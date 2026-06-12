@@ -1,0 +1,6 @@
+.git
+node_modules
+quest-dados.json
+quest-dados.json.tmp
+*.log
+teste

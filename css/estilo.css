@@ -316,6 +316,38 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 
 .modal-acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
 
+/* ---------- Modal de conta ---------- */
+.conta-explica { color: var(--texto-fraco); font-size: 0.88rem; line-height: 1.5; margin: 0 0 14px; }
+.abas-conta { display: flex; gap: 6px; margin-bottom: 14px; background: var(--fundo); padding: 4px; border-radius: 10px; }
+.aba-conta {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--texto-fraco);
+  padding: 8px;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.aba-conta.ativa { background: var(--painel-2); color: var(--texto); }
+#formConta label { display: block; font-size: 0.82rem; color: var(--texto-fraco); margin-bottom: 10px; }
+#formConta input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  padding: 9px 11px;
+  font-size: 0.92rem;
+}
+#formConta input:focus { outline: none; border-color: var(--laranja); }
+#formConta .botao { width: 100%; margin-top: 4px; padding: 10px; }
+.conta-erro { color: var(--vermelho); font-size: 0.84rem; min-height: 1.1em; margin: 0 0 8px; }
+.conta-aviso { color: var(--texto-fraco); font-size: 0.76rem; margin: 12px 0 0; text-align: center; }
+
 /* ---------- Toasts ---------- */
 #toasts {
   position: fixed;

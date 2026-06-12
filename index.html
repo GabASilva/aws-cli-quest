@@ -20,6 +20,7 @@
       <small id="streakBonus"></small>
     </div>
     <button class="botao" id="btnRanking">🏆 Ranking</button>
+    <button class="botao secundario" id="btnConta">👤 Entrar</button>
   </header>
 
   <main>
@@ -48,10 +49,41 @@
     <div class="modal-caixa">
       <h2>🏆 Ranking da comunidade</h2>
       <table class="ranking"><tbody id="corpoRanking"></tbody></table>
-      <div class="linha-nome">
+      <div class="linha-nome" id="linhaNome">
         <input id="nomeJogador" maxlength="20" placeholder="Seu nome no ranking">
         <button class="botao" id="btnSalvarNome">Salvar nome</button>
       </div>
+      <div class="modal-acoes">
+        <button class="botao secundario" data-fechar>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: conta (login / cadastro) -->
+  <div class="modal" id="modalConta">
+    <div class="modal-caixa">
+      <h2 id="contaTitulo">👤 Entrar na sua conta</h2>
+      <p class="conta-explica" id="contaExplica">
+        Crie um usuário pra salvar seu progresso na nuvem, jogar de qualquer dispositivo
+        e aparecer no ranking da galera.
+      </p>
+      <div class="abas-conta">
+        <button class="aba-conta ativa" data-aba="login">Entrar</button>
+        <button class="aba-conta" data-aba="cadastro">Criar conta</button>
+      </div>
+      <form id="formConta" autocomplete="off">
+        <label>Usuário
+          <input id="campoUsuario" maxlength="20" placeholder="ex.: gabriel" autocomplete="off" spellcheck="false">
+        </label>
+        <label>Senha
+          <input id="campoSenha" type="password" maxlength="60" placeholder="mínimo 4 caracteres" autocomplete="off">
+        </label>
+        <p class="conta-erro" id="contaErro"></p>
+        <button class="botao" id="btnEnviarConta" type="submit">Entrar</button>
+      </form>
+      <p class="conta-aviso">
+        ⚠️ Isto é um joguinho educativo — <strong>não use uma senha de verdade</strong>.
+      </p>
       <div class="modal-acoes">
         <button class="botao secundario" data-fechar>Fechar</button>
       </div>
@@ -75,6 +107,7 @@
   <script src="js/simulador.js"></script>
   <script src="js/manuais.js"></script>
   <script src="js/desafios.js"></script>
+  <script src="js/api.js"></script>
   <script src="js/jogo.js"></script>
   <script src="js/app.js"></script>
 </body>

@@ -187,9 +187,8 @@ function fecharModais() {
 }
 
 // ---------- Ranking ----------
-function abrirRanking() {
+function pintarRanking(lista) {
   const corpo = $("#corpoRanking");
-  const lista = montarRanking();
   corpo.innerHTML = lista.map((j, i) => {
     const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}º`;
     return `<tr class="${j.ehJogador ? "voce" : ""}">
@@ -199,6 +198,28 @@ function abrirRanking() {
       <td>${tituloPorXp(j.xp)}</td>
     </tr>`;
   }).join("");
+}
+
+async function abrirRanking() {
+  const linhaNome = $("#linhaNome");
+  // Online: ranking real dos usuários cadastrados. Offline: bots + você.
+  if (api.online) {
+    if (linhaNome) linhaNome.style.display = "none";
+    $("#corpoRanking").innerHTML = `<tr><td colspan="4">carregando…</td></tr>`;
+    $("#modalRanking").classList.add("aberto");
+    const reais = await apiRanking();
+    if (reais) {
+      const lista = reais.map((u) => ({ nome: u.usuario, xp: u.xp, ehJogador: u.usuario === api.usuario }));
+      if (!lista.some((j) => j.ehJogador) && api.usuario) {
+        lista.push({ nome: api.usuario, xp: jogo.xp, ehJogador: true });
+        lista.sort((a, b) => b.xp - a.xp);
+      }
+      pintarRanking(lista);
+      return;
+    }
+  }
+  if (linhaNome) linhaNome.style.display = "";
+  pintarRanking(montarRanking());
   $("#nomeJogador").value = jogo.nomeJogador;
   $("#modalRanking").classList.add("aberto");
 }
@@ -331,9 +352,93 @@ function celebrar(d) {
   }
 }
 
+// ---------- Conta (login / cadastro) ----------
+const contaUi = { aba: "login" };
+
+function atualizarBotaoConta() {
+  const btn = $("#btnConta");
+  if (api.usuario) {
+    btn.textContent = "👤 " + api.usuario;
+    btn.title = "Clique pra sair da conta";
+  } else {
+    btn.textContent = api.online ? "👤 Entrar" : "👤 Conta (offline)";
+    btn.title = api.online ? "Entrar ou criar conta" : "Backend indisponível — jogando em modo local";
+  }
+}
+
+function abrirModalConta() {
+  if (api.usuario) {
+    // logado: oferece sair
+    if (confirm(`Sair da conta "${api.usuario}"? Seu progresso fica salvo na nuvem.`)) {
+      apiSair();
+      carregarJogo(); // volta pro slot local anônimo
+      ui.desafioAtivo = null;
+      atualizarBotaoConta();
+      renderCabecalho();
+      renderSidebar();
+      renderCard();
+      toast("Você saiu da conta. Jogando em modo local agora.", "neutro");
+    }
+    return;
+  }
+  if (!api.online) {
+    toast("O servidor de contas está fora do ar — dá pra jogar normal, mas o progresso fica só neste navegador.", "neutro");
+    return;
+  }
+  $("#contaErro").textContent = "";
+  $("#campoUsuario").value = "";
+  $("#campoSenha").value = "";
+  trocarAbaConta("login");
+  $("#modalConta").classList.add("aberto");
+  $("#campoUsuario").focus();
+}
+
+function trocarAbaConta(aba) {
+  contaUi.aba = aba;
+  document.querySelectorAll(".aba-conta").forEach((b) => b.classList.toggle("ativa", b.dataset.aba === aba));
+  $("#contaTitulo").textContent = aba === "login" ? "👤 Entrar na sua conta" : "✨ Criar uma conta";
+  $("#btnEnviarConta").textContent = aba === "login" ? "Entrar" : "Criar conta e jogar";
+  $("#contaErro").textContent = "";
+}
+
+async function enviarConta(ev) {
+  ev.preventDefault();
+  const usuario = $("#campoUsuario").value.trim();
+  const senha = $("#campoSenha").value;
+  const btn = $("#btnEnviarConta");
+  btn.disabled = true;
+  $("#contaErro").textContent = "";
+  try {
+    const r = contaUi.aba === "login" ? await apiLogin(usuario, senha) : await apiCadastrar(usuario, senha);
+    aplicarProgressoNuvem(r.perfil, r.progresso);
+    fecharModais();
+    atualizarBotaoConta();
+    ui.desafioAtivo = null;
+    $("#saidaTerminal").innerHTML = "";
+    boasVindas();
+    renderCabecalho();
+    renderSidebar();
+    renderCard();
+    toast(`👋 Olá, <strong>${escaparHtml(api.usuario)}</strong>! Progresso sincronizado.`, "sucesso");
+  } catch (e) {
+    $("#contaErro").textContent = e.message || "Não rolou. Tente de novo.";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ---------- Inicialização ----------
-function iniciar() {
-  carregarJogo();
+async function iniciar() {
+  // tenta o backend e restaura sessão antes de carregar o progresso
+  let sessao = null;
+  try { sessao = await apiIniciar(); } catch (e) { /* offline */ }
+
+  if (sessao && sessao.perfil) {
+    aplicarProgressoNuvem(sessao.perfil, sessao.progresso);
+  } else {
+    carregarJogo();
+  }
+  atualizarBotaoConta();
   renderCabecalho();
   renderSidebar();
   renderCard();
@@ -360,6 +465,9 @@ function iniciar() {
   $("#terminal").addEventListener("click", () => entrada.focus());
 
   $("#btnRanking").addEventListener("click", abrirRanking);
+  $("#btnConta").addEventListener("click", abrirModalConta);
+  $("#formConta").addEventListener("submit", enviarConta);
+  document.querySelectorAll(".aba-conta").forEach((b) => b.addEventListener("click", () => trocarAbaConta(b.dataset.aba)));
   $("#btnSalvarNome").addEventListener("click", () => {
     const nome = $("#nomeJogador").value.trim();
     if (nome) {

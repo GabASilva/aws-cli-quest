@@ -48,18 +48,65 @@ function estadoInicial() {
 
 let jogo = estadoInicial();
 
+// Quando logado, cada conta tem seu próprio slot local (pra não misturar
+// progresso de pessoas diferentes no mesmo navegador).
+function chaveLocal() {
+  return api.usuario ? CHAVE_STORAGE + "." + api.usuario : CHAVE_STORAGE;
+}
+
+let sincronizacaoAgendada = false;
+function sincronizarNuvem() {
+  if (!api.online || !api.token) return;
+  // debounce: agrupa rajadas de salvamento num envio só
+  if (sincronizacaoAgendada) return;
+  sincronizacaoAgendada = true;
+  setTimeout(() => {
+    sincronizacaoAgendada = false;
+    apiSalvarProgresso({
+      xp: jogo.xp,
+      melhorStreak: jogo.melhorStreak,
+      progresso: {
+        streak: jogo.streak,
+        concluidos: jogo.concluidos,
+        revelados: jogo.revelados,
+        etapasProjetos: jogo.etapasProjetos,
+        conta: jogo.conta,
+      },
+    });
+  }, 600);
+}
+
 function salvarJogo() {
   try {
-    localStorage.setItem(CHAVE_STORAGE, JSON.stringify(jogo));
+    localStorage.setItem(chaveLocal(), JSON.stringify(jogo));
   } catch (e) {
     /* sem localStorage (file:// em alguns navegadores) — segue sem persistir */
   }
+  sincronizarNuvem();
+}
+
+// Aplica um progresso vindo do servidor por cima do estado atual.
+function aplicarProgressoNuvem(perfil, progresso) {
+  jogo = estadoInicial();
+  if (perfil) {
+    jogo.nomeJogador = perfil.usuario;
+    jogo.xp = perfil.xp || 0;
+    jogo.melhorStreak = perfil.melhorStreak || 0;
+  }
+  if (progresso) {
+    jogo.streak = progresso.streak || 0;
+    jogo.concluidos = progresso.concluidos || {};
+    jogo.revelados = progresso.revelados || {};
+    jogo.etapasProjetos = progresso.etapasProjetos || {};
+    if (progresso.conta && progresso.conta.s3) jogo.conta = progresso.conta;
+  }
+  try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
 }
 
 function carregarJogo() {
   try {
-    const bruto = localStorage.getItem(CHAVE_STORAGE);
-    if (!bruto) return;
+    const bruto = localStorage.getItem(chaveLocal());
+    if (!bruto) { jogo = estadoInicial(); return; }
     const salvo = JSON.parse(bruto);
     jogo = Object.assign(estadoInicial(), salvo);
     if (!jogo.conta || !jogo.conta.s3) jogo.conta = criarContaAws();
@@ -70,7 +117,9 @@ function carregarJogo() {
 
 function resetarJogo() {
   jogo = estadoInicial();
-  try { localStorage.removeItem(CHAVE_STORAGE); } catch (e) { /* ok */ }
+  if (api.usuario) jogo.nomeJogador = api.usuario;
+  try { localStorage.removeItem(chaveLocal()); } catch (e) { /* ok */ }
+  sincronizarNuvem();
 }
 
 // ---------- Níveis ----------
@@ -150,6 +199,8 @@ function progressoServico(servicoId) {
 }
 
 // ---------- Ranking ----------
+// Local/offline: usa os bots + você. Online: a função abaixo é substituída
+// pelos jogadores reais (montarRankingOnline em app.js).
 function montarRanking() {
   const todos = [
     ...RANKING_BOTS.map((b) => ({ ...b, ehJogador: false })),
