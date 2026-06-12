@@ -1,0 +1,567 @@
+"use strict";
+// ============================================================
+// AWS CLI Quest — manuais.js
+// Manuais embutidos: aws help, aws <serviço> help, aws <serviço> <comando> help
+// ============================================================
+
+const MANUAIS = {
+  "": `AWS CLI (simulador) — manual geral
+==================================
+
+USO
+    aws <serviço> <comando> [opções]
+
+SERVIÇOS DISPONÍVEIS
+    s3          Armazenamento de objetos — comandos de alto nível (mb, cp, ls, sync...)
+    s3api       Operações de baixo nível do S3 (versionamento, políticas...)
+    ec2         Máquinas virtuais (instâncias, security groups, key pairs)
+    iam         Usuários, grupos, papéis (roles) e permissões
+    lambda      Funções serverless
+    dynamodb    Banco de dados NoSQL
+    sts         Identidade da sessão (get-caller-identity)
+
+MANUAIS
+    aws <serviço> help                p. ex.: aws s3 help
+    aws <serviço> <comando> help      p. ex.: aws s3 mb help
+
+UTILITÁRIOS DO TERMINAL
+    ls        lista os arquivos locais fictícios (pra usar com cp, sync, fileb://...)
+    clear     limpa a tela
+    help      este manual`,
+
+  s3: `aws s3 — comandos de alto nível do S3
+=====================================
+
+COMANDOS
+    mb        cria um bucket                 aws s3 mb s3://meu-bucket
+    rb        remove um bucket               aws s3 rb s3://meu-bucket [--force]
+    ls        lista buckets ou objetos       aws s3 ls | aws s3 ls s3://meu-bucket
+    cp        copia arquivos                 aws s3 cp relatorio.csv s3://meu-bucket/
+    rm        apaga um objeto                aws s3 rm s3://meu-bucket/arquivo.txt
+    sync      sincroniza uma pasta local     aws s3 sync ./site s3://meu-bucket
+    website   configura hospedagem de site   aws s3 website s3://meu-bucket --index-document index.html
+
+Digite 'aws s3 <comando> help' para detalhes de cada um.
+Pra operações avançadas (versionamento, políticas), veja 'aws s3api help'.`,
+
+  "s3.mb": `aws s3 mb — make bucket (criar bucket)
+
+USO
+    aws s3 mb s3://<nome-do-bucket>
+
+REGRAS DO NOME
+    3 a 63 caracteres; só letras minúsculas, números, pontos e hífens;
+    precisa ser único (na AWS de verdade, único no mundo inteiro!).
+
+EXEMPLO
+    aws s3 mb s3://meu-primeiro-bucket`,
+
+  "s3.rb": `aws s3 rb — remove bucket (apagar bucket)
+
+USO
+    aws s3 rb s3://<nome-do-bucket> [--force]
+
+OPÇÕES
+    --force    apaga o bucket mesmo com objetos dentro (apaga tudo junto)
+
+EXEMPLO
+    aws s3 rb s3://bucket-temporario --force`,
+
+  "s3.ls": `aws s3 ls — listar buckets ou objetos
+
+USO
+    aws s3 ls                          lista todos os seus buckets
+    aws s3 ls s3://<bucket>            lista os objetos do bucket
+    aws s3 ls s3://<bucket>/<prefixo>  lista objetos com aquele prefixo
+
+EXEMPLOS
+    aws s3 ls
+    aws s3 ls s3://meu-primeiro-bucket`,
+
+  "s3.cp": `aws s3 cp — copiar arquivos de/para o S3
+
+USO
+    aws s3 cp <origem> <destino>
+
+DIREÇÕES
+    upload      aws s3 cp relatorio.csv s3://meu-bucket/
+    download    aws s3 cp s3://meu-bucket/relatorio.csv ./
+    cópia       aws s3 cp s3://bucket-a/x.txt s3://bucket-b/x.txt
+
+DICA
+    Se o destino terminar com '/', o nome do arquivo é mantido.
+    Digite 'ls' no terminal pra ver os arquivos locais disponíveis.`,
+
+  "s3.rm": `aws s3 rm — apagar um objeto do bucket
+
+USO
+    aws s3 rm s3://<bucket>/<chave>
+
+EXEMPLO
+    aws s3 rm s3://meu-primeiro-bucket/relatorio.csv`,
+
+  "s3.sync": `aws s3 sync — sincronizar pasta local com o bucket
+
+USO
+    aws s3 sync <pasta-local> s3://<bucket>[/prefixo]
+
+EXEMPLO
+    aws s3 sync ./site s3://meu-bucket
+
+Envia todos os arquivos da pasta (recursivo). Digite 'ls' pra ver
+que existe uma pasta ./site pronta no disco local fictício.`,
+
+  "s3.website": `aws s3 website — configurar hospedagem de site estático
+
+USO
+    aws s3 website s3://<bucket> --index-document <arquivo> [--error-document <arquivo>]
+
+EXEMPLO
+    aws s3 website s3://meu-site --index-document index.html --error-document erro404.html
+
+Na AWS real, depois disso o site fica acessível em
+http://<bucket>.s3-website-<região>.amazonaws.com`,
+
+  s3api: `aws s3api — operações de baixo nível do S3
+==========================================
+
+COMANDOS
+    create-bucket            cria bucket (estilo API)
+    list-buckets             lista buckets em JSON
+    put-bucket-versioning    liga/desliga versionamento
+    get-bucket-versioning    consulta o versionamento
+    put-bucket-policy        aplica política de acesso ao bucket
+    get-bucket-policy        consulta a política
+
+Digite 'aws s3api <comando> help' para detalhes.`,
+
+  "s3api.create-bucket": `aws s3api create-bucket
+
+USO
+    aws s3api create-bucket --bucket <nome> [--region <região>]
+
+EXEMPLO
+    aws s3api create-bucket --bucket meu-bucket-api --region us-east-1`,
+
+  "s3api.list-buckets": `aws s3api list-buckets
+
+USO
+    aws s3api list-buckets
+
+Retorna a lista de buckets em JSON (diferente de 'aws s3 ls', que é texto).`,
+
+  "s3api.put-bucket-versioning": `aws s3api put-bucket-versioning
+
+USO
+    aws s3api put-bucket-versioning --bucket <nome> --versioning-configuration Status=Enabled
+
+STATUS
+    Enabled      liga o versionamento (guarda versões antigas dos objetos)
+    Suspended    suspende
+
+EXEMPLO
+    aws s3api put-bucket-versioning --bucket meu-primeiro-bucket --versioning-configuration Status=Enabled`,
+
+  "s3api.get-bucket-versioning": `aws s3api get-bucket-versioning
+
+USO
+    aws s3api get-bucket-versioning --bucket <nome>`,
+
+  "s3api.put-bucket-policy": `aws s3api put-bucket-policy
+
+USO
+    aws s3api put-bucket-policy --bucket <nome> --policy file://<arquivo.json>
+
+EXEMPLO
+    aws s3api put-bucket-policy --bucket meu-site --policy file://politica-publica.json
+
+Existe um politica-publica.json pronto no disco local (digite 'ls').
+É assim que se libera leitura pública pra hospedar um site, por exemplo.`,
+
+  "s3api.get-bucket-policy": `aws s3api get-bucket-policy
+
+USO
+    aws s3api get-bucket-policy --bucket <nome>`,
+
+  ec2: `aws ec2 — máquinas virtuais
+===========================
+
+COMANDOS
+    describe-instances                   lista suas instâncias
+    run-instances                        cria/inicia instâncias novas
+    stop-instances                       para instâncias
+    start-instances                      liga instâncias paradas
+    terminate-instances                  encerra (apaga) instâncias
+    create-key-pair                      cria par de chaves SSH
+    describe-key-pairs                   lista pares de chaves
+    create-security-group                cria grupo de segurança (firewall)
+    authorize-security-group-ingress     libera porta de entrada
+    describe-security-groups             lista grupos de segurança
+
+Digite 'aws ec2 <comando> help' para detalhes.`,
+
+  "ec2.describe-instances": `aws ec2 describe-instances
+
+USO
+    aws ec2 describe-instances
+
+Lista todas as suas instâncias com estado, tipo, IP etc.`,
+
+  "ec2.run-instances": `aws ec2 run-instances — criar instâncias
+
+USO
+    aws ec2 run-instances --image-id <ami> --instance-type <tipo>
+                          [--count N] [--key-name <chave>] [--security-groups <sg>]
+
+PARÂMETROS
+    --image-id         a imagem (AMI), ex.: ami-0abcd1234ef567890
+    --instance-type    ex.: t2.micro, t3.micro, t3.small...
+    --count            quantas instâncias (padrão 1)
+    --key-name         par de chaves pra acessar via SSH
+    --security-groups  grupo(s) de segurança
+
+EXEMPLO
+    aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t2.micro`,
+
+  "ec2.stop-instances": `aws ec2 stop-instances
+
+USO
+    aws ec2 stop-instances --instance-ids <id> [<id2> ...]
+
+EXEMPLO
+    aws ec2 stop-instances --instance-ids i-0abc123def456
+
+Pegue o id com 'aws ec2 describe-instances'.`,
+
+  "ec2.start-instances": `aws ec2 start-instances
+
+USO
+    aws ec2 start-instances --instance-ids <id> [<id2> ...]
+
+Liga instâncias que estavam paradas (stopped).`,
+
+  "ec2.terminate-instances": `aws ec2 terminate-instances
+
+USO
+    aws ec2 terminate-instances --instance-ids <id> [<id2> ...]
+
+ATENÇÃO: encerrar é definitivo — a instância é apagada (na AWS real,
+o disco junto, a menos que configure o contrário).`,
+
+  "ec2.create-key-pair": `aws ec2 create-key-pair
+
+USO
+    aws ec2 create-key-pair --key-name <nome>
+
+EXEMPLO
+    aws ec2 create-key-pair --key-name minha-chave
+
+Retorna a chave privada — na vida real, salve num .pem e proteja!`,
+
+  "ec2.describe-key-pairs": `aws ec2 describe-key-pairs
+
+USO
+    aws ec2 describe-key-pairs`,
+
+  "ec2.create-security-group": `aws ec2 create-security-group
+
+USO
+    aws ec2 create-security-group --group-name <nome> --description "<descrição>"
+
+EXEMPLO
+    aws ec2 create-security-group --group-name web-sg --description "Servidores web"
+
+Um security group é um firewall: por padrão bloqueia toda entrada.
+Use authorize-security-group-ingress pra liberar portas.`,
+
+  "ec2.authorize-security-group-ingress": `aws ec2 authorize-security-group-ingress — liberar porta de entrada
+
+USO
+    aws ec2 authorize-security-group-ingress --group-name <nome>
+        --protocol tcp --port <porta> --cidr <faixa-de-ip>
+
+EXEMPLOS
+    aws ec2 authorize-security-group-ingress --group-name web-sg --protocol tcp --port 80 --cidr 0.0.0.0/0
+    aws ec2 authorize-security-group-ingress --group-name web-sg --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+0.0.0.0/0 = qualquer IP do mundo (cuidado com a porta 22 na vida real!).`,
+
+  "ec2.describe-security-groups": `aws ec2 describe-security-groups
+
+USO
+    aws ec2 describe-security-groups`,
+
+  iam: `aws iam — identidade e permissões
+=================================
+
+COMANDOS
+    create-user / list-users / delete-user
+    create-group / list-groups / get-group
+    add-user-to-group
+    attach-user-policy / attach-group-policy / list-attached-user-policies
+    create-role / list-roles / attach-role-policy
+
+POLÍTICAS GERENCIADAS ÚTEIS (--policy-arn)
+    arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+    arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Digite 'aws iam <comando> help' para detalhes.`,
+
+  "iam.create-user": `aws iam create-user
+
+USO
+    aws iam create-user --user-name <nome>
+
+EXEMPLO
+    aws iam create-user --user-name ana`,
+
+  "iam.list-users": `aws iam list-users
+
+USO
+    aws iam list-users`,
+
+  "iam.delete-user": `aws iam delete-user
+
+USO
+    aws iam delete-user --user-name <nome>`,
+
+  "iam.create-group": `aws iam create-group
+
+USO
+    aws iam create-group --group-name <nome>
+
+EXEMPLO
+    aws iam create-group --group-name devs
+
+Grupos servem pra dar permissões a várias pessoas de uma vez.`,
+
+  "iam.list-groups": `aws iam list-groups
+
+USO
+    aws iam list-groups`,
+
+  "iam.add-user-to-group": `aws iam add-user-to-group
+
+USO
+    aws iam add-user-to-group --user-name <usuário> --group-name <grupo>
+
+EXEMPLO
+    aws iam add-user-to-group --user-name ana --group-name devs`,
+
+  "iam.get-group": `aws iam get-group
+
+USO
+    aws iam get-group --group-name <nome>
+
+Mostra o grupo e quem está dentro dele.`,
+
+  "iam.attach-user-policy": `aws iam attach-user-policy
+
+USO
+    aws iam attach-user-policy --user-name <usuário> --policy-arn <arn>
+
+EXEMPLO
+    aws iam attach-user-policy --user-name ana --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`,
+
+  "iam.attach-group-policy": `aws iam attach-group-policy
+
+USO
+    aws iam attach-group-policy --group-name <grupo> --policy-arn <arn>
+
+EXEMPLO
+    aws iam attach-group-policy --group-name devs --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`,
+
+  "iam.list-attached-user-policies": `aws iam list-attached-user-policies
+
+USO
+    aws iam list-attached-user-policies --user-name <usuário>`,
+
+  "iam.create-role": `aws iam create-role — criar papel (role)
+
+USO
+    aws iam create-role --role-name <nome>
+        --assume-role-policy-document file://<trust.json>
+
+EXEMPLO
+    aws iam create-role --role-name papel-lambda --assume-role-policy-document file://trust.json
+
+Uma role é uma identidade que SERVIÇOS assumem (ex.: uma função Lambda).
+O trust policy diz QUEM pode assumir a role. Existe um trust.json
+pronto no disco local (digite 'ls').`,
+
+  "iam.list-roles": `aws iam list-roles
+
+USO
+    aws iam list-roles`,
+
+  "iam.attach-role-policy": `aws iam attach-role-policy
+
+USO
+    aws iam attach-role-policy --role-name <role> --policy-arn <arn>
+
+EXEMPLO
+    aws iam attach-role-policy --role-name papel-lambda --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole`,
+
+  lambda: `aws lambda — funções serverless
+===============================
+
+COMANDOS
+    create-function                  cria uma função
+    list-functions                   lista as funções
+    get-function                     detalhes de uma função
+    invoke                           executa a função
+    update-function-configuration    altera timeout, memória, variáveis de ambiente
+    delete-function                  apaga a função
+
+RUNTIMES ACEITOS
+    python3.11, python3.12, python3.13, nodejs18.x, nodejs20.x,
+    nodejs22.x, java21, ruby3.3, go1.x
+
+Digite 'aws lambda <comando> help' para detalhes.`,
+
+  "lambda.create-function": `aws lambda create-function
+
+USO
+    aws lambda create-function --function-name <nome>
+        --runtime <runtime> --role <arn-da-role>
+        --handler <arquivo.função> --zip-file fileb://<código.zip>
+
+EXEMPLO
+    aws lambda create-function --function-name ola-mundo --runtime python3.12 --role arn:aws:iam::123456789012:role/papel-lambda --handler app.handler --zip-file fileb://app.zip
+
+Existe um app.zip pronto no disco local (digite 'ls').`,
+
+  "lambda.list-functions": `aws lambda list-functions
+
+USO
+    aws lambda list-functions`,
+
+  "lambda.get-function": `aws lambda get-function
+
+USO
+    aws lambda get-function --function-name <nome>`,
+
+  "lambda.invoke": `aws lambda invoke — executar a função
+
+USO
+    aws lambda invoke --function-name <nome> <arquivo-de-saida>
+
+EXEMPLO
+    aws lambda invoke --function-name ola-mundo saida.json
+
+O arquivo de saída recebe a resposta da função.`,
+
+  "lambda.update-function-configuration": `aws lambda update-function-configuration
+
+USO
+    aws lambda update-function-configuration --function-name <nome>
+        [--timeout <segundos>] [--memory-size <MB>]
+        [--environment Variables={CHAVE=valor,OUTRA=valor}]
+
+EXEMPLOS
+    aws lambda update-function-configuration --function-name ola-mundo --timeout 30 --memory-size 256
+    aws lambda update-function-configuration --function-name ola-mundo --environment Variables={TABELA=pedidos}`,
+
+  "lambda.delete-function": `aws lambda delete-function
+
+USO
+    aws lambda delete-function --function-name <nome>`,
+
+  dynamodb: `aws dynamodb — banco NoSQL
+==========================
+
+COMANDOS
+    create-table      cria uma tabela
+    list-tables       lista as tabelas
+    describe-table    detalhes de uma tabela
+    put-item          insere/substitui um item
+    get-item          busca um item pela chave
+    scan              lista todos os itens
+    delete-table      apaga a tabela
+
+Digite 'aws dynamodb <comando> help' para detalhes.`,
+
+  "dynamodb.create-table": `aws dynamodb create-table
+
+USO
+    aws dynamodb create-table --table-name <nome>
+        --attribute-definitions AttributeName=<attr>,AttributeType=<S|N|B>
+        --key-schema AttributeName=<attr>,KeyType=HASH
+        --billing-mode PAY_PER_REQUEST
+
+EXEMPLO
+    aws dynamodb create-table --table-name clientes --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST
+
+TIPOS: S = string, N = número, B = binário.
+PAY_PER_REQUEST = paga por requisição (sem capacidade provisionada).`,
+
+  "dynamodb.list-tables": `aws dynamodb list-tables
+
+USO
+    aws dynamodb list-tables`,
+
+  "dynamodb.describe-table": `aws dynamodb describe-table
+
+USO
+    aws dynamodb describe-table --table-name <nome>`,
+
+  "dynamodb.put-item": `aws dynamodb put-item
+
+USO
+    aws dynamodb put-item --table-name <nome> --item '<json>'
+
+EXEMPLO
+    aws dynamodb put-item --table-name clientes --item '{"id": {"S": "1"}, "nome": {"S": "Ana"}}'
+
+O JSON usa o formato do DynamoDB: cada valor declara o tipo
+("S" string, "N" número). Use aspas simples por fora.`,
+
+  "dynamodb.get-item": `aws dynamodb get-item
+
+USO
+    aws dynamodb get-item --table-name <nome> --key '<json>'
+
+EXEMPLO
+    aws dynamodb get-item --table-name clientes --key '{"id": {"S": "1"}}'`,
+
+  "dynamodb.scan": `aws dynamodb scan
+
+USO
+    aws dynamodb scan --table-name <nome>
+
+Retorna TODOS os itens da tabela (na vida real, cuidado: scan em
+tabela grande custa caro e é lento).`,
+
+  "dynamodb.delete-table": `aws dynamodb delete-table
+
+USO
+    aws dynamodb delete-table --table-name <nome>`,
+
+  sts: `aws sts — security token service
+
+COMANDOS
+    get-caller-identity    mostra quem você é (conta, usuário, ARN)
+
+EXEMPLO
+    aws sts get-caller-identity
+
+É o "whoami" da AWS — ótimo pra conferir com que credenciais
+você está operando.`,
+
+  "sts.get-caller-identity": `aws sts get-caller-identity
+
+USO
+    aws sts get-caller-identity
+
+Retorna o id da conta, o usuário e o ARN da sessão atual.`,
+};
+
+function obterManual(caminho) {
+  const m = MANUAIS[caminho];
+  if (m) return m;
+  // tenta o manual do serviço, se o do comando não existir
+  const servico = caminho.split(".")[0];
+  if (MANUAIS[servico]) return `(não há manual específico pra '${caminho.replace(".", " ")}')\n\n` + MANUAIS[servico];
+  return `Não há manual pra '${caminho.replace(".", " ")}'. Digite 'aws help' pra ver os serviços disponíveis.`;
+}

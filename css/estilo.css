@@ -1,0 +1,357 @@
+/* AWS CLI Quest — tema dark com o laranja AWS */
+:root {
+  --fundo: #10151f;
+  --painel: #161e2d;
+  --painel-2: #1c2638;
+  --borda: #2a3650;
+  --texto: #dce3ee;
+  --texto-fraco: #8b99b0;
+  --laranja: #ff9900;
+  --laranja-escuro: #cc7a00;
+  --verde: #3ecf6f;
+  --vermelho: #ff5c5c;
+  --azul: #58a6ff;
+  --fonte-mono: "Cascadia Code", "Consolas", "Fira Code", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Cabeçalho ---------- */
+header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 20px;
+  background: var(--painel);
+  border-bottom: 2px solid var(--laranja);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--laranja);
+  white-space: nowrap;
+}
+
+.nivel-box {
+  flex: 1;
+  min-width: 160px;
+  max-width: 420px;
+}
+
+#tituloNivel { font-weight: 600; font-size: 0.9rem; }
+
+.barra {
+  height: 8px;
+  background: var(--painel-2);
+  border-radius: 6px;
+  margin: 4px 0 2px;
+  overflow: hidden;
+  border: 1px solid var(--borda);
+}
+
+#barraXp {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--laranja-escuro), var(--laranja));
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+#textoXp { font-size: 0.75rem; color: var(--texto-fraco); }
+
+.streak {
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  opacity: 0.55;
+  text-align: center;
+}
+.streak.aceso { opacity: 1; border-color: var(--laranja); box-shadow: 0 0 12px rgba(255, 153, 0, 0.25); }
+.streak small { display: block; font-size: 0.65rem; color: var(--laranja); font-weight: 600; }
+
+.botao {
+  background: var(--laranja);
+  color: #1a1205;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.botao:hover { filter: brightness(1.1); }
+.botao.secundario { background: var(--painel-2); color: var(--texto); border: 1px solid var(--borda); }
+.botao.perigo { background: transparent; color: var(--vermelho); border: 1px solid var(--vermelho); }
+.botao.perigo:hover { background: rgba(255, 92, 92, 0.12); }
+
+/* ---------- Layout principal ---------- */
+main {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- Sidebar ---------- */
+#sidebar {
+  background: var(--painel);
+  border-right: 1px solid var(--borda);
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.servico { margin-bottom: 8px; border-radius: 10px; overflow: hidden; }
+
+.servico-cab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--texto);
+  cursor: pointer;
+  text-align: left;
+}
+.servico.aberto .servico-cab { border-color: var(--laranja); }
+.servico-icone { font-size: 1.3rem; }
+.servico-nomes { flex: 1; display: flex; flex-direction: column; }
+.servico-nomes small { color: var(--texto-fraco); font-size: 0.72rem; }
+.servico-prog {
+  font-family: var(--fonte-mono);
+  font-size: 0.78rem;
+  color: var(--texto-fraco);
+  background: var(--fundo);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.servico-prog.completo { color: var(--verde); }
+
+.lista-desafios { padding: 6px 2px 2px 10px; display: flex; flex-direction: column; gap: 4px; }
+
+.item-desafio {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  grid-template-areas: "st titulo" "st meta";
+  gap: 0 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--texto);
+  cursor: pointer;
+  text-align: left;
+}
+.item-desafio:hover:not(:disabled) { background: var(--painel-2); }
+.item-desafio.ativo { border-color: var(--laranja); background: var(--painel-2); }
+.item-desafio.feito .item-titulo { color: var(--texto-fraco); text-decoration: line-through; }
+.item-desafio.travado { opacity: 0.45; cursor: not-allowed; }
+.item-desafio .status { grid-area: st; }
+.item-titulo { grid-area: titulo; font-size: 0.86rem; font-weight: 600; }
+.item-meta { grid-area: meta; font-size: 0.7rem; color: var(--texto-fraco); }
+
+/* ---------- Centro ---------- */
+.centro {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px;
+  gap: 12px;
+}
+
+#cardDesafio {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 16px 20px;
+  overflow-y: auto;
+  max-height: 46%;
+  flex-shrink: 0;
+}
+#cardDesafio h2 { margin: 8px 0 6px; font-size: 1.15rem; }
+#cardDesafio .descricao { margin: 0 0 10px; color: var(--texto); line-height: 1.5; }
+#cardDesafio .descricao b { color: var(--laranja); }
+.card-vazio p { color: var(--texto-fraco); line-height: 1.55; }
+.card-vazio code { background: var(--painel-2); padding: 1px 6px; border-radius: 5px; font-family: var(--fonte-mono); }
+
+.card-topo { display: flex; gap: 8px; flex-wrap: wrap; }
+.selo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.4px;
+}
+.selo.nivel-1 { background: rgba(62, 207, 111, 0.15); color: var(--verde); }
+.selo.nivel-2 { background: rgba(88, 166, 255, 0.15); color: var(--azul); }
+.selo.nivel-3 { background: rgba(255, 153, 0, 0.15); color: var(--laranja); }
+.selo.xp { background: var(--painel-2); color: var(--texto); border: 1px solid var(--borda); }
+.selo.feito { background: rgba(62, 207, 111, 0.2); color: var(--verde); }
+
+.acoes-card { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.dicas { margin-top: 10px; border-left: 3px solid var(--azul); padding-left: 12px; }
+.dicas p { margin: 5px 0; color: var(--texto-fraco); font-size: 0.88rem; }
+
+.checklist { list-style: none; padding: 0; margin: 8px 0; }
+.checklist li { padding: 4px 0; font-size: 0.9rem; color: var(--texto-fraco); }
+.checklist li.ok { color: var(--verde); }
+
+.solucao { margin-top: 12px; background: var(--fundo); border: 1px dashed var(--vermelho); border-radius: 10px; padding: 10px 14px; }
+.solucao-titulo { margin: 0 0 6px; font-weight: 700; color: var(--vermelho); }
+.solucao code {
+  display: block;
+  font-family: var(--fonte-mono);
+  font-size: 0.82rem;
+  padding: 4px 0;
+  color: var(--texto);
+  word-break: break-all;
+}
+.solucao-aviso { margin: 6px 0 0; font-size: 0.78rem; color: var(--texto-fraco); }
+
+/* ---------- Terminal ---------- */
+#terminal {
+  flex: 1;
+  background: #0b0f17;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 14px;
+  overflow-y: auto;
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  cursor: text;
+  min-height: 0;
+}
+
+#saidaTerminal .linha { margin: 0 0 2px; white-space: pre-wrap; word-break: break-word; }
+pre.linha { font-family: var(--fonte-mono); }
+.linha.erro { color: var(--vermelho); }
+.linha.ok { color: var(--verde); }
+.linha.eco { color: var(--texto); margin-top: 6px; }
+.prompt { color: var(--laranja); font-weight: 700; }
+
+.linha-entrada { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+#entradaTerminal {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--texto);
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+  caret-color: var(--laranja);
+}
+
+/* ---------- Rodapé ---------- */
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 20px;
+  background: var(--painel);
+  border-top: 1px solid var(--borda);
+  font-size: 0.75rem;
+  color: var(--texto-fraco);
+  flex-shrink: 0;
+}
+footer button { font-size: 0.72rem; padding: 4px 10px; }
+
+/* ---------- Modais ---------- */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+}
+.modal.aberto { display: flex; }
+.modal-caixa {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 20px 24px;
+  width: min(560px, 92vw);
+  max-height: 84vh;
+  overflow-y: auto;
+}
+.modal-caixa h2 { margin: 0 0 12px; color: var(--laranja); }
+
+table.ranking { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.ranking td { padding: 7px 8px; border-bottom: 1px solid var(--borda); }
+table.ranking tr.voce td { background: rgba(255, 153, 0, 0.12); font-weight: 700; }
+table.ranking tr.voce td:first-child { border-radius: 8px 0 0 8px; }
+table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
+
+.linha-nome { display: flex; gap: 8px; margin-top: 14px; }
+.linha-nome input {
+  flex: 1;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  padding: 7px 10px;
+  font-size: 0.88rem;
+}
+
+.modal-acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+/* ---------- Toasts ---------- */
+#toasts {
+  position: fixed;
+  top: 70px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+}
+.toast {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--laranja);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  animation: entrar 0.25s ease;
+  max-width: 360px;
+}
+.toast.sucesso { border-left-color: var(--verde); }
+.toast.nivel { border-left-color: var(--laranja); box-shadow: 0 0 18px rgba(255, 153, 0, 0.35); }
+.toast.neutro { border-left-color: var(--texto-fraco); }
+.toast.saindo { opacity: 0; transform: translateX(20px); transition: all 0.45s ease; }
+.xp-toast { color: var(--verde); font-weight: 800; }
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Responsivo simples ---------- */
+@media (max-width: 760px) {
+  main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  #sidebar { max-height: 34vh; }
+  #cardDesafio { max-height: none; }
+  header { flex-wrap: wrap; gap: 10px; }
+}
