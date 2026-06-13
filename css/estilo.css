@@ -380,10 +380,67 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---------- Tradutor de erro / autocomplete no terminal ---------- */
+.linha.dica-erro { color: var(--azul); margin-bottom: 6px; }
+.linha.sugestao { color: var(--laranja); }
+.linha.eco-tab { color: var(--texto-fraco); }
+
+/* ---------- Modais largos (conceitos / conquistas) ---------- */
+.modal-largo { width: min(720px, 94vw); }
+.busca-conceito {
+  width: 100%;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  padding: 9px 11px;
+  font-size: 0.9rem;
+  margin-bottom: 14px;
+}
+.busca-conceito:focus { outline: none; border-color: var(--laranja); }
+
+.grade-conceitos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cartao-conceito {
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.cartao-topo strong { color: var(--laranja); }
+.tag-servico {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--texto-fraco);
+  background: var(--fundo);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.cartao-conceito p { margin: 0; font-size: 0.82rem; line-height: 1.45; color: var(--texto); }
+.conceito-vazio { color: var(--texto-fraco); grid-column: 1 / -1; text-align: center; }
+
+/* ---------- Conquistas ---------- */
+.contador-conquistas { color: var(--texto-fraco); font-size: 0.85rem; margin: 0 0 14px; }
+.cartao-conquista {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.cartao-conquista.bloqueada { opacity: 0.5; }
+.cartao-conquista.ok { border-color: var(--laranja); }
+.badge-icone { font-size: 1.8rem; line-height: 1; }
+.cartao-conquista strong { display: block; }
+.cartao-conquista p { margin: 2px 0 0; font-size: 0.8rem; color: var(--texto-fraco); line-height: 1.4; }
+
 /* ---------- Responsivo simples ---------- */
 @media (max-width: 760px) {
   main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   #sidebar { max-height: 34vh; }
   #cardDesafio { max-height: none; }
   header { flex-wrap: wrap; gap: 10px; }
+  .grade-conceitos { grid-template-columns: 1fr; }
 }
