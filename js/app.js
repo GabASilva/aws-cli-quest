@@ -410,7 +410,8 @@ async function enviarConta(ev) {
   $("#contaErro").textContent = "";
   try {
     const r = contaUi.aba === "login" ? await apiLogin(usuario, senha) : await apiCadastrar(usuario, senha);
-    aplicarProgressoNuvem(r.perfil, r.progresso);
+    // vincula à conta o que foi jogado deslogado (em vez de descartar)
+    const res = entrarComConta(r.perfil, r.progresso);
     fecharModais();
     atualizarBotaoConta();
     ui.desafioAtivo = null;
@@ -419,7 +420,13 @@ async function enviarConta(ev) {
     renderCabecalho();
     renderSidebar();
     renderCard();
-    toast(`👋 Olá, <strong>${escaparHtml(api.usuario)}</strong>! Progresso sincronizado.`, "sucesso");
+    if (res.fundiu) {
+      toast(`🔗 <strong>${escaparHtml(api.usuario)}</strong>: juntamos seu progresso deslogado com o da conta.`, "sucesso");
+    } else if (res.tinhaLocal) {
+      toast(`🔗 Olá, <strong>${escaparHtml(api.usuario)}</strong>! Seu progresso foi vinculado à conta.`, "sucesso");
+    } else {
+      toast(`👋 Olá, <strong>${escaparHtml(api.usuario)}</strong>! Progresso sincronizado.`, "sucesso");
+    }
   } catch (e) {
     $("#contaErro").textContent = e.message || "Não rolou. Tente de novo.";
   } finally {

@@ -103,6 +103,89 @@ function aplicarProgressoNuvem(perfil, progresso) {
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
 }
 
+// Funde dois estados (o local anônimo e o da nuvem) num só, sem perder nada:
+// união dos desafios concluídos/revelados, etapas de projeto no "ou" lógico,
+// maior streak, e o XP recalculado a partir dos concluídos (sempre coerente).
+function mesclarEstados(local, nuvem) {
+  local = local || {};
+  nuvem = nuvem || {};
+  const concluidos = Object.assign({}, nuvem.concluidos, local.concluidos);
+  // em conflito (concluído dos dois lados), fica o que rendeu mais XP
+  for (const id in (nuvem.concluidos || {})) {
+    const l = local.concluidos && local.concluidos[id];
+    if (l) concluidos[id] = (l.xpGanho || 0) >= (nuvem.concluidos[id].xpGanho || 0) ? l : nuvem.concluidos[id];
+  }
+  const revelados = Object.assign({}, nuvem.revelados, local.revelados);
+
+  const etapasProjetos = {};
+  const idsProj = new Set([
+    ...Object.keys(nuvem.etapasProjetos || {}),
+    ...Object.keys(local.etapasProjetos || {}),
+  ]);
+  for (const id of idsProj) {
+    const a = (local.etapasProjetos || {})[id] || [];
+    const b = (nuvem.etapasProjetos || {})[id] || [];
+    const n = Math.max(a.length, b.length);
+    etapasProjetos[id] = Array.from({ length: n }, (_, i) => !!a[i] || !!b[i]);
+  }
+
+  // a conta AWS (sandbox) fica com a de quem tem mais desafios feitos
+  const nLocal = Object.keys(local.concluidos || {}).length;
+  const nNuvem = Object.keys(nuvem.concluidos || {}).length;
+  let conta;
+  if (nLocal >= nNuvem && local.conta && local.conta.s3) conta = local.conta;
+  else if (nuvem.conta && nuvem.conta.s3) conta = nuvem.conta;
+  else conta = (local.conta && local.conta.s3) ? local.conta : criarContaAws();
+
+  return {
+    concluidos,
+    revelados,
+    etapasProjetos,
+    conta,
+    xp: Object.values(concluidos).reduce((s, c) => s + (c.xpGanho || 0), 0),
+    streak: Math.max(local.streak || 0, nuvem.streak || 0),
+    melhorStreak: Math.max(local.melhorStreak || 0, nuvem.melhorStreak || 0),
+  };
+}
+
+// Entra numa conta vinculando o progresso jogado deslogado.
+// `jogo` (em memória) ainda guarda o progresso anônimo neste ponto.
+// Retorna { fundiu, tinhaLocal } pra UI dar o aviso certo.
+function entrarComConta(perfil, progressoNuvem) {
+  const local = {
+    concluidos: jogo.concluidos,
+    revelados: jogo.revelados,
+    etapasProjetos: jogo.etapasProjetos,
+    conta: jogo.conta,
+    streak: jogo.streak,
+    melhorStreak: jogo.melhorStreak,
+  };
+  const tinhaLocal = Object.keys(local.concluidos || {}).length > 0;
+  const tinhaNuvem = !!(progressoNuvem && Object.keys(progressoNuvem.concluidos || {}).length > 0);
+  const fundiu = tinhaLocal && tinhaNuvem;
+
+  const merged = mesclarEstados(local, progressoNuvem);
+  jogo = estadoInicial();
+  jogo.nomeJogador = perfil ? perfil.usuario : jogo.nomeJogador;
+  jogo.xp = merged.xp;
+  jogo.streak = merged.streak;
+  jogo.melhorStreak = merged.melhorStreak;
+  jogo.concluidos = merged.concluidos;
+  jogo.revelados = merged.revelados;
+  jogo.etapasProjetos = merged.etapasProjetos;
+  jogo.conta = merged.conta;
+
+  try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
+  // some com o slot anônimo: o que foi jogado deslogado agora é da conta,
+  // e o próximo visitante anônimo começa do zero.
+  if (tinhaLocal) {
+    try { localStorage.removeItem(CHAVE_STORAGE); } catch (e) { /* ok */ }
+  }
+  // sobe o estado já vinculado pra nuvem (com XP recalculado)
+  sincronizarNuvem();
+  return { fundiu, tinhaLocal };
+}
+
 function carregarJogo() {
   try {
     const bruto = localStorage.getItem(chaveLocal());
