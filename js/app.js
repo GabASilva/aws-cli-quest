@@ -45,6 +45,11 @@ function renderCabecalho() {
   const bonus = bonusAtual();
   $("#streakBonus").textContent = bonus > 0 ? `+${Math.round(bonus * 100)}% XP` : "";
   $("#streakBox").classList.toggle("aceso", jogo.streak > 0);
+  const perdidas = jogo.sequenciasPerdidas || [];
+  $("#streakBox").title =
+    `Sequência atual: ${jogo.streak} · recorde: ${jogo.melhorStreak}` +
+    (perdidas.length ? ` · últimas perdidas: ${perdidas.join(", ")}` : "") +
+    `\nCada acerto seguido dá +10% de XP (máx. +50%). Revelar resposta zera.`;
 }
 
 // ---------- Sidebar ----------
@@ -174,7 +179,7 @@ function abrirModalRevelar(d) {
     (${d.xp} XP) e <strong>zera sua sequência de acertos</strong> (🔥 ${jogo.streak}). Tem certeza?`;
   $("#btnConfirmaRevelar").onclick = () => {
     revelarResposta(d);
-    jogo.streak = 0;
+    perderSequencia(); // registra a sequência perdida (guarda as últimas 3) e zera
     salvarJogo();
     fecharModais();
     renderCabecalho();

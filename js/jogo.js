@@ -42,8 +42,20 @@ function estadoInicial() {
     concluidos: {}, // id -> { xpGanho, revelado }
     revelados: {}, // id -> true (revelou antes de concluir)
     etapasProjetos: {}, // id do projeto -> [bool, bool, ...]
+    sequenciasPerdidas: [], // últimas 3 sequências mais altas antes de perder
     conta: criarContaAws(),
   };
+}
+
+// Registra a sequência atual como "perdida" (guarda as últimas 3) e zera.
+// Chamado quando a pessoa perde a sequência (ex.: revelou a resposta).
+function perderSequencia() {
+  if (!Array.isArray(jogo.sequenciasPerdidas)) jogo.sequenciasPerdidas = [];
+  if (jogo.streak > 0) {
+    jogo.sequenciasPerdidas.unshift(jogo.streak);
+    jogo.sequenciasPerdidas = jogo.sequenciasPerdidas.slice(0, 3);
+  }
+  jogo.streak = 0;
 }
 
 let jogo = estadoInicial();
@@ -70,6 +82,7 @@ function sincronizarNuvem() {
         concluidos: jogo.concluidos,
         revelados: jogo.revelados,
         etapasProjetos: jogo.etapasProjetos,
+        sequenciasPerdidas: jogo.sequenciasPerdidas,
         conta: jogo.conta,
       },
     });
@@ -98,6 +111,7 @@ function aplicarProgressoNuvem(perfil, progresso) {
     jogo.concluidos = progresso.concluidos || {};
     jogo.revelados = progresso.revelados || {};
     jogo.etapasProjetos = progresso.etapasProjetos || {};
+    jogo.sequenciasPerdidas = progresso.sequenciasPerdidas || [];
     if (progresso.conta) jogo.conta = progresso.conta;
   }
   jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)
@@ -138,6 +152,9 @@ function mesclarEstados(local, nuvem) {
   else if (nuvem.conta && nuvem.conta.s3) conta = nuvem.conta;
   else conta = (local.conta && local.conta.s3) ? local.conta : criarContaAws();
 
+  const perdidas = (nuvem.sequenciasPerdidas && nuvem.sequenciasPerdidas.length)
+    ? nuvem.sequenciasPerdidas
+    : (local.sequenciasPerdidas || []);
   return {
     concluidos,
     revelados,
@@ -146,6 +163,7 @@ function mesclarEstados(local, nuvem) {
     xp: Object.values(concluidos).reduce((s, c) => s + (c.xpGanho || 0), 0),
     streak: Math.max(local.streak || 0, nuvem.streak || 0),
     melhorStreak: Math.max(local.melhorStreak || 0, nuvem.melhorStreak || 0),
+    sequenciasPerdidas: perdidas.slice(0, 3),
   };
 }
 
@@ -160,6 +178,7 @@ function entrarComConta(perfil, progressoNuvem) {
     conta: jogo.conta,
     streak: jogo.streak,
     melhorStreak: jogo.melhorStreak,
+    sequenciasPerdidas: jogo.sequenciasPerdidas,
   };
   const tinhaLocal = Object.keys(local.concluidos || {}).length > 0;
   const tinhaNuvem = !!(progressoNuvem && Object.keys(progressoNuvem.concluidos || {}).length > 0);
@@ -174,6 +193,7 @@ function entrarComConta(perfil, progressoNuvem) {
   jogo.concluidos = merged.concluidos;
   jogo.revelados = merged.revelados;
   jogo.etapasProjetos = merged.etapasProjetos;
+  jogo.sequenciasPerdidas = merged.sequenciasPerdidas || [];
   jogo.conta = normalizarConta(merged.conta); // migra contas antigas (campos novos)
 
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
@@ -236,7 +256,7 @@ function concluirDesafio(desafio) {
   const nivelAntes = nivelAtual(jogo.xp).indice;
   jogo.xp += ganho;
   if (revelado) {
-    jogo.streak = 0;
+    perderSequencia();
   } else {
     jogo.streak += 1;
     if (jogo.streak > jogo.melhorStreak) jogo.melhorStreak = jogo.streak;
