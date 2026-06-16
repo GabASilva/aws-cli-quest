@@ -98,8 +98,9 @@ function aplicarProgressoNuvem(perfil, progresso) {
     jogo.concluidos = progresso.concluidos || {};
     jogo.revelados = progresso.revelados || {};
     jogo.etapasProjetos = progresso.etapasProjetos || {};
-    if (progresso.conta && progresso.conta.s3) jogo.conta = progresso.conta;
+    if (progresso.conta) jogo.conta = progresso.conta;
   }
+  jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
 }
 
@@ -173,7 +174,7 @@ function entrarComConta(perfil, progressoNuvem) {
   jogo.concluidos = merged.concluidos;
   jogo.revelados = merged.revelados;
   jogo.etapasProjetos = merged.etapasProjetos;
-  jogo.conta = merged.conta;
+  jogo.conta = normalizarConta(merged.conta); // migra contas antigas (campos novos)
 
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
   // some com o slot anônimo: o que foi jogado deslogado agora é da conta,
@@ -192,7 +193,7 @@ function carregarJogo() {
     if (!bruto) { jogo = estadoInicial(); return; }
     const salvo = JSON.parse(bruto);
     jogo = Object.assign(estadoInicial(), salvo);
-    if (!jogo.conta || !jogo.conta.s3) jogo.conta = criarContaAws();
+    jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)
   } catch (e) {
     jogo = estadoInicial();
   }

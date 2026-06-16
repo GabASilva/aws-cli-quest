@@ -57,6 +57,33 @@ const POLITICAS_AWS = [
   "AdministratorAccess",
 ];
 
+// Migração: garante que uma conta carregada (de save antigo ou da nuvem) tenha
+// TODOS os campos que o motor espera. Sem isso, contas criadas antes de um
+// campo novo (ex.: iam.policies, arquivosSalvos) quebravam com "Erro interno".
+function normalizarConta(c) {
+  if (!c || typeof c !== "object") return criarContaAws();
+  c.regiao = c.regiao || "us-east-1";
+  c.contaId = c.contaId || "123456789012";
+  c.s3 = c.s3 || {};
+  c.s3.buckets = c.s3.buckets || {};
+  c.ec2 = c.ec2 || {};
+  c.ec2.instancias = c.ec2.instancias || {};
+  c.ec2.securityGroups = c.ec2.securityGroups || {};
+  c.ec2.keyPairs = c.ec2.keyPairs || {};
+  c.iam = c.iam || {};
+  c.iam.usuarios = c.iam.usuarios || {};
+  c.iam.grupos = c.iam.grupos || {};
+  c.iam.roles = c.iam.roles || {};
+  c.iam.policies = c.iam.policies || {};
+  c.lambda = c.lambda || {};
+  c.lambda.funcoes = c.lambda.funcoes || {};
+  c.dynamodb = c.dynamodb || {};
+  c.dynamodb.tabelas = c.dynamodb.tabelas || {};
+  c.arquivosSalvos = c.arquivosSalvos || {};
+  if (!c.iam.policies["lab_policy"]) semearLabPolicy(c);
+  return c;
+}
+
 // ---------- "Disco local" fictício (pra cp, sync, fileb:// etc.) ----------
 const ARQUIVOS_LOCAIS = {
   "relatorio.csv": 2480,
@@ -1076,6 +1103,7 @@ function aplicarQueryEOutput(saida, flags) {
 // Wrapper: trata o redirecionamento ">" (salva a saída num arquivo virtual)
 // e delega a execução do comando AWS pro executarComandoAwsBase.
 function executarComandoAws(conta, linha) {
+  normalizarConta(conta); // blinda contra contas antigas sem algum campo
   let alvo = null;
   const m = /\s>\s*([^\s>|]+)\s*$/.exec(linha);
   if (m) {
