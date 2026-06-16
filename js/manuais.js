@@ -62,7 +62,7 @@ REGRAS DO NOME
     precisa ser único (na AWS de verdade, único no mundo inteiro!).
 
 EXEMPLO
-    aws s3 mb s3://meu-primeiro-bucket`,
+    aws s3 mb s3://meu-bucket-exemplo`,
 
   "s3.rb": `aws s3 rb — remove bucket (apagar bucket)
 
@@ -73,7 +73,7 @@ OPÇÕES
     --force    apaga o bucket mesmo com objetos dentro (apaga tudo junto)
 
 EXEMPLO
-    aws s3 rb s3://bucket-temporario --force`,
+    aws s3 rb s3://bucket-antigo --force`,
 
   "s3.ls": `aws s3 ls — listar buckets ou objetos
 
@@ -84,7 +84,7 @@ USO
 
 EXEMPLOS
     aws s3 ls
-    aws s3 ls s3://meu-primeiro-bucket`,
+    aws s3 ls s3://meu-bucket-exemplo`,
 
   "s3.cp": `aws s3 cp — copiar arquivos de/para o S3
 
@@ -106,7 +106,7 @@ USO
     aws s3 rm s3://<bucket>/<chave>
 
 EXEMPLO
-    aws s3 rm s3://meu-primeiro-bucket/relatorio.csv`,
+    aws s3 rm s3://meu-bucket-exemplo/arquivo.txt`,
 
   "s3.sync": `aws s3 sync — sincronizar pasta local com o bucket
 
@@ -168,7 +168,7 @@ STATUS
     Suspended    suspende
 
 EXEMPLO
-    aws s3api put-bucket-versioning --bucket meu-primeiro-bucket --versioning-configuration Status=Enabled`,
+    aws s3api put-bucket-versioning --bucket meu-bucket-exemplo --versioning-configuration Status=Enabled`,
 
   "s3api.get-bucket-versioning": `aws s3api get-bucket-versioning
 
@@ -229,7 +229,9 @@ PARÂMETROS
     --security-groups  grupo(s) de segurança
 
 EXEMPLO
-    aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t2.micro`,
+    aws ec2 run-instances --image-id ami-0123456789abcdef0 --instance-type t3.micro
+
+(troque o --image-id e o --instance-type pelos que o desafio pedir.)`,
 
   "ec2.stop-instances": `aws ec2 stop-instances
 
@@ -262,7 +264,7 @@ USO
     aws ec2 create-key-pair --key-name <nome>
 
 EXEMPLO
-    aws ec2 create-key-pair --key-name minha-chave
+    aws ec2 create-key-pair --key-name chave-exemplo
 
 Retorna a chave privada — na vida real, salve num .pem e proteja!`,
 
@@ -277,7 +279,7 @@ USO
     aws ec2 create-security-group --group-name <nome> --description "<descrição>"
 
 EXEMPLO
-    aws ec2 create-security-group --group-name web-sg --description "Servidores web"
+    aws ec2 create-security-group --group-name exemplo-sg --description "Meu grupo"
 
 Um security group é um firewall: por padrão bloqueia toda entrada.
 Use authorize-security-group-ingress pra liberar portas.`,
@@ -289,10 +291,11 @@ USO
         --protocol tcp --port <porta> --cidr <faixa-de-ip>
 
 EXEMPLOS
-    aws ec2 authorize-security-group-ingress --group-name web-sg --protocol tcp --port 80 --cidr 0.0.0.0/0
-    aws ec2 authorize-security-group-ingress --group-name web-sg --protocol tcp --port 22 --cidr 0.0.0.0/0
+    aws ec2 authorize-security-group-ingress --group-name exemplo-sg --protocol tcp --port 443 --cidr 0.0.0.0/0
+    aws ec2 authorize-security-group-ingress --group-name exemplo-sg --protocol tcp --port 3306 --cidr 10.0.0.0/16
 
-0.0.0.0/0 = qualquer IP do mundo (cuidado com a porta 22 na vida real!).`,
+0.0.0.0/0 = qualquer IP do mundo (cuidado com a porta 22 na vida real!).
+/32 no fim = um IP só; /16 = uma faixa. Troque porta e CIDR pelo que o desafio pedir.`,
 
   "ec2.describe-security-groups": `aws ec2 describe-security-groups
 
@@ -333,7 +336,7 @@ EXEMPLO
     aws iam create-policy --policy-name minha-politica --policy-document file://politica-publica.json
 
 Cria uma política "Local" (customer managed). Nasce com a versão v1
-como padrão. Veja com 'aws iam list-policies --scope Local'.`,
+como padrão. Depois dá pra conferir na lista das suas políticas.`,
 
   "iam.list-policies": `aws iam list-policies — listar políticas
 
@@ -346,10 +349,10 @@ ESCOPO
     All     todas (padrão)
 
 EXEMPLO
-    aws iam list-policies --scope Local
+    aws iam list-policies --scope AWS
 
 Dica: o ARN e o DefaultVersionId que aparecem aqui são o que você usa
-no get-policy-version.`,
+no get-policy-version. Use --scope Local pra ver só as SUAS políticas.`,
 
   "iam.get-policy": `aws iam get-policy — metadados de uma política
 
@@ -357,7 +360,7 @@ USO
     aws iam get-policy --policy-arn <arn>
 
 EXEMPLO
-    aws iam get-policy --policy-arn arn:aws:iam::123456789012:policy/lab_policy
+    aws iam get-policy --policy-arn arn:aws:iam::123456789012:policy/minha-politica
 
 Retorna o DefaultVersionId (a versão ativa), entre outros dados. O JSON
 da política em si vem com get-policy-version.`,
@@ -368,10 +371,10 @@ USO
     aws iam get-policy-version --policy-arn <arn> --version-id <vN>
 
 EXEMPLO
-    aws iam get-policy-version --policy-arn arn:aws:iam::123456789012:policy/lab_policy --version-id v1
+    aws iam get-policy-version --policy-arn arn:aws:iam::123456789012:policy/minha-politica --version-id v1
 
 Retorna o documento JSON da política (campo Document). Combine com '>'
-pra salvar num arquivo: ... --version-id v1 > lab_policy.json`,
+pra salvar num arquivo: ... --version-id v1 > politica.json`,
 
   "iam.list-policy-versions": `aws iam list-policy-versions
 
@@ -386,7 +389,7 @@ USO
     aws iam create-policy-version --policy-arn <arn> --policy-document file://<doc.json> [--set-as-default]
 
 EXEMPLO
-    aws iam create-policy-version --policy-arn arn:aws:iam::123456789012:policy/lab_policy --policy-document file://politica-publica.json --set-as-default
+    aws iam create-policy-version --policy-arn arn:aws:iam::123456789012:policy/minha-politica --policy-document file://politica-publica.json --set-as-default
 
 Cria uma nova versão (v2, v3...). Com --set-as-default ela vira a ativa.`,
 
@@ -438,7 +441,7 @@ USO
     aws iam create-user --user-name <nome>
 
 EXEMPLO
-    aws iam create-user --user-name ana`,
+    aws iam create-user --user-name fulano`,
 
   "iam.list-users": `aws iam list-users
 
@@ -456,7 +459,7 @@ USO
     aws iam create-group --group-name <nome>
 
 EXEMPLO
-    aws iam create-group --group-name devs
+    aws iam create-group --group-name grupo-exemplo
 
 Grupos servem pra dar permissões a várias pessoas de uma vez.`,
 
@@ -471,7 +474,7 @@ USO
     aws iam add-user-to-group --user-name <usuário> --group-name <grupo>
 
 EXEMPLO
-    aws iam add-user-to-group --user-name ana --group-name devs`,
+    aws iam add-user-to-group --user-name fulano --group-name grupo-exemplo`,
 
   "iam.get-group": `aws iam get-group
 
@@ -486,7 +489,7 @@ USO
     aws iam attach-user-policy --user-name <usuário> --policy-arn <arn>
 
 EXEMPLO
-    aws iam attach-user-policy --user-name ana --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`,
+    aws iam attach-user-policy --user-name fulano --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`,
 
   "iam.attach-group-policy": `aws iam attach-group-policy
 
@@ -494,7 +497,7 @@ USO
     aws iam attach-group-policy --group-name <grupo> --policy-arn <arn>
 
 EXEMPLO
-    aws iam attach-group-policy --group-name devs --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`,
+    aws iam attach-group-policy --group-name grupo-exemplo --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`,
 
   "iam.list-attached-user-policies": `aws iam list-attached-user-policies
 
@@ -508,7 +511,7 @@ USO
         --assume-role-policy-document file://<trust.json>
 
 EXEMPLO
-    aws iam create-role --role-name papel-lambda --assume-role-policy-document file://trust.json
+    aws iam create-role --role-name role-exemplo --assume-role-policy-document file://trust.json
 
 Uma role é uma identidade que SERVIÇOS assumem (ex.: uma função Lambda).
 O trust policy diz QUEM pode assumir a role. Existe um trust.json
@@ -525,7 +528,7 @@ USO
     aws iam attach-role-policy --role-name <role> --policy-arn <arn>
 
 EXEMPLO
-    aws iam attach-role-policy --role-name papel-lambda --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole`,
+    aws iam attach-role-policy --role-name role-exemplo --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole`,
 
   lambda: `aws lambda — funções serverless
 ===============================
@@ -552,7 +555,7 @@ USO
         --handler <arquivo.função> --zip-file fileb://<código.zip>
 
 EXEMPLO
-    aws lambda create-function --function-name ola-mundo --runtime python3.12 --role arn:aws:iam::123456789012:role/papel-lambda --handler app.handler --zip-file fileb://app.zip
+    aws lambda create-function --function-name minha-funcao --runtime python3.12 --role arn:aws:iam::123456789012:role/role-exemplo --handler app.handler --zip-file fileb://app.zip
 
 Existe um app.zip pronto no disco local (digite 'ls').`,
 
@@ -572,7 +575,7 @@ USO
     aws lambda invoke --function-name <nome> <arquivo-de-saida>
 
 EXEMPLO
-    aws lambda invoke --function-name ola-mundo saida.json
+    aws lambda invoke --function-name minha-funcao resposta.json
 
 O arquivo de saída recebe a resposta da função.`,
 
@@ -584,8 +587,8 @@ USO
         [--environment Variables={CHAVE=valor,OUTRA=valor}]
 
 EXEMPLOS
-    aws lambda update-function-configuration --function-name ola-mundo --timeout 30 --memory-size 256
-    aws lambda update-function-configuration --function-name ola-mundo --environment Variables={TABELA=pedidos}`,
+    aws lambda update-function-configuration --function-name minha-funcao --timeout 15 --memory-size 512
+    aws lambda update-function-configuration --function-name minha-funcao --environment Variables={ETAPA=teste}`,
 
   "lambda.delete-function": `aws lambda delete-function
 
@@ -615,7 +618,7 @@ USO
         --billing-mode PAY_PER_REQUEST
 
 EXEMPLO
-    aws dynamodb create-table --table-name clientes --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST
+    aws dynamodb create-table --table-name catalogo --attribute-definitions AttributeName=produto,AttributeType=S --key-schema AttributeName=produto,KeyType=HASH --billing-mode PAY_PER_REQUEST
 
 TIPOS: S = string, N = número, B = binário.
 PAY_PER_REQUEST = paga por requisição (sem capacidade provisionada).`,
@@ -636,7 +639,7 @@ USO
     aws dynamodb put-item --table-name <nome> --item '<json>'
 
 EXEMPLO
-    aws dynamodb put-item --table-name clientes --item '{"id": {"S": "1"}, "nome": {"S": "Ana"}}'
+    aws dynamodb put-item --table-name catalogo --item '{"produto": {"S": "café"}, "preco": {"N": "25"}}'
 
 O JSON usa o formato do DynamoDB: cada valor declara o tipo
 ("S" string, "N" número). Use aspas simples por fora.`,
@@ -647,7 +650,7 @@ USO
     aws dynamodb get-item --table-name <nome> --key '<json>'
 
 EXEMPLO
-    aws dynamodb get-item --table-name clientes --key '{"id": {"S": "1"}}'`,
+    aws dynamodb get-item --table-name catalogo --key '{"produto": {"S": "café"}}'`,
 
   "dynamodb.scan": `aws dynamodb scan
 
