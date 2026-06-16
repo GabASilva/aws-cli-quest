@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
-const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js"]
+const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -38,6 +38,12 @@ const teste = `
   }
 
   for (const d of DESAFIOS) {
+    // desafios de shell/Linux (solução não começa com 'aws') são testados no
+    // navegador, não aqui — o executarComandoAws só roda comandos aws.
+    if (d.solucao.some((s) => !s.trim().startsWith("aws"))) {
+      console.log("· (pulado no node — shell) " + d.id + " — " + d.titulo);
+      continue;
+    }
     for (const sol of d.solucao) {
       if (sol.startsWith("aws ec2 describe-instances") && d.id === "ec2-3") { rodar(sol); continue; }
       rodar(resolver(sol));

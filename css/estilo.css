@@ -447,6 +447,35 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 .cartao-conquista strong { display: block; }
 .cartao-conquista p { margin: 2px 0 0; font-size: 0.8rem; color: var(--texto-fraco); line-height: 1.4; }
 
+/* ---------- Faixa do Desafio do dia / Treino aleatório ---------- */
+#faixaTreino {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--laranja);
+  border-radius: 10px;
+  padding: 8px 14px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.faixa-bloco { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.faixa-rotulo { font-weight: 700; color: var(--laranja); white-space: nowrap; }
+#faixaDiaTitulo { font-weight: 600; }
+#faixaDiaTitulo small { color: var(--texto-fraco); font-weight: 400; }
+.faixa-selo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: rgba(255, 153, 0, 0.15);
+  color: var(--laranja);
+}
+.faixa-selo.ok { background: rgba(62, 207, 111, 0.2); color: var(--verde); }
+#faixaTreino .botao { padding: 6px 14px; font-size: 0.82rem; }
+
 /* ---------- Responsivo simples ---------- */
 @media (max-width: 760px) {
   main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
