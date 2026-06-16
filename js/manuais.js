@@ -24,10 +24,18 @@ MANUAIS
     aws <serviço> help                p. ex.: aws s3 help
     aws <serviço> <comando> help      p. ex.: aws s3 mb help
 
+OPÇÕES QUE VALEM PRA QUALQUER COMANDO
+    --query '<expressão>'   filtra/transforma a saída (JMESPath).
+                            Ex.: --query 'Policies[*].Arn'
+    --output <formato>      json (padrão) ou text.
+    comando > arquivo       redireciona a saída pra um arquivo (salva).
+                            Ex.: ... get-policy-version ... > lab_policy.json
+
 UTILITÁRIOS DO TERMINAL
-    ls        lista os arquivos locais fictícios (pra usar com cp, sync, fileb://...)
-    clear     limpa a tela
-    help      este manual`,
+    ls            lista os arquivos (fictícios + os que você criou com '>')
+    cat <arq>     mostra o conteúdo de um arquivo
+    clear         limpa a tela
+    help          este manual`,
 
   s3: `aws s3 — comandos de alto nível do S3
 =====================================
@@ -294,19 +302,135 @@ USO
   iam: `aws iam — identidade e permissões
 =================================
 
-COMANDOS
+USUÁRIOS / GRUPOS / ROLES
     create-user / list-users / delete-user
-    create-group / list-groups / get-group
-    add-user-to-group
-    attach-user-policy / attach-group-policy / list-attached-user-policies
-    create-role / list-roles / attach-role-policy
+    create-group / list-groups / get-group / delete-group
+    add-user-to-group / remove-user-from-group
+    create-role / list-roles / attach-role-policy / delete-role
 
-POLÍTICAS GERENCIADAS ÚTEIS (--policy-arn)
+PERMISSÕES (anexar / desanexar)
+    attach-user-policy / detach-user-policy / list-attached-user-policies
+    attach-group-policy / detach-group-policy
+    attach-role-policy / detach-role-policy
+
+POLÍTICAS GERENCIADAS PELO CLIENTE (customer managed)
+    create-policy / list-policies / get-policy / delete-policy
+    get-policy-version / list-policy-versions / create-policy-version
+
+POLÍTICAS GERENCIADAS PELA AWS (--policy-arn)
     arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
     arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
     arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
 Digite 'aws iam <comando> help' para detalhes.`,
+
+  "iam.create-policy": `aws iam create-policy — criar política gerenciada pelo cliente
+
+USO
+    aws iam create-policy --policy-name <nome> --policy-document file://<doc.json>
+
+EXEMPLO
+    aws iam create-policy --policy-name minha-politica --policy-document file://politica-publica.json
+
+Cria uma política "Local" (customer managed). Nasce com a versão v1
+como padrão. Veja com 'aws iam list-policies --scope Local'.`,
+
+  "iam.list-policies": `aws iam list-policies — listar políticas
+
+USO
+    aws iam list-policies [--scope Local | AWS | All]
+
+ESCOPO
+    Local   só as gerenciadas por você (customer managed)
+    AWS     só as gerenciadas pela AWS
+    All     todas (padrão)
+
+EXEMPLO
+    aws iam list-policies --scope Local
+
+Dica: o ARN e o DefaultVersionId que aparecem aqui são o que você usa
+no get-policy-version.`,
+
+  "iam.get-policy": `aws iam get-policy — metadados de uma política
+
+USO
+    aws iam get-policy --policy-arn <arn>
+
+EXEMPLO
+    aws iam get-policy --policy-arn arn:aws:iam::123456789012:policy/lab_policy
+
+Retorna o DefaultVersionId (a versão ativa), entre outros dados. O JSON
+da política em si vem com get-policy-version.`,
+
+  "iam.get-policy-version": `aws iam get-policy-version — pegar o JSON de uma versão
+
+USO
+    aws iam get-policy-version --policy-arn <arn> --version-id <vN>
+
+EXEMPLO
+    aws iam get-policy-version --policy-arn arn:aws:iam::123456789012:policy/lab_policy --version-id v1
+
+Retorna o documento JSON da política (campo Document). Combine com '>'
+pra salvar num arquivo: ... --version-id v1 > lab_policy.json`,
+
+  "iam.list-policy-versions": `aws iam list-policy-versions
+
+USO
+    aws iam list-policy-versions --policy-arn <arn>
+
+Lista as versões da política e indica qual é a padrão (IsDefaultVersion).`,
+
+  "iam.create-policy-version": `aws iam create-policy-version
+
+USO
+    aws iam create-policy-version --policy-arn <arn> --policy-document file://<doc.json> [--set-as-default]
+
+EXEMPLO
+    aws iam create-policy-version --policy-arn arn:aws:iam::123456789012:policy/lab_policy --policy-document file://politica-publica.json --set-as-default
+
+Cria uma nova versão (v2, v3...). Com --set-as-default ela vira a ativa.`,
+
+  "iam.delete-policy": `aws iam delete-policy
+
+USO
+    aws iam delete-policy --policy-arn <arn>`,
+
+  "iam.detach-user-policy": `aws iam detach-user-policy
+
+USO
+    aws iam detach-user-policy --user-name <usuário> --policy-arn <arn>
+
+O contrário do attach-user-policy: tira a política do usuário.`,
+
+  "iam.detach-group-policy": `aws iam detach-group-policy
+
+USO
+    aws iam detach-group-policy --group-name <grupo> --policy-arn <arn>`,
+
+  "iam.detach-role-policy": `aws iam detach-role-policy
+
+USO
+    aws iam detach-role-policy --role-name <role> --policy-arn <arn>`,
+
+  "iam.remove-user-from-group": `aws iam remove-user-from-group
+
+USO
+    aws iam remove-user-from-group --user-name <usuário> --group-name <grupo>
+
+Tira o usuário do grupo (precisa fazer isso antes de apagar um grupo cheio).`,
+
+  "iam.delete-group": `aws iam delete-group
+
+USO
+    aws iam delete-group --group-name <nome>
+
+Só funciona com o grupo VAZIO — remova os membros antes com
+remove-user-from-group.`,
+
+  "iam.delete-role": `aws iam delete-role
+
+USO
+    aws iam delete-role --role-name <nome>`,
 
   "iam.create-user": `aws iam create-user
 

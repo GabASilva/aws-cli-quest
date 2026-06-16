@@ -9,16 +9,53 @@ class ErroCli extends Error {}
 
 // ---------- Conta virtual ----------
 function criarContaAws() {
-  return {
+  const conta = {
     regiao: "us-east-1",
     contaId: "123456789012",
     s3: { buckets: {} },
     ec2: { instancias: {}, securityGroups: {}, keyPairs: {} },
-    iam: { usuarios: {}, grupos: {}, roles: {} },
+    iam: { usuarios: {}, grupos: {}, roles: {}, policies: {} },
     lambda: { funcoes: {} },
     dynamodb: { tabelas: {} },
+    arquivosSalvos: {}, // arquivos criados via redirecionamento ">"
+  };
+  semearLabPolicy(conta);
+  return conta;
+}
+
+// Política gerenciada pelo cliente já existente na conta (igual ao lab da AWS).
+// Os desafios avançados pedem pra "baixar" essa política via CLI.
+function semearLabPolicy(conta) {
+  const doc = {
+    Version: "2012-10-17",
+    Statement: [
+      {
+        Sid: "PermitirLeituraS3",
+        Effect: "Allow",
+        Action: ["s3:Get*", "s3:List*"],
+        Resource: "*",
+      },
+    ],
+  };
+  conta.iam.policies["lab_policy"] = {
+    nome: "lab_policy",
+    arn: `arn:aws:iam::${conta.contaId}:policy/lab_policy`,
+    scope: "Local",
+    defaultVersionId: "v1",
+    criadoEm: "2026-01-15T12:00:00+00:00",
+    versions: { v1: { documento: doc, criadoEm: "2026-01-15T12:00:00+00:00" } },
   };
 }
+
+// Políticas gerenciadas PELA AWS (aparecem em list-policies --scope AWS/All).
+const POLITICAS_AWS = [
+  "AmazonS3ReadOnlyAccess",
+  "AmazonS3FullAccess",
+  "AmazonDynamoDBFullAccess",
+  "AmazonEC2FullAccess",
+  "IAMReadOnlyAccess",
+  "AdministratorAccess",
+];
 
 // ---------- "Disco local" fictício (pra cp, sync, fileb:// etc.) ----------
 const ARQUIVOS_LOCAIS = {
@@ -606,7 +643,158 @@ const cmdIam = {
     if (!r.politicas.includes(arn)) r.politicas.push(arn);
     return "";
   },
+
+  // ----- Políticas gerenciadas pelo cliente (customer managed) -----
+  "create-policy": (conta, pos, flags) => {
+    const nome = exigirFlag(flags, "policy-name");
+    if (conta.iam.policies[nome]) throw new ErroCli(`An error occurred (EntityAlreadyExists) when calling the CreatePolicy operation: A policy called ${nome} already exists.`);
+    const doc = exigirFlag(flags, "policy-document");
+    let documento;
+    if (doc.startsWith("file://")) {
+      if (!arquivoLocal(doc.slice(7))) throw new ErroCli(`Error parsing parameter '--policy-document': Unable to load paramfile ${doc}: arquivo não existe. Digite 'ls' (existe um politica-publica.json pronto).`);
+      documento = { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: "s3:*", Resource: "*" }] };
+    } else {
+      try { documento = JSON.parse(doc); }
+      catch (e) { throw new ErroCli("An error occurred (MalformedPolicyDocument) when calling the CreatePolicy operation: o documento precisa ser JSON válido."); }
+    }
+    conta.iam.policies[nome] = {
+      nome,
+      arn: arnIam(conta, "policy", nome),
+      scope: "Local",
+      defaultVersionId: "v1",
+      criadoEm: agoraIso(),
+      versions: { v1: { documento, criadoEm: agoraIso() } },
+    };
+    const p = conta.iam.policies[nome];
+    return js({ Policy: { PolicyName: nome, Arn: p.arn, DefaultVersionId: "v1", CreateDate: p.criadoEm } });
+  },
+
+  "list-policies": (conta, pos, flags) => {
+    const escopo = typeof flags.scope === "string" ? flags.scope : "All";
+    if (!["Local", "AWS", "All"].includes(escopo)) throw new ErroCli(`An error occurred (ValidationError) when calling the ListPolicies operation: --scope precisa ser Local, AWS ou All (recebido '${escopo}').`);
+    const locais = Object.values(conta.iam.policies).map((p) => ({
+      PolicyName: p.nome,
+      Arn: p.arn,
+      DefaultVersionId: p.defaultVersionId,
+      CreateDate: p.criadoEm,
+    }));
+    const awsManaged = POLITICAS_AWS.map((n) => ({
+      PolicyName: n,
+      Arn: `arn:aws:iam::aws:policy/${n}`,
+      DefaultVersionId: "v1",
+    }));
+    let lista = [];
+    if (escopo === "Local") lista = locais;
+    else if (escopo === "AWS") lista = awsManaged;
+    else lista = [...locais, ...awsManaged];
+    return js({ Policies: lista });
+  },
+
+  "get-policy": (conta, pos, flags) => {
+    const p = exigirPolitica(conta, flags, "GetPolicy");
+    return js({ Policy: { PolicyName: p.nome, Arn: p.arn, DefaultVersionId: p.defaultVersionId, CreateDate: p.criadoEm } });
+  },
+
+  "list-policy-versions": (conta, pos, flags) => {
+    const p = exigirPolitica(conta, flags, "ListPolicyVersions");
+    return js({
+      Versions: Object.entries(p.versions).map(([vid, v]) => ({
+        VersionId: vid,
+        IsDefaultVersion: vid === p.defaultVersionId,
+        CreateDate: v.criadoEm,
+      })),
+    });
+  },
+
+  "get-policy-version": (conta, pos, flags) => {
+    const p = exigirPolitica(conta, flags, "GetPolicyVersion");
+    const vid = exigirFlag(flags, "version-id");
+    const v = p.versions[vid];
+    if (!v) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the GetPolicyVersion operation: Policy ${p.arn} version ${vid} does not exist or is not attachable.`);
+    return js({ PolicyVersion: { Document: v.documento, VersionId: vid, IsDefaultVersion: vid === p.defaultVersionId, CreateDate: v.criadoEm } });
+  },
+
+  "create-policy-version": (conta, pos, flags) => {
+    const p = exigirPolitica(conta, flags, "CreatePolicyVersion");
+    const doc = exigirFlag(flags, "policy-document");
+    let documento;
+    if (doc.startsWith("file://")) {
+      if (!arquivoLocal(doc.slice(7))) throw new ErroCli(`Error parsing parameter '--policy-document': Unable to load paramfile ${doc}: arquivo não existe.`);
+      documento = { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: "s3:*", Resource: "*" }] };
+    } else {
+      try { documento = JSON.parse(doc); }
+      catch (e) { throw new ErroCli("An error occurred (MalformedPolicyDocument) when calling the CreatePolicyVersion operation: JSON inválido."); }
+    }
+    const num = Object.keys(p.versions).length + 1;
+    const vid = "v" + num;
+    p.versions[vid] = { documento, criadoEm: agoraIso() };
+    if (flags["set-as-default"] !== undefined) p.defaultVersionId = vid;
+    return js({ PolicyVersion: { VersionId: vid, IsDefaultVersion: vid === p.defaultVersionId, CreateDate: p.versions[vid].criadoEm } });
+  },
+
+  "delete-policy": (conta, pos, flags) => {
+    const p = exigirPolitica(conta, flags, "DeletePolicy");
+    delete conta.iam.policies[p.nome];
+    return "";
+  },
+
+  // ----- Desanexar e remover (gestão / faxina) -----
+  "detach-user-policy": (conta, pos, flags) => {
+    const u = conta.iam.usuarios[exigirFlag(flags, "user-name")];
+    if (!u) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DetachUserPolicy operation: o usuário não existe.");
+    const arn = exigirArnPolitica(flags);
+    u.politicas = u.politicas.filter((a) => a !== arn);
+    return "";
+  },
+
+  "detach-group-policy": (conta, pos, flags) => {
+    const g = conta.iam.grupos[exigirFlag(flags, "group-name")];
+    if (!g) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DetachGroupPolicy operation: o grupo não existe.");
+    const arn = exigirArnPolitica(flags);
+    g.politicas = g.politicas.filter((a) => a !== arn);
+    return "";
+  },
+
+  "detach-role-policy": (conta, pos, flags) => {
+    const r = conta.iam.roles[exigirFlag(flags, "role-name")];
+    if (!r) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DetachRolePolicy operation: a role não existe.");
+    const arn = exigirArnPolitica(flags);
+    r.politicas = r.politicas.filter((a) => a !== arn);
+    return "";
+  },
+
+  "remove-user-from-group": (conta, pos, flags) => {
+    const usuario = exigirFlag(flags, "user-name");
+    const g = conta.iam.grupos[exigirFlag(flags, "group-name")];
+    if (!g) throw new ErroCli("An error occurred (NoSuchEntity) when calling the RemoveUserFromGroup operation: o grupo não existe.");
+    g.membros = g.membros.filter((m) => m !== usuario);
+    return "";
+  },
+
+  "delete-group": (conta, pos, flags) => {
+    const nome = exigirFlag(flags, "group-name");
+    const g = conta.iam.grupos[nome];
+    if (!g) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteGroup operation: The group with name ${nome} cannot be found.`);
+    if (g.membros.length) throw new ErroCli(`An error occurred (DeleteConflict) when calling the DeleteGroup operation: Cannot delete entity, must remove users from group first. Use remove-user-from-group antes.`);
+    delete conta.iam.grupos[nome];
+    return "";
+  },
+
+  "delete-role": (conta, pos, flags) => {
+    const nome = exigirFlag(flags, "role-name");
+    if (!conta.iam.roles[nome]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteRole operation: Role ${nome} cannot be found.`);
+    delete conta.iam.roles[nome];
+    return "";
+  },
 };
+
+// Acha uma política (gerenciada pelo cliente) pelo --policy-arn.
+function exigirPolitica(conta, flags, operacao) {
+  const arn = exigirFlag(flags, "policy-arn");
+  const p = Object.values(conta.iam.policies).find((x) => x.arn === arn);
+  if (!p) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the ${operacao} operation: Policy ${arn} does not exist or is not attachable.\nDica: pegue o ARN certo com 'aws iam list-policies --scope Local'.`);
+  return p;
+}
 
 // ---------- Lambda ----------
 const RUNTIMES = ["python3.11", "python3.12", "python3.13", "nodejs18.x", "nodejs20.x", "nodejs22.x", "java21", "ruby3.3", "go1.x"];
@@ -827,9 +1015,84 @@ const SERVICOS = {
   sts: cmdSts,
 };
 
+// ---------- --query (JMESPath enxuto) e --output ----------
+// Suporta o essencial pro curso: caminhos com ponto, [*] / [], índice [n]
+// e filtro [?Campo=='valor']. Acessar um campo numa lista mapeia sobre ela.
+function consultaJmes(valor, expr) {
+  for (const seg of String(expr).split(".")) {
+    const m = /^([A-Za-z_]\w*)?(.*)$/.exec(seg);
+    const id = m[1];
+    let resto = m[2];
+    if (id) valor = acessar(valor, id);
+    let br;
+    const reBr = /\[([^\]]*)\]/g;
+    while ((br = reBr.exec(resto))) {
+      const dentro = br[1];
+      if (dentro === "*" || dentro === "") {
+        // projeção: mantém a lista como está
+      } else if (/^\?/.test(dentro)) {
+        // o valor pode chegar com ou sem aspas (o tokenizer já as remove)
+        const f = /^\?\s*([A-Za-z_]\w*)\s*==\s*(.+?)\s*$/.exec(dentro);
+        if (f && Array.isArray(valor)) {
+          const alvo = f[2].replace(/^'(.*)'$/, "$1").replace(/^"(.*)"$/, "$1");
+          valor = valor.filter((v) => v && String(v[f[1]]) === alvo);
+        }
+      } else if (/^\d+$/.test(dentro)) {
+        valor = Array.isArray(valor) ? valor[parseInt(dentro, 10)] : undefined;
+      }
+    }
+  }
+  return valor;
+}
+
+function acessar(valor, id) {
+  if (Array.isArray(valor)) return valor.map((v) => (v == null ? null : v[id]));
+  if (valor && typeof valor === "object") return valor[id];
+  return undefined;
+}
+
+function formatarTexto(valor) {
+  if (valor == null) return "None";
+  if (Array.isArray(valor)) {
+    return valor
+      .map((v) => (v && typeof v === "object" ? Object.values(v).join("\t") : String(v)))
+      .join("\n");
+  }
+  if (typeof valor === "object") return Object.values(valor).join("\t");
+  return String(valor);
+}
+
+function aplicarQueryEOutput(saida, flags) {
+  let valor;
+  try { valor = JSON.parse(saida); }
+  catch (e) { return saida; } // saída não-JSON (texto puro): deixa como está
+  if (typeof flags.query === "string") valor = consultaJmes(valor, flags.query);
+  const formato = typeof flags.output === "string" ? flags.output : "json";
+  if (formato === "text") return formatarTexto(valor);
+  return js(valor);
+}
+
 // ---------- Dispatcher principal ----------
-// Retorna { ok, saida, cmd } — cmd é o comando parseado (ou null).
+// Wrapper: trata o redirecionamento ">" (salva a saída num arquivo virtual)
+// e delega a execução do comando AWS pro executarComandoAwsBase.
 function executarComandoAws(conta, linha) {
+  let alvo = null;
+  const m = /\s>\s*([^\s>|]+)\s*$/.exec(linha);
+  if (m) {
+    alvo = m[1];
+    linha = linha.slice(0, m.index);
+  }
+  const r = executarComandoAwsBase(conta, linha);
+  if (alvo && r.ok) {
+    conta.arquivosSalvos = conta.arquivosSalvos || {};
+    conta.arquivosSalvos[alvo] = r.saida;
+    return { ok: true, saida: `(saída salva em ${alvo})`, cmd: r.cmd };
+  }
+  return r;
+}
+
+// Retorna { ok, saida, cmd } — cmd é o comando parseado (ou null).
+function executarComandoAwsBase(conta, linha) {
   let tokens;
   try {
     tokens = tokenizar(linha);
@@ -874,7 +1137,10 @@ function executarComandoAws(conta, linha) {
   const { posicionais, flags } = parsearArgs(tokens.slice(3));
   const cmd = { servico, sub, posicionais, flags, linha };
   try {
-    const saida = handler(conta, posicionais, flags);
+    let saida = handler(conta, posicionais, flags);
+    if (flags.query !== undefined || flags.output !== undefined) {
+      saida = aplicarQueryEOutput(saida, flags);
+    }
     return { ok: true, saida, cmd };
   } catch (e) {
     if (e instanceof ErroCli) return { ok: false, saida: e.message, cmd };

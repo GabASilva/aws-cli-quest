@@ -269,12 +269,22 @@ function executarLinha(linha) {
     return;
   }
   if (comando === "ls") {
-    imprimir(listarArquivosLocais());
+    const salvos = Object.keys(jogo.conta.arquivosSalvos || {});
+    const extra = salvos.length ? "\n" + salvos.sort().join("\n") + "   (criados por você)" : "";
+    imprimir(listarArquivosLocais() + extra);
     rolarTerminal();
     return;
   }
   if (comando === "help") {
     imprimir(obterManual(""));
+    rolarTerminal();
+    return;
+  }
+  if (comando.startsWith("cat ")) {
+    const nome = comando.slice(4).trim();
+    const salvos = jogo.conta.arquivosSalvos || {};
+    if (salvos[nome] !== undefined) imprimir(salvos[nome]);
+    else imprimir(`cat: ${nome}: arquivo não encontrado. Use 'ls' pra ver os arquivos (os criados com '>' aparecem lá).`, "erro");
     rolarTerminal();
     return;
   }
