@@ -31,8 +31,32 @@ function carregarBd() {
     if (!bd.usuarios) bd.usuarios = {};
     if (!bd.sessoes) bd.sessoes = {};
     if (!bd.codigos) bd.codigos = {};
+    if (!bd.resets) bd.resets = {};
   } catch (e) {
-    bd = { usuarios: {}, sessoes: {}, codigos: {} };
+    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {} };
+  }
+}
+
+// ---------- E-mail (Resend) ----------
+const EMAIL_VALIDO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+async function enviarEmail(para, assunto, html) {
+  if (!process.env.RESEND_KEY) {
+    console.log(`[e-mail DEV → ${para}] ${assunto} :: ${html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}`);
+    return;
+  }
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + process.env.RESEND_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || "AWS CLI Quest <onboarding@resend.dev>",
+        to: para,
+        subject: assunto,
+        html,
+      }),
+    });
+  } catch (e) {
+    console.error("falha ao enviar e-mail:", e.message);
   }
 }
 
@@ -272,11 +296,14 @@ async function tratarApi(req, res, rota) {
     const erro = validarCadastro(nome, corpo.senha);
     if (erro) return responderJson(res, 400, { erro });
     if (bd.usuarios[nome]) return responderJson(res, 409, { erro: "Esse usuário já existe. Escolha outro nome ou faça login." });
+    const email = String(corpo.email || "").trim().toLowerCase();
+    if (email && !EMAIL_VALIDO.test(email)) return responderJson(res, 400, { erro: "E-mail inválido." });
+    if (email && Object.values(bd.usuarios).some((u) => u.email === email)) return responderJson(res, 409, { erro: "Esse e-mail já está em uso." });
     const { salt, hash } = criarSenha(String(corpo.senha));
-    bd.usuarios[nome] = { salt, hash, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
+    bd.usuarios[nome] = { salt, hash, email: email || null, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
     salvarBd();
     const token = novaSessao(nome);
-    return responderJson(res, 201, { token, perfil: perfilPublico(nome), licenca: licencaPublica(bd.usuarios[nome]) });
+    return responderJson(res, 201, { token, perfil: perfilPublico(nome), licenca: licencaPublica(bd.usuarios[nome]), email: email || null });
   }
 
   // POST /api/login { usuario, senha }
@@ -305,7 +332,7 @@ async function tratarApi(req, res, rota) {
     }
     limparFalhasLogin(nome);
     const token = novaSessao(nome);
-    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa });
+    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null });
   }
 
   // GET /api/eu  (Authorization: Bearer <token>)
@@ -313,7 +340,7 @@ async function tratarApi(req, res, rota) {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
     const u = bd.usuarios[nome];
-    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa });
+    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null });
   }
 
   // POST /api/progresso { xp, melhorStreak, progresso }  (autenticado)
@@ -410,6 +437,67 @@ async function tratarApi(req, res, rota) {
     } catch (e) {
       return responderJson(res, 502, { erro: "Falha ao falar com o Mercado Pago: " + e.message });
     }
+  }
+
+  // POST /api/email  (autenticado, { email }) — define/atualiza o e-mail da conta
+  if (rota === "/api/email" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const corpo = await lerCorpo(req);
+    const email = String(corpo.email || "").trim().toLowerCase();
+    if (!EMAIL_VALIDO.test(email)) return responderJson(res, 400, { erro: "E-mail inválido." });
+    if (Object.entries(bd.usuarios).some(([n, u]) => n !== nome && u.email === email)) {
+      return responderJson(res, 409, { erro: "Esse e-mail já está em uso por outra conta." });
+    }
+    bd.usuarios[nome].email = email;
+    salvarBd();
+    return responderJson(res, 200, { ok: true, email });
+  }
+
+  // POST /api/senha/esqueci  { email } — envia link de redefinição (não revela se existe)
+  if (rota === "/api/senha/esqueci" && req.method === "POST") {
+    if (!dentroDoLimite("esqueci:" + ipDe(req), 5, 3600000)) {
+      return responderJson(res, 429, { erro: "Muitos pedidos. Tente daqui a pouco." });
+    }
+    const corpo = await lerCorpo(req);
+    const email = String(corpo.email || "").trim().toLowerCase();
+    const entrada = Object.entries(bd.usuarios).find(([n, u]) => u.email && u.email === email);
+    if (entrada) {
+      const token = crypto.randomBytes(24).toString("hex");
+      bd.resets[token] = { usuario: entrada[0], expira: Date.now() + 3600000 }; // 1h
+      salvarBd();
+      const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+      const link = `${base}/?reset=${token}`;
+      await enviarEmail(
+        email,
+        "Redefinir sua senha — AWS CLI Quest",
+        `<p>Olá, <strong>${entrada[0]}</strong>!</p><p>Recebemos um pedido pra redefinir sua senha no AWS CLI Quest. Clique no link abaixo (vale por 1 hora):</p><p><a href="${link}">${link}</a></p><p>Se não foi você, pode ignorar este e-mail — sua senha continua a mesma.</p>`
+      );
+    }
+    // resposta sempre igual, exista ou não a conta (não vaza quais e-mails existem)
+    return responderJson(res, 200, { ok: true, msg: "Se existe uma conta com esse e-mail, enviamos o link de redefinição." });
+  }
+
+  // POST /api/senha/redefinir  { token, senha } — troca a senha e derruba as sessões
+  if (rota === "/api/senha/redefinir" && req.method === "POST") {
+    const corpo = await lerCorpo(req);
+    const token = String(corpo.token || "");
+    const r = bd.resets[token];
+    if (!r || r.expira < Date.now()) {
+      if (r) delete bd.resets[token];
+      return responderJson(res, 400, { erro: "Link inválido ou expirado. Peça um novo." });
+    }
+    const erroSenha = validarCadastro("aaa", corpo.senha); // reusa só a regra de senha
+    if (erroSenha && /[Ss]enha/.test(erroSenha)) return responderJson(res, 400, { erro: erroSenha });
+    const u = bd.usuarios[r.usuario];
+    if (!u) { delete bd.resets[token]; return responderJson(res, 400, { erro: "Conta não encontrada." }); }
+    const { salt, hash } = criarSenha(String(corpo.senha));
+    u.salt = salt;
+    u.hash = hash;
+    delete bd.resets[token];
+    for (const [t, s] of Object.entries(bd.sessoes)) if (s.usuario === r.usuario) delete bd.sessoes[t]; // derruba sessões
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
   }
 
   // POST /api/2fa/iniciar  (autenticado) — gera um segredo provisório

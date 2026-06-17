@@ -129,7 +129,43 @@
     modal.addEventListener("click", (e) => { if (e.target === modal) fecharModais(); });
 
     atualizarBotaoSeguranca();
+
+    // chegou pelo link de redefinição de senha? (?reset=TOKEN)
+    const token = new URLSearchParams(location.search).get("reset");
+    if (token) abrirRedefinir(token);
   });
+
+  function abrirRedefinir(token) {
+    const modal = document.createElement("div");
+    modal.className = "modal aberto";
+    modal.id = "modalReset";
+    modal.innerHTML = `
+      <div class="modal-caixa">
+        <h2>🔑 Redefinir senha</h2>
+        <p class="conta-explica">Crie uma nova senha pra sua conta (mínimo 6 caracteres).</p>
+        <div class="linha-codigo">
+          <input id="resetSenha" type="password" maxlength="60" placeholder="nova senha" autocomplete="off">
+          <button class="botao" id="btnRedefinir">Salvar</button>
+        </div>
+        <p class="codigo-erro" id="resetErro"></p>
+      </div>`;
+    document.body.appendChild(modal);
+    const limparUrl = () => history.replaceState(null, "", location.pathname);
+    modal.querySelector("#btnRedefinir").addEventListener("click", async () => {
+      const senha = modal.querySelector("#resetSenha").value;
+      const erro = modal.querySelector("#resetErro");
+      erro.textContent = "";
+      try {
+        await apiRedefinirSenha(token, senha);
+        modal.remove();
+        limparUrl();
+        toast("✅ Senha redefinida! Agora é só entrar com a nova senha.", "sucesso");
+        if (typeof abrirModalConta === "function") abrirModalConta();
+      } catch (e) {
+        erro.textContent = e.message || "Não consegui redefinir. Peça um novo link.";
+      }
+    });
+  }
 
   // atualiza a visibilidade do botão quando entra/sai da conta
   const atualizarBotaoContaOriginal = window.atualizarBotaoConta;

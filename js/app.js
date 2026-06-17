@@ -403,6 +403,7 @@ function abrirModalConta() {
   $("#contaErro").textContent = "";
   $("#campoUsuario").value = "";
   $("#campoSenha").value = "";
+  $("#campoEmail").value = "";
   trocarAbaConta("login");
   $("#modalConta").classList.add("aberto");
   $("#campoUsuario").focus();
@@ -413,6 +414,8 @@ function trocarAbaConta(aba) {
   document.querySelectorAll(".aba-conta").forEach((b) => b.classList.toggle("ativa", b.dataset.aba === aba));
   $("#contaTitulo").textContent = aba === "login" ? "👤 Entrar na sua conta" : "✨ Criar uma conta";
   $("#btnEnviarConta").textContent = aba === "login" ? "Entrar" : "Criar conta e jogar";
+  $("#labelEmail").style.display = aba === "cadastro" ? "" : "none"; // e-mail só no cadastro
+  $("#linkEsqueci").parentElement.style.display = aba === "login" ? "" : "none";
   $("#contaErro").textContent = "";
 }
 
@@ -433,7 +436,7 @@ async function enviarConta(ev) {
         r = await apiLogin(usuario, senha, codigo.trim());
       }
     } else {
-      r = await apiCadastrar(usuario, senha);
+      r = await apiCadastrar(usuario, senha, $("#campoEmail").value.trim());
     }
     // vincula à conta o que foi jogado deslogado (em vez de descartar)
     const res = entrarComConta(r.perfil, r.progresso);
@@ -456,6 +459,20 @@ async function enviarConta(ev) {
     $("#contaErro").textContent = e.message || "Não rolou. Tente de novo.";
   } finally {
     btn.disabled = false;
+  }
+}
+
+async function aoEsquecerSenha(ev) {
+  if (ev) ev.preventDefault();
+  const sugestao = $("#campoEmail") ? $("#campoEmail").value.trim() : "";
+  const email = window.prompt("Digite o e-mail cadastrado na sua conta pra receber o link de redefinição:", sugestao);
+  if (!email) return;
+  try {
+    const r = await apiEsqueciSenha(email.trim());
+    fecharModais();
+    toast(r.msg || "Se existe uma conta com esse e-mail, enviamos o link de redefinição. 📧", "sucesso");
+  } catch (e) {
+    toast(e.message || "Não consegui enviar agora. Tente mais tarde.", "neutro");
   }
 }
 
@@ -500,6 +517,7 @@ async function iniciar() {
   $("#btnConta").addEventListener("click", abrirModalConta);
   $("#formConta").addEventListener("submit", enviarConta);
   document.querySelectorAll(".aba-conta").forEach((b) => b.addEventListener("click", () => trocarAbaConta(b.dataset.aba)));
+  $("#linkEsqueci").addEventListener("click", aoEsquecerSenha);
   $("#btnSalvarNome").addEventListener("click", () => {
     const nome = $("#nomeJogador").value.trim();
     if (nome) {

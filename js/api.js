@@ -12,6 +12,7 @@ const api = {
   usuario: null, // nome do usuário logado (null = anônimo/local)
   licenca: { tier: "free", pro: false }, // licença efetiva do usuário
   twofa: false, // 2FA ativado nesta conta?
+  email: null, // e-mail cadastrado (pra recuperação de senha)
 };
 
 function temPro() {
@@ -51,7 +52,8 @@ async function apiIniciar() {
     api.usuario = r.perfil.usuario;
     api.licenca = r.licenca || { tier: "free", pro: false };
     api.twofa = !!r.twofa;
-    return r; // { perfil, progresso, licenca, twofa }
+    api.email = r.email || null;
+    return r; // { perfil, progresso, licenca, twofa, email }
   } catch (e) {
     api.token = null;
     try { localStorage.removeItem(CHAVE_TOKEN); } catch (_) { /* ok */ }
@@ -59,11 +61,12 @@ async function apiIniciar() {
   }
 }
 
-async function apiCadastrar(usuario, senha) {
-  const r = await apiFetch("/api/cadastrar", { method: "POST", body: JSON.stringify({ usuario, senha }) });
+async function apiCadastrar(usuario, senha, email) {
+  const r = await apiFetch("/api/cadastrar", { method: "POST", body: JSON.stringify({ usuario, senha, email }) });
   api.token = r.token;
   api.usuario = r.perfil.usuario;
   api.licenca = r.licenca || { tier: "free", pro: false };
+  api.email = r.email || null;
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -77,6 +80,7 @@ async function apiLogin(usuario, senha, codigo) {
   api.usuario = r.perfil.usuario;
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.twofa = !!r.twofa;
+  api.email = r.email || null;
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -102,6 +106,19 @@ async function api2faDesativar(senha) {
   const r = await apiFetch("/api/2fa/desativar", { method: "POST", body: JSON.stringify({ senha }) });
   api.twofa = false;
   return r;
+}
+
+// ---------- E-mail / recuperação de senha ----------
+async function apiDefinirEmail(email) {
+  const r = await apiFetch("/api/email", { method: "POST", body: JSON.stringify({ email }) });
+  api.email = r.email || email;
+  return r;
+}
+async function apiEsqueciSenha(email) {
+  return apiFetch("/api/senha/esqueci", { method: "POST", body: JSON.stringify({ email }) });
+}
+async function apiRedefinirSenha(token, senha) {
+  return apiFetch("/api/senha/redefinir", { method: "POST", body: JSON.stringify({ token, senha }) });
 }
 
 // Planos/preços e se o checkout automático está ativo.

@@ -358,6 +358,10 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 #formConta .botao { width: 100%; margin-top: 4px; padding: 10px; }
 .conta-erro { color: var(--vermelho); font-size: 0.84rem; min-height: 1.1em; margin: 0 0 8px; }
 .conta-aviso { color: var(--texto-fraco); font-size: 0.76rem; margin: 12px 0 0; text-align: center; }
+.conta-link { text-align: center; margin: 8px 0 0; font-size: 0.84rem; }
+.conta-link a { color: var(--azul); text-decoration: none; }
+.conta-link a:hover { text-decoration: underline; }
+#labelEmail small { color: var(--texto-fraco); font-weight: 400; }
 
 /* ---------- Toasts ---------- */
 #toasts {

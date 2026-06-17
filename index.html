@@ -75,14 +75,18 @@
         <label>Usuário
           <input id="campoUsuario" maxlength="20" placeholder="ex.: gabriel" autocomplete="off" spellcheck="false">
         </label>
+        <label id="labelEmail" style="display:none">E-mail <small>(pra recuperar a senha)</small>
+          <input id="campoEmail" type="email" maxlength="120" placeholder="voce@exemplo.com" autocomplete="off">
+        </label>
         <label>Senha
-          <input id="campoSenha" type="password" maxlength="60" placeholder="mínimo 4 caracteres" autocomplete="off">
+          <input id="campoSenha" type="password" maxlength="60" placeholder="mínimo 6 caracteres" autocomplete="off">
         </label>
         <p class="conta-erro" id="contaErro"></p>
         <button class="botao" id="btnEnviarConta" type="submit">Entrar</button>
       </form>
+      <p class="conta-link"><a href="#" id="linkEsqueci">Esqueci minha senha</a></p>
       <p class="conta-aviso">
-        ⚠️ Isto é um joguinho educativo — <strong>não use uma senha de verdade</strong>.
+        ⚠️ Use uma senha que você não usa em outros sites.
       </p>
       <div class="modal-acoes">
         <button class="botao secundario" data-fechar>Fechar</button>
