@@ -528,6 +528,28 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 .custom-linha small { color: var(--texto-fraco); font-weight: 400; }
 .custom-linha .botao { white-space: nowrap; }
 
+/* ---------- Segurança / 2FA ---------- */
+.seg-status.ok { color: var(--verde); }
+.seg-passos { font-size: 0.86rem; color: var(--texto); line-height: 1.5; padding-left: 18px; }
+.seg-segredo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+.seg-segredo code {
+  flex: 1;
+  background: #0b0f17;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--fonte-mono);
+  font-size: 1rem;
+  letter-spacing: 2px;
+  color: var(--laranja);
+  word-break: break-all;
+}
+
 .resgatar-bloco { margin-top: 14px; }
 .resgatar-bloco label { display: block; font-size: 0.82rem; color: var(--texto-fraco); margin-bottom: 6px; }
 .linha-codigo { display: flex; gap: 8px; }

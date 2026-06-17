@@ -11,6 +11,7 @@ const api = {
   token: null, // token de sessão
   usuario: null, // nome do usuário logado (null = anônimo/local)
   licenca: { tier: "free", pro: false }, // licença efetiva do usuário
+  twofa: false, // 2FA ativado nesta conta?
 };
 
 function temPro() {
@@ -49,7 +50,8 @@ async function apiIniciar() {
     const r = await apiFetch("/api/eu");
     api.usuario = r.perfil.usuario;
     api.licenca = r.licenca || { tier: "free", pro: false };
-    return r; // { perfil, progresso, licenca }
+    api.twofa = !!r.twofa;
+    return r; // { perfil, progresso, licenca, twofa }
   } catch (e) {
     api.token = null;
     try { localStorage.removeItem(CHAVE_TOKEN); } catch (_) { /* ok */ }
@@ -66,11 +68,15 @@ async function apiCadastrar(usuario, senha) {
   return r;
 }
 
-async function apiLogin(usuario, senha) {
-  const r = await apiFetch("/api/login", { method: "POST", body: JSON.stringify({ usuario, senha }) });
+// Login. Se a conta tiver 2FA, a 1ª chamada (sem código) volta { precisa2fa: true };
+// chame de novo passando o código do app autenticador.
+async function apiLogin(usuario, senha, codigo) {
+  const r = await apiFetch("/api/login", { method: "POST", body: JSON.stringify({ usuario, senha, codigo }) });
+  if (r.precisa2fa) return r; // ainda não logou — falta o 2º fator
   api.token = r.token;
   api.usuario = r.perfil.usuario;
   api.licenca = r.licenca || { tier: "free", pro: false };
+  api.twofa = !!r.twofa;
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -79,7 +85,23 @@ function apiSair() {
   api.token = null;
   api.usuario = null;
   api.licenca = { tier: "free", pro: false };
+  api.twofa = false;
   try { localStorage.removeItem(CHAVE_TOKEN); } catch (e) { /* ok */ }
+}
+
+// ---------- 2FA ----------
+async function api2faIniciar() {
+  return apiFetch("/api/2fa/iniciar", { method: "POST", body: "{}" });
+}
+async function api2faAtivar(codigo) {
+  const r = await apiFetch("/api/2fa/ativar", { method: "POST", body: JSON.stringify({ codigo }) });
+  api.twofa = true;
+  return r;
+}
+async function api2faDesativar(senha) {
+  const r = await apiFetch("/api/2fa/desativar", { method: "POST", body: JSON.stringify({ senha }) });
+  api.twofa = false;
+  return r;
 }
 
 // Planos/preços e se o checkout automático está ativo.

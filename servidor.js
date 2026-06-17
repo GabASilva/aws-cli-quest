@@ -70,9 +70,48 @@ function conferirSenha(senha, salt, hashEsperado) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+// ---------- 2FA (TOTP, compatível com Google Authenticator/Authy — sem deps) ----------
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function base32Encode(buf) {
+  let bits = 0, valor = 0, saida = "";
+  for (const b of buf) {
+    valor = (valor << 8) | b; bits += 8;
+    while (bits >= 5) { saida += B32[(valor >>> (bits - 5)) & 31]; bits -= 5; }
+  }
+  if (bits > 0) saida += B32[(valor << (5 - bits)) & 31];
+  return saida;
+}
+function base32Decode(str) {
+  let bits = 0, valor = 0; const out = [];
+  for (const ch of String(str).toUpperCase().replace(/[^A-Z2-7]/g, "")) {
+    valor = (valor << 5) | B32.indexOf(ch); bits += 5;
+    if (bits >= 8) { out.push((valor >>> (bits - 8)) & 0xff); bits -= 8; }
+  }
+  return Buffer.from(out);
+}
+function totp(secretB32, t) {
+  let contador = Math.floor((t || Date.now()) / 1000 / 30);
+  const buf = Buffer.alloc(8);
+  for (let i = 7; i >= 0; i--) { buf[i] = contador & 0xff; contador = Math.floor(contador / 256); }
+  const h = crypto.createHmac("sha1", base32Decode(secretB32)).update(buf).digest();
+  const off = h[h.length - 1] & 0x0f;
+  const cod = (((h[off] & 0x7f) << 24) | ((h[off + 1] & 0xff) << 16) | ((h[off + 2] & 0xff) << 8) | (h[off + 3] & 0xff)) % 1000000;
+  return String(cod).padStart(6, "0");
+}
+function verificarTotp(secretB32, codigo) {
+  const c = String(codigo || "").replace(/\s/g, "");
+  if (!/^\d{6}$/.test(c)) return false;
+  for (let w = -1; w <= 1; w++) { // tolera ±30s de defasagem de relógio
+    if (totp(secretB32, Date.now() + w * 30000) === c) return true;
+  }
+  return false;
+}
+
 // ---------- Sessões ----------
+const SESSAO_TTL_MS = 30 * 86400000; // token vale 30 dias
+
 function novaSessao(nomeUsuario) {
-  const token = crypto.randomBytes(24).toString("hex");
+  const token = crypto.randomBytes(32).toString("hex");
   bd.sessoes[token] = { usuario: nomeUsuario, criadoEm: Date.now() };
   return token;
 }
@@ -80,8 +119,49 @@ function novaSessao(nomeUsuario) {
 function usuarioDoToken(token) {
   const s = token && bd.sessoes[token];
   if (!s) return null;
+  if (Date.now() - s.criadoEm > SESSAO_TTL_MS) { delete bd.sessoes[token]; return null; }
   return bd.usuarios[s.usuario] ? s.usuario : null;
 }
+
+function limparExpirados() {
+  const agora = Date.now();
+  for (const [t, s] of Object.entries(bd.sessoes)) {
+    if (agora - s.criadoEm > SESSAO_TTL_MS) delete bd.sessoes[t];
+  }
+  for (const [k, arr] of _janela) {
+    if (!arr.some((t) => agora - t < 3600000)) _janela.delete(k);
+  }
+}
+
+// ---------- Proteção contra abuso (rate limit + bloqueio de login) ----------
+function ipDe(req) {
+  return (
+    req.headers["fly-client-ip"] ||
+    String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    (req.socket && req.socket.remoteAddress) ||
+    "?"
+  );
+}
+const _janela = new Map(); // chave -> [timestamps] (janela deslizante)
+function dentroDoLimite(chave, max, janelaMs) {
+  const agora = Date.now();
+  const arr = (_janela.get(chave) || []).filter((t) => agora - t < janelaMs);
+  arr.push(agora);
+  _janela.set(chave, arr);
+  return arr.length <= max;
+}
+const _falhasLogin = new Map(); // usuario -> { n, ate }
+function segundosBloqueado(nome) {
+  const f = _falhasLogin.get(nome);
+  return f && f.ate > Date.now() ? Math.ceil((f.ate - Date.now()) / 1000) : 0;
+}
+function registrarFalhaLogin(nome) {
+  const f = _falhasLogin.get(nome) || { n: 0, ate: 0 };
+  f.n++;
+  if (f.n >= 5) f.ate = Date.now() + Math.min(15 * 60000, (f.n - 4) * 60000); // 1min → até 15min
+  _falhasLogin.set(nome, f);
+}
+function limparFalhasLogin(nome) { _falhasLogin.delete(nome); }
 
 // ---------- Validação ----------
 const NOME_VALIDO = /^[a-zA-Z0-9_.-]{3,20}$/;
@@ -90,8 +170,11 @@ function validarCadastro(nome, senha) {
   if (!nome || !NOME_VALIDO.test(nome)) {
     return "Usuário inválido: use 3 a 20 caracteres (letras, números, ponto, hífen ou _).";
   }
-  if (!senha || String(senha).length < 4) {
-    return "Senha muito curta: use pelo menos 4 caracteres.";
+  if (!senha || String(senha).length < 6) {
+    return "Senha muito curta: use pelo menos 6 caracteres.";
+  }
+  if (String(senha).length > 200) {
+    return "Senha longa demais.";
   }
   return null;
 }
@@ -115,9 +198,16 @@ function lerCorpo(req) {
   });
 }
 
+// headers de segurança aplicados em TODA resposta
+const HEADERS_SEG = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY", // anti-clickjacking (ninguém embute o app num iframe)
+  "Referrer-Policy": "no-referrer",
+};
+
 function responderJson(res, status, obj) {
   const corpo = JSON.stringify(obj);
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...HEADERS_SEG });
   res.end(corpo);
 }
 
@@ -174,6 +264,9 @@ function concederLicenca(u, tier, opts) {
 async function tratarApi(req, res, rota) {
   // POST /api/cadastrar { usuario, senha }
   if (rota === "/api/cadastrar" && req.method === "POST") {
+    if (!dentroDoLimite("cad:" + ipDe(req), 5, 3600000)) {
+      return responderJson(res, 429, { erro: "Muitas contas criadas a partir desse acesso. Tente daqui a pouco." });
+    }
     const corpo = await lerCorpo(req);
     const nome = String(corpo.usuario || "").trim();
     const erro = validarCadastro(nome, corpo.senha);
@@ -188,14 +281,31 @@ async function tratarApi(req, res, rota) {
 
   // POST /api/login { usuario, senha }
   if (rota === "/api/login" && req.method === "POST") {
+    if (!dentroDoLimite("login:" + ipDe(req), 20, 5 * 60000)) {
+      return responderJson(res, 429, { erro: "Muitas tentativas. Espere alguns minutos e tente de novo." });
+    }
     const corpo = await lerCorpo(req);
     const nome = String(corpo.usuario || "").trim();
+    const bloq = segundosBloqueado(nome);
+    if (bloq) {
+      return responderJson(res, 429, { erro: `Conta bloqueada por tentativas demais. Tente em ${bloq}s.` });
+    }
     const u = bd.usuarios[nome];
     if (!u || !conferirSenha(String(corpo.senha || ""), u.salt, u.hash)) {
+      if (u) registrarFalhaLogin(nome); // só conta falha de usuário real (não revela quais existem)
       return responderJson(res, 401, { erro: "Usuário ou senha incorretos." });
     }
+    // 2º fator, se o usuário tiver 2FA ativo
+    if (u.twofa) {
+      if (!corpo.codigo) return responderJson(res, 200, { precisa2fa: true });
+      if (!verificarTotp(u.twofa, corpo.codigo)) {
+        registrarFalhaLogin(nome);
+        return responderJson(res, 401, { erro: "Código de 2FA incorreto." });
+      }
+    }
+    limparFalhasLogin(nome);
     const token = novaSessao(nome);
-    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u) });
+    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa });
   }
 
   // GET /api/eu  (Authorization: Bearer <token>)
@@ -203,7 +313,7 @@ async function tratarApi(req, res, rota) {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
     const u = bd.usuarios[nome];
-    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u) });
+    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa });
   }
 
   // POST /api/progresso { xp, melhorStreak, progresso }  (autenticado)
@@ -212,9 +322,14 @@ async function tratarApi(req, res, rota) {
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
     const corpo = await lerCorpo(req);
     const u = bd.usuarios[nome];
-    if (typeof corpo.xp === "number" && corpo.xp >= 0) u.xp = Math.floor(corpo.xp);
-    if (typeof corpo.melhorStreak === "number" && corpo.melhorStreak >= 0) u.melhorStreak = Math.floor(corpo.melhorStreak);
-    if (corpo.progresso && typeof corpo.progresso === "object") u.progresso = corpo.progresso;
+    // teto de sanidade (evita XP/streak absurdos no ranking)
+    if (typeof corpo.xp === "number" && corpo.xp >= 0) u.xp = Math.min(Math.floor(corpo.xp), 5000000);
+    if (typeof corpo.melhorStreak === "number" && corpo.melhorStreak >= 0) u.melhorStreak = Math.min(Math.floor(corpo.melhorStreak), 100000);
+    if (corpo.progresso && typeof corpo.progresso === "object") {
+      const p = corpo.progresso;
+      delete p.licenca; // a LICENÇA nunca vem do cliente — só de código/pagamento/admin
+      u.progresso = p;
+    }
     salvarBd();
     return responderJson(res, 200, { ok: true });
   }
@@ -297,6 +412,47 @@ async function tratarApi(req, res, rota) {
     }
   }
 
+  // POST /api/2fa/iniciar  (autenticado) — gera um segredo provisório
+  if (rota === "/api/2fa/iniciar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const u = bd.usuarios[nome];
+    if (u.twofa) return responderJson(res, 400, { erro: "O 2FA já está ativado." });
+    const secret = base32Encode(crypto.randomBytes(20));
+    u.twofaTmp = secret;
+    salvarBd();
+    const label = encodeURIComponent("AWS CLI Quest:" + nome);
+    const otpauth = `otpauth://totp/${label}?secret=${secret}&issuer=AWS%20CLI%20Quest&period=30&digits=6`;
+    return responderJson(res, 200, { secret, otpauth });
+  }
+
+  // POST /api/2fa/ativar  (autenticado, { codigo }) — confirma e liga o 2FA
+  if (rota === "/api/2fa/ativar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const u = bd.usuarios[nome];
+    const corpo = await lerCorpo(req);
+    if (!u.twofaTmp) return responderJson(res, 400, { erro: "Comece em 'Ativar 2FA' antes de confirmar." });
+    if (!verificarTotp(u.twofaTmp, corpo.codigo)) return responderJson(res, 400, { erro: "Código incorreto. Confira o relógio e o app autenticador." });
+    u.twofa = u.twofaTmp;
+    delete u.twofaTmp;
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // POST /api/2fa/desativar  (autenticado, { senha }) — desliga (pede a senha)
+  if (rota === "/api/2fa/desativar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const u = bd.usuarios[nome];
+    const corpo = await lerCorpo(req);
+    if (!conferirSenha(String(corpo.senha || ""), u.salt, u.hash)) return responderJson(res, 401, { erro: "Senha incorreta." });
+    delete u.twofa;
+    delete u.twofaTmp;
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
   // POST /api/mp/webhook — Mercado Pago avisa que um pagamento mudou de status
   if (rota === "/api/mp/webhook" && req.method === "POST") {
     try {
@@ -351,23 +507,30 @@ const MIMES = {
   ".ico": "image/x-icon",
 };
 
+// só estes tipos podem ser servidos (o resto = 404)
+const EXT_PUBLICAS = new Set([".html", ".js", ".css", ".png", ".svg", ".ico", ".jpg", ".jpeg", ".webp", ".woff2"]);
+// nunca servir código de servidor, scripts de admin, dados, configs etc.
+const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
+
 function servirEstatico(req, res, rota) {
   const relativo = rota === "/" ? "index.html" : rota.replace(/^\/+/, "");
   const arquivo = path.normalize(path.join(RAIZ, relativo));
-  if (!arquivo.startsWith(RAIZ) || relativo.includes("\0") || relativo.startsWith("quest-dados")) {
-    res.writeHead(403);
+  const ext = path.extname(arquivo).toLowerCase();
+  if (!arquivo.startsWith(RAIZ) || relativo.includes("\0") || PROIBIDO.test(relativo) || !EXT_PUBLICAS.has(ext)) {
+    res.writeHead(403, HEADERS_SEG);
     res.end("403");
     return;
   }
   fs.readFile(arquivo, (erro, conteudo) => {
     if (erro) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", ...HEADERS_SEG });
       res.end("404 — " + relativo);
       return;
     }
     res.writeHead(200, {
-      "Content-Type": MIMES[path.extname(arquivo).toLowerCase()] || "application/octet-stream",
+      "Content-Type": MIMES[ext] || "application/octet-stream",
       "Cache-Control": rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store",
+      ...HEADERS_SEG,
     });
     res.end(conteudo);
   });
@@ -375,6 +538,8 @@ function servirEstatico(req, res, rota) {
 
 // ---------- Servidor ----------
 carregarBd();
+limparExpirados();
+setInterval(limparExpirados, 3600000).unref(); // limpa sessões/rate-limit de hora em hora
 http
   .createServer(async (req, res) => {
     const rota = decodeURIComponent(req.url.split("?")[0]);

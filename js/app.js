@@ -424,7 +424,17 @@ async function enviarConta(ev) {
   btn.disabled = true;
   $("#contaErro").textContent = "";
   try {
-    const r = contaUi.aba === "login" ? await apiLogin(usuario, senha) : await apiCadastrar(usuario, senha);
+    let r;
+    if (contaUi.aba === "login") {
+      r = await apiLogin(usuario, senha);
+      if (r && r.precisa2fa) {
+        const codigo = window.prompt("🔐 Esta conta tem 2FA. Digite o código de 6 dígitos do seu app autenticador:");
+        if (!codigo) { $("#contaErro").textContent = "Login cancelado (faltou o código 2FA)."; btn.disabled = false; return; }
+        r = await apiLogin(usuario, senha, codigo.trim());
+      }
+    } else {
+      r = await apiCadastrar(usuario, senha);
+    }
     // vincula à conta o que foi jogado deslogado (em vez de descartar)
     const res = entrarComConta(r.perfil, r.progresso);
     fecharModais();
