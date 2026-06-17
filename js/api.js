@@ -10,7 +10,12 @@ const api = {
   online: false, // tem backend respondendo?
   token: null, // token de sessão
   usuario: null, // nome do usuário logado (null = anônimo/local)
+  licenca: { tier: "free", pro: false }, // licença efetiva do usuário
 };
+
+function temPro() {
+  return !!(api.licenca && api.licenca.pro);
+}
 
 const CHAVE_TOKEN = "awsCliQuest.token";
 
@@ -43,7 +48,8 @@ async function apiIniciar() {
   try {
     const r = await apiFetch("/api/eu");
     api.usuario = r.perfil.usuario;
-    return r; // { perfil, progresso }
+    api.licenca = r.licenca || { tier: "free", pro: false };
+    return r; // { perfil, progresso, licenca }
   } catch (e) {
     api.token = null;
     try { localStorage.removeItem(CHAVE_TOKEN); } catch (_) { /* ok */ }
@@ -55,6 +61,7 @@ async function apiCadastrar(usuario, senha) {
   const r = await apiFetch("/api/cadastrar", { method: "POST", body: JSON.stringify({ usuario, senha }) });
   api.token = r.token;
   api.usuario = r.perfil.usuario;
+  api.licenca = r.licenca || { tier: "free", pro: false };
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -63,6 +70,7 @@ async function apiLogin(usuario, senha) {
   const r = await apiFetch("/api/login", { method: "POST", body: JSON.stringify({ usuario, senha }) });
   api.token = r.token;
   api.usuario = r.perfil.usuario;
+  api.licenca = r.licenca || { tier: "free", pro: false };
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -70,7 +78,26 @@ async function apiLogin(usuario, senha) {
 function apiSair() {
   api.token = null;
   api.usuario = null;
+  api.licenca = { tier: "free", pro: false };
   try { localStorage.removeItem(CHAVE_TOKEN); } catch (e) { /* ok */ }
+}
+
+// Planos/preços e se o checkout automático está ativo.
+async function apiPlanos() {
+  if (!api.online) return null;
+  try { return await apiFetch("/api/planos"); } catch (e) { return null; }
+}
+
+// Cria o checkout no Mercado Pago e devolve a URL pra redirecionar.
+async function apiAssinar(tier) {
+  return apiFetch("/api/assinar", { method: "POST", body: JSON.stringify({ tier }) });
+}
+
+// Resgata um código de ativação. Atualiza api.licenca em caso de sucesso.
+async function apiResgatar(codigo) {
+  const r = await apiFetch("/api/licenca/resgatar", { method: "POST", body: JSON.stringify({ codigo }) });
+  if (r.licenca) api.licenca = r.licenca;
+  return r;
 }
 
 // Envia o progresso atual pro servidor (silencioso — não trava o jogo se falhar).

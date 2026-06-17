@@ -1,5 +1,7 @@
 node_modules/
 quest-dados.json
 quest-dados.json.tmp
+quest-dados.json.bak*
+*.bak.*
 *.log
 .DS_Store

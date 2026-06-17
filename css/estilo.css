@@ -476,6 +476,59 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 .faixa-selo.ok { background: rgba(62, 207, 111, 0.2); color: var(--verde); }
 #faixaTreino .botao { padding: 6px 14px; font-size: 0.82rem; }
 
+/* ---------- Freemium / planos ---------- */
+.selo-pro {
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--laranja);
+  background: rgba(255, 153, 0, 0.12);
+  border: 1px solid var(--laranja);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.bloco-pro .servico-cab { opacity: 0.92; }
+#btnPlano { border-color: var(--laranja); color: var(--laranja); }
+
+.grade-planos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 4px; }
+.cartao-plano {
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+}
+.cartao-plano h3 { margin: 0 0 6px; font-size: 1rem; }
+.cartao-plano .preco { font-size: 1.35rem; font-weight: 800; color: var(--laranja); }
+.cartao-plano .preco small { font-size: 0.7rem; font-weight: 500; color: var(--texto-fraco); }
+.cartao-plano .plano-nota { font-size: 0.72rem; color: var(--verde); margin: 6px 0; min-height: 1em; }
+.cartao-plano .botao { width: 100%; margin-top: 8px; }
+.plano-off {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid var(--azul);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  color: var(--texto);
+  margin: 12px 0;
+}
+.resgatar-bloco { margin-top: 14px; }
+.resgatar-bloco label { display: block; font-size: 0.82rem; color: var(--texto-fraco); margin-bottom: 6px; }
+.linha-codigo { display: flex; gap: 8px; }
+.linha-codigo input {
+  flex: 1;
+  background: var(--painel-2);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  padding: 9px 11px;
+  font-family: var(--fonte-mono);
+  font-size: 0.9rem;
+}
+.linha-codigo input:focus { outline: none; border-color: var(--laranja); }
+.codigo-erro { color: var(--vermelho); font-size: 0.82rem; min-height: 1em; margin: 6px 0 0; }
+
 /* ---------- Responsivo simples ---------- */
 @media (max-width: 760px) {
   main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
@@ -483,4 +536,5 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   #cardDesafio { max-height: none; }
   header { flex-wrap: wrap; gap: 10px; }
   .grade-conceitos { grid-template-columns: 1fr; }
+  .grade-planos { grid-template-columns: 1fr; }
 }

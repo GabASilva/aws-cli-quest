@@ -30,8 +30,9 @@ function carregarBd() {
     bd = JSON.parse(fs.readFileSync(ARQUIVO_DADOS, "utf8"));
     if (!bd.usuarios) bd.usuarios = {};
     if (!bd.sessoes) bd.sessoes = {};
+    if (!bd.codigos) bd.codigos = {};
   } catch (e) {
-    bd = { usuarios: {}, sessoes: {} };
+    bd = { usuarios: {}, sessoes: {}, codigos: {} };
   }
 }
 
@@ -125,6 +126,33 @@ function perfilPublico(nome) {
   return { usuario: nome, xp: u.xp || 0, melhorStreak: u.melhorStreak || 0 };
 }
 
+// ---------- Licenças ----------
+const PRECOS = { mensal: 19.9, semestral: 89.9, anual: 149.9 };
+const DIAS = { mensal: 30, semestral: 182, anual: 365 };
+const TITULO_PLANO = { mensal: "AWS CLI Quest Pro — Mensal", semestral: "AWS CLI Quest Pro — Semestral", anual: "AWS CLI Quest Pro — Anual" };
+
+// Estado efetivo da licença de um usuário (considera expiração).
+function licencaPublica(u) {
+  const l = u && u.licenca;
+  if (!l) return { tier: "free", pro: false };
+  const pro = l.tier === "vitalicio" || !l.expiraEm || l.expiraEm > Date.now();
+  return { tier: pro ? l.tier : "free", pro, expiraEm: l.expiraEm || null, escola: !!l.escola };
+}
+
+// Concede/renova licença. Renovação acumula a partir da expiração vigente.
+function concederLicenca(u, tier, opts) {
+  opts = opts || {};
+  const agora = Date.now();
+  let expiraEm = null;
+  if (tier !== "vitalicio") {
+    const dias = opts.dias || DIAS[tier] || 30;
+    const base = u.licenca && u.licenca.expiraEm && u.licenca.expiraEm > agora ? u.licenca.expiraEm : agora;
+    expiraEm = base + dias * 86400000;
+  }
+  u.licenca = { tier, expiraEm, emitidaPor: opts.por || "checkout", escola: opts.escola || false, desde: agora };
+  return licencaPublica(u);
+}
+
 // ---------- API ----------
 async function tratarApi(req, res, rota) {
   // POST /api/cadastrar { usuario, senha }
@@ -138,7 +166,7 @@ async function tratarApi(req, res, rota) {
     bd.usuarios[nome] = { salt, hash, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
     salvarBd();
     const token = novaSessao(nome);
-    return responderJson(res, 201, { token, perfil: perfilPublico(nome) });
+    return responderJson(res, 201, { token, perfil: perfilPublico(nome), licenca: licencaPublica(bd.usuarios[nome]) });
   }
 
   // POST /api/login { usuario, senha }
@@ -150,14 +178,15 @@ async function tratarApi(req, res, rota) {
       return responderJson(res, 401, { erro: "Usuário ou senha incorretos." });
     }
     const token = novaSessao(nome);
-    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso });
+    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u) });
   }
 
   // GET /api/eu  (Authorization: Bearer <token>)
   if (rota === "/api/eu" && req.method === "GET") {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
-    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: bd.usuarios[nome].progresso });
+    const u = bd.usuarios[nome];
+    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u) });
   }
 
   // POST /api/progresso { xp, melhorStreak, progresso }  (autenticado)
@@ -180,6 +209,86 @@ async function tratarApi(req, res, rota) {
       .sort((a, b) => b.xp - a.xp)
       .slice(0, 50);
     return responderJson(res, 200, { ranking: lista });
+  }
+
+  // GET /api/planos  (público — preços e o que está disponível)
+  if (rota === "/api/planos" && req.method === "GET") {
+    return responderJson(res, 200, { precos: PRECOS, checkoutAtivo: !!process.env.MP_TOKEN });
+  }
+
+  // POST /api/licenca/resgatar { codigo }  (autenticado) — resgata código
+  if (rota === "/api/licenca/resgatar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra resgatar um código." });
+    const corpo = await lerCorpo(req);
+    const cod = String(corpo.codigo || "").trim().toUpperCase();
+    const c = bd.codigos[cod];
+    if (!c) return responderJson(res, 404, { erro: "Código inválido." });
+    if (c.usadoPor) return responderJson(res, 409, { erro: "Esse código já foi usado." });
+    const lic = concederLicenca(bd.usuarios[nome], c.tier, { dias: c.dias, escola: c.escola, por: "codigo:" + cod });
+    c.usadoPor = nome;
+    c.usadoEm = Date.now();
+    salvarBd();
+    return responderJson(res, 200, { ok: true, licenca: lic });
+  }
+
+  // POST /api/assinar { tier }  (autenticado) — cria checkout no Mercado Pago
+  if (rota === "/api/assinar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra assinar." });
+    const corpo = await lerCorpo(req);
+    const tier = String(corpo.tier || "");
+    if (!PRECOS[tier]) return responderJson(res, 400, { erro: "Plano inválido. O vitalício e o escola não são vendidos por aqui." });
+    if (!process.env.MP_TOKEN) {
+      return responderJson(res, 503, { erro: "Checkout automático ainda não está ativo. Use um código de ativação.", fallback: "codigo" });
+    }
+    try {
+      const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+      const pref = {
+        items: [{ title: TITULO_PLANO[tier], quantity: 1, unit_price: PRECOS[tier], currency_id: "BRL" }],
+        external_reference: nome + "|" + tier,
+        back_urls: { success: base + "/?pago=1", failure: base + "/?pago=0", pending: base + "/?pago=pendente" },
+        auto_return: "approved",
+        notification_url: base + "/api/mp/webhook",
+      };
+      const r = await fetch("https://api.mercadopago.com/checkout/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.MP_TOKEN },
+        body: JSON.stringify(pref),
+      });
+      const dados = await r.json();
+      if (!dados.init_point) return responderJson(res, 502, { erro: "Mercado Pago não retornou o checkout.", detalhe: dados.message || "" });
+      return responderJson(res, 200, { url: dados.init_point });
+    } catch (e) {
+      return responderJson(res, 502, { erro: "Falha ao falar com o Mercado Pago: " + e.message });
+    }
+  }
+
+  // POST /api/mp/webhook — Mercado Pago avisa que um pagamento mudou de status
+  if (rota === "/api/mp/webhook" && req.method === "POST") {
+    try {
+      const corpo = await lerCorpo(req).catch(() => ({}));
+      const url = new URL(req.url, "http://x");
+      const tipo = corpo.type || url.searchParams.get("type");
+      const pagamentoId = (corpo.data && corpo.data.id) || url.searchParams.get("data.id") || url.searchParams.get("id");
+      if (tipo === "payment" && pagamentoId && process.env.MP_TOKEN) {
+        // busca o pagamento na fonte (não dá pra forjar) e confere se foi aprovado
+        const r = await fetch("https://api.mercadopago.com/v1/payments/" + pagamentoId, {
+          headers: { Authorization: "Bearer " + process.env.MP_TOKEN },
+        });
+        const pag = await r.json();
+        if (pag.status === "approved" && pag.external_reference) {
+          const [usuario, tier] = String(pag.external_reference).split("|");
+          if (bd.usuarios[usuario] && PRECOS[tier]) {
+            concederLicenca(bd.usuarios[usuario], tier, { por: "mercadopago:" + pagamentoId });
+            salvarBd();
+          }
+        }
+      }
+    } catch (e) {
+      console.error("webhook MP erro:", e.message);
+    }
+    return responderJson(res, 200, { ok: true }); // sempre 200 pro MP não reenviar infinito
   }
 
   return responderJson(res, 404, { erro: "rota não encontrada" });

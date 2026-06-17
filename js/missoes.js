@@ -137,6 +137,7 @@ const BANCO = [
     return h % BANCO.length;
   }
   function desafioDoDia() { return BANCO[indiceDia()]; }
+  window.desafioDoDia = desafioDoDia; // exposto pra trava grátis/Pro saber o do dia
 
   function chaveDia() { return "awsCliQuest.diaOk" + (typeof api !== "undefined" && api.usuario ? "." + api.usuario : ""); }
   function diaReivindicado() { try { return localStorage.getItem(chaveDia()) === hojeStr(); } catch (e) { return false; } }
