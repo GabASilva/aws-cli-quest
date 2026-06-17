@@ -121,6 +121,22 @@ async function apiRedefinirSenha(token, senha) {
   return apiFetch("/api/senha/redefinir", { method: "POST", body: JSON.stringify({ token, senha }) });
 }
 
+// ---------- Login com Google ----------
+async function apiConfig() {
+  if (!api.online) return null;
+  try { return await apiFetch("/api/config"); } catch (e) { return null; }
+}
+async function apiGoogle(credential) {
+  const r = await apiFetch("/api/google", { method: "POST", body: JSON.stringify({ credential }) });
+  api.token = r.token;
+  api.usuario = r.perfil.usuario;
+  api.licenca = r.licenca || { tier: "free", pro: false };
+  api.twofa = !!r.twofa;
+  api.email = r.email || null;
+  try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
+  return r;
+}
+
 // Planos/preços e se o checkout automático está ativo.
 async function apiPlanos() {
   if (!api.online) return null;

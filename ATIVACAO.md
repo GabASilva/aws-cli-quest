@@ -1,0 +1,85 @@
+# Guia de ativação — abrir pro mercado
+
+Tudo já está **implementado e no ar**. Falta só plugar as contas dos provedores
+(cada um é uma variável de ambiente / "secret" no Fly). Sem elas, o app funciona
+normalmente — só os recursos abaixo ficam inativos com um aviso amigável.
+
+> Pra aplicar qualquer `secret`, rode o comando e o Fly reinicia o app sozinho.
+> Conferir o que já está setado: `flyctl secrets list -a aws-cli-quest`
+
+---
+
+## 1. Pagamento — Mercado Pago (Checkout Pro)
+
+1. Painel do Mercado Pago → **Suas integrações** → sua aplicação (produto **Checkout Pro**).
+2. **Credenciais de produção** → copie o **Access Token** (`APP_USR-...`).
+3. Setar no Fly:
+   ```
+   flyctl secrets set MP_TOKEN="APP_USR-xxxxx" -a aws-cli-quest
+   ```
+4. No painel do MP → **Webhooks/Notificações** → URL:
+   `https://aws-cli-quest.fly.dev/api/mp/webhook` (evento: **Pagamentos**).
+5. Teste: assinar um plano → pagar (Pix/cartão) → a licença ativa sozinha.
+
+Enquanto `MP_TOKEN` não existir: o painel mostra os preços mas cai no
+**resgate por código** (você gera códigos no admin).
+
+---
+
+## 2. Recuperação de senha — Resend (e-mail)
+
+1. Crie conta em **resend.com** (grátis: 3.000 e-mails/mês).
+2. Pra testar rápido, dá pra enviar com o remetente `onboarding@resend.dev`.
+   Pra produção, **verifique um domínio seu** no painel da Resend.
+3. Pegue a **API Key** (`re_...`) e setar:
+   ```
+   flyctl secrets set RESEND_KEY="re_xxxxx" -a aws-cli-quest
+   flyctl secrets set RESEND_FROM="AWS CLI Quest <nao-responda@seudominio.com>" -a aws-cli-quest
+   ```
+   (Se não setar `RESEND_FROM`, usa `onboarding@resend.dev`.)
+
+Enquanto `RESEND_KEY` não existir: o link de redefinição é **escrito no log do
+servidor** (modo dev) — útil pra teste, mas o usuário final não recebe e-mail.
+
+---
+
+## 3. Login com Google (one-click)
+
+1. **Google Cloud Console** → crie um projeto → **APIs e serviços → Credenciais**.
+2. **Criar credenciais → ID do cliente OAuth** → tipo **Aplicativo da Web**.
+3. Em **Origens JavaScript autorizadas**, adicione:
+   `https://aws-cli-quest.fly.dev`
+4. Copie o **Client ID** (`...apps.googleusercontent.com` — não é secreto) e setar:
+   ```
+   flyctl secrets set GOOGLE_CLIENT_ID="xxxxx.apps.googleusercontent.com" -a aws-cli-quest
+   ```
+
+Enquanto `GOOGLE_CLIENT_ID` não existir: o botão "Continuar com o Google"
+simplesmente **não aparece**.
+
+---
+
+## 4. (Opcional) Base URL
+
+Só precisa se mudar o domínio. Padrão já é a URL do Fly.
+```
+flyctl secrets set URL_BASE="https://aws-cli-quest.fly.dev" -a aws-cli-quest
+```
+
+---
+
+## Administração (rodar no servidor)
+
+> Acorde a máquina abrindo o site uma vez, depois:
+
+```
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js listar"
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js licenca <usuario> vitalicio"   # liberar colega
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js codigo anual 10"               # gerar 10 códigos anuais
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js codigo escola 30 365 escola"   # 30 códigos escola (1 ano)
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js codigos"                        # listar códigos
+```
+
+Planos e preços: Mensal R$ 19,90 · Semestral R$ 89,90 · Anual R$ 149,90 ·
+Personalizado (1–24 meses, desconto progressivo) · Escola R$ 49,90/aluno/ano ·
+Vitalício só por concessão sua.

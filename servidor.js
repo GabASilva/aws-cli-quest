@@ -203,6 +203,16 @@ function validarCadastro(nome, senha) {
   return null;
 }
 
+// Gera um nome de usuário único a partir do nome/e-mail do Google.
+function gerarUsername(base) {
+  let s = String(base || "").toLowerCase().replace(/[^a-z0-9_.-]/g, "").slice(0, 16);
+  if (s.length < 3) s = "user" + s;
+  let nome = s;
+  let i = 1;
+  while (bd.usuarios[nome]) nome = (s + i++).slice(0, 20);
+  return nome;
+}
+
 // ---------- Helpers HTTP ----------
 function lerCorpo(req) {
   return new Promise((resolve, reject) => {
@@ -318,8 +328,10 @@ async function tratarApi(req, res, rota) {
       return responderJson(res, 429, { erro: `Conta bloqueada por tentativas demais. Tente em ${bloq}s.` });
     }
     const u = bd.usuarios[nome];
-    if (!u || !conferirSenha(String(corpo.senha || ""), u.salt, u.hash)) {
-      if (u) registrarFalhaLogin(nome); // só conta falha de usuário real (não revela quais existem)
+    // contas criadas só via Google não têm senha — não dá pra logar por senha
+    // (mas podem definir uma usando "Esqueci minha senha", já que têm e-mail)
+    if (!u || !u.hash || !conferirSenha(String(corpo.senha || ""), u.salt, u.hash)) {
+      if (u && u.hash) registrarFalhaLogin(nome); // só conta falha de usuário real (não revela quais existem)
       return responderJson(res, 401, { erro: "Usuário ou senha incorretos." });
     }
     // 2º fator, se o usuário tiver 2FA ativo
@@ -368,6 +380,42 @@ async function tratarApi(req, res, rota) {
       .sort((a, b) => b.xp - a.xp)
       .slice(0, 50);
     return responderJson(res, 200, { ranking: lista });
+  }
+
+  // GET /api/config  (público — o que o front precisa saber pra montar a UI)
+  if (rota === "/api/config" && req.method === "GET") {
+    return responderJson(res, 200, { googleClientId: process.env.GOOGLE_CLIENT_ID || null });
+  }
+
+  // POST /api/google  { credential }  — login/cadastro com Conta Google (one-click)
+  if (rota === "/api/google" && req.method === "POST") {
+    if (!process.env.GOOGLE_CLIENT_ID) return responderJson(res, 503, { erro: "Login com Google ainda não está ativo." });
+    if (!dentroDoLimite("google:" + ipDe(req), 30, 5 * 60000)) return responderJson(res, 429, { erro: "Muitas tentativas. Espere um pouco." });
+    const corpo = await lerCorpo(req);
+    const cred = String(corpo.credential || "");
+    if (!cred) return responderJson(res, 400, { erro: "Faltou o token do Google." });
+    let info;
+    try {
+      const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(cred));
+      info = await r.json();
+    } catch (e) {
+      return responderJson(res, 502, { erro: "Falha ao validar com o Google." });
+    }
+    // o Google verifica a assinatura; aqui conferimos pra QUEM o token foi emitido
+    const emailOk = info && (info.email_verified === true || info.email_verified === "true");
+    if (!info || info.aud !== process.env.GOOGLE_CLIENT_ID || !emailOk || !info.email) {
+      return responderJson(res, 401, { erro: "Não consegui validar sua Conta Google." });
+    }
+    const email = String(info.email).toLowerCase();
+    let nome = Object.keys(bd.usuarios).find((n) => bd.usuarios[n].email === email);
+    if (!nome) {
+      nome = gerarUsername(info.given_name || info.name || email.split("@")[0]);
+      bd.usuarios[nome] = { email, google: true, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
+    }
+    const u = bd.usuarios[nome];
+    salvarBd();
+    const token = novaSessao(nome);
+    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null });
   }
 
   // GET /api/planos  (público — preços e o que está disponível)
