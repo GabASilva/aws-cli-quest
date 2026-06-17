@@ -648,6 +648,32 @@ const EXT_PUBLICAS = new Set([".html", ".js", ".css", ".png", ".svg", ".ico", ".
 // nunca servir código de servidor, scripts de admin, dados, configs etc.
 const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
 
+const PROD = !!process.env.DADOS_DIR; // no Fly o Dockerfile define DADOS_DIR
+
+// ---------- Versão dos assets (cache-busting por conteúdo) ----------
+// Hash de tudo que o cliente baixa. Muda só quando algum arquivo muda, então:
+//  - index.html (sempre no-store) referencia js/css com ?v=VERSAO
+//  - quando a gente faz deploy de algo novo, a VERSAO muda → URL nova → o
+//    navegador baixa a versão nova sozinho (sem precisar de Ctrl+F5)
+//  - quando nada mudou, ele reusa o cache (rápido)
+function calcularVersao() {
+  try {
+    const h = crypto.createHash("sha256");
+    for (const dir of ["js", "css"]) {
+      const p = path.join(RAIZ, dir);
+      for (const f of fs.readdirSync(p).sort()) {
+        h.update(f);
+        h.update(fs.readFileSync(path.join(p, f)));
+      }
+    }
+    h.update(fs.readFileSync(path.join(RAIZ, "index.html")));
+    return h.digest("hex").slice(0, 10);
+  } catch (e) {
+    return String(Date.now());
+  }
+}
+const VERSAO = calcularVersao();
+
 function servirEstatico(req, res, rota) {
   const relativo = rota === "/" ? "index.html" : rota.replace(/^\/+/, "");
   const arquivo = path.normalize(path.join(RAIZ, relativo));
@@ -657,18 +683,34 @@ function servirEstatico(req, res, rota) {
     res.end("403");
     return;
   }
+  const temVersao = /[?&]v=/.test(req.url || ""); // pediram a URL versionada?
   fs.readFile(arquivo, (erro, conteudo) => {
     if (erro) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", ...HEADERS_SEG });
       res.end("404 — " + relativo);
       return;
     }
+    let corpo = conteudo;
+    let cache;
+    if (relativo === "index.html") {
+      // injeta ?v=VERSAO em todo src/href de js/ e css/ (URLs locais)
+      corpo = Buffer.from(
+        String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSAO}"`)
+      );
+      cache = "no-store"; // o HTML é sempre buscado fresco
+    } else if (temVersao && PROD) {
+      // URL versionada (imutável): pode cachear pra sempre, com segurança
+      cache = "public, max-age=31536000, immutable";
+    } else {
+      // sem versão (ou em dev): revalida sempre, nunca serve velho
+      cache = rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store";
+    }
     res.writeHead(200, {
       "Content-Type": MIMES[ext] || "application/octet-stream",
-      "Cache-Control": rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store",
+      "Cache-Control": cache,
       ...HEADERS_SEG,
     });
-    res.end(conteudo);
+    res.end(corpo);
   });
 }
 
