@@ -98,6 +98,7 @@ function podeAcessar(d) {
     const planos = await apiPlanos();
     const checkoutAtivo = planos && planos.checkoutAtivo;
     const p = (planos && planos.precos) || { mensal: 19.9, semestral: 89.9, anual: 149.9 };
+    const custom = (planos && planos.custom) || { min: 1, max: 24, faixas: [{ min: 12, mes: 12.49 }, { min: 6, mes: 14.98 }, { min: 3, mes: 16.9 }, { min: 1, mes: 19.9 }] };
     const fmt = (v) => "R$ " + v.toFixed(2).replace(".", ",");
     document.querySelector("#planosGrade").innerHTML = `
       ${cartaoPlano("mensal", "Mensal", fmt(p.mensal), "/mês", "", checkoutAtivo)}
@@ -106,8 +107,42 @@ function podeAcessar(d) {
     document.querySelectorAll("#planosGrade [data-tier]").forEach((b) =>
       b.addEventListener("click", () => assinar(b.dataset.tier, b))
     );
+    renderCustom(custom, checkoutAtivo);
     document.querySelector("#planosCheckoutOff").style.display = checkoutAtivo ? "none" : "block";
     modal.classList.add("aberto");
+  }
+
+  function precoCustomClient(meses, custom) {
+    meses = Math.max(custom.min, Math.min(custom.max, Math.floor(meses)));
+    let mes = custom.faixas[custom.faixas.length - 1].mes;
+    for (const f of custom.faixas) { if (meses >= f.min) { mes = f.mes; break; } }
+    return { meses, mes, total: Math.round(meses * mes * 100) / 100 };
+  }
+
+  function renderCustom(custom, ativo) {
+    const fmt = (v) => "R$ " + v.toFixed(2).replace(".", ",");
+    const cont = document.querySelector("#planoCustom");
+    cont.innerHTML = `
+      <h3>🎚️ Plano personalizado</h3>
+      <p class="custom-desc">Escolha por quantos meses quer o Pro — quanto mais tempo, mais barato o mês.</p>
+      <input type="range" id="customMeses" min="${custom.min}" max="${custom.max}" value="3">
+      <div class="custom-linha">
+        <span id="customResumo"></span>
+        <button class="botao" id="btnAssinarCustom" ${ativo ? "" : "disabled title='Checkout em ativação'"}>Assinar</button>
+      </div>`;
+    const slider = cont.querySelector("#customMeses");
+    const resumo = cont.querySelector("#customResumo");
+    function atualizar() {
+      const meses = parseInt(slider.value, 10);
+      const c = precoCustomClient(meses, custom);
+      const pct = Math.round((1 - c.mes / 19.9) * 100);
+      const ate = new Date(Date.now() + meses * 30 * 86400000).toLocaleDateString("pt-BR");
+      resumo.innerHTML = `<strong>${meses} ${meses === 1 ? "mês" : "meses"}</strong> · <span class="custom-total">${fmt(c.total)}</span>
+        <small>(≈ ${fmt(c.mes)}/mês${pct > 0 ? " · " + pct + "% off" : ""} · ativa até ${ate})</small>`;
+    }
+    slider.addEventListener("input", atualizar);
+    cont.querySelector("#btnAssinarCustom").addEventListener("click", (e) => assinar("custom", e.target, parseInt(slider.value, 10)));
+    atualizar();
   }
 
   function cartaoPlano(tier, nome, preco, periodo, nota, ativo) {
@@ -119,19 +154,20 @@ function podeAcessar(d) {
     </div>`;
   }
 
-  async function assinar(tier, btn) {
+  async function assinar(tier, btn, meses) {
     if (!api.usuario) { toast("Crie uma conta ou entre antes de assinar. 👤", "neutro"); return; }
     btn.disabled = true;
+    const textoOriginal = btn.textContent;
     btn.textContent = "Abrindo…";
     try {
-      const r = await apiAssinar(tier);
+      const r = await apiAssinar(tier, meses);
       if (r.url) { window.location.href = r.url; return; } // vai pro Mercado Pago
       toast("Não consegui abrir o checkout. Tente um código de ativação.", "erro");
     } catch (e) {
       toast(e.message || "Checkout indisponível. Use um código de ativação.", "neutro");
     } finally {
       btn.disabled = false;
-      btn.textContent = "Assinar";
+      btn.textContent = textoOriginal;
     }
   }
 
@@ -177,6 +213,7 @@ function podeAcessar(d) {
         <h2>⭐ AWS CLI Quest Pro</h2>
         <p id="planosAviso" class="conta-explica"></p>
         <div id="planosGrade" class="grade-planos"></div>
+        <div id="planoCustom" class="plano-custom"></div>
         <p id="planosCheckoutOff" class="plano-off" style="display:none">
           💳 O pagamento automático está sendo ativado. Por enquanto, garanta seu acesso com um
           <strong>código de ativação</strong> (fale com o responsável pelo app).

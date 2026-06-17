@@ -89,8 +89,9 @@ async function apiPlanos() {
 }
 
 // Cria o checkout no Mercado Pago e devolve a URL pra redirecionar.
-async function apiAssinar(tier) {
-  return apiFetch("/api/assinar", { method: "POST", body: JSON.stringify({ tier }) });
+// Pro plano "custom", passe a quantidade de meses.
+async function apiAssinar(tier, meses) {
+  return apiFetch("/api/assinar", { method: "POST", body: JSON.stringify({ tier, meses }) });
 }
 
 // Resgata um código de ativação. Atualiza api.licenca em caso de sucesso.

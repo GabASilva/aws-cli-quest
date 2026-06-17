@@ -131,6 +131,23 @@ const PRECOS = { mensal: 19.9, semestral: 89.9, anual: 149.9 };
 const DIAS = { mensal: 30, semestral: 182, anual: 365 };
 const TITULO_PLANO = { mensal: "AWS CLI Quest Pro — Mensal", semestral: "AWS CLI Quest Pro — Semestral", anual: "AWS CLI Quest Pro — Anual" };
 
+// Plano personalizado: você escolhe quantos meses, e o preço por mês cai
+// progressivamente (ancorado no mensal/semestral/anual).
+const FAIXAS_CUSTOM = [
+  { min: 12, mes: 12.49 }, // 12+ meses — preço do anual
+  { min: 6, mes: 14.98 }, //  6–11   — preço do semestral
+  { min: 3, mes: 16.9 }, //   3–5    — desconto intermediário
+  { min: 1, mes: 19.9 }, //   1–2    — preço do mensal
+];
+function precoMesCustom(meses) {
+  for (const f of FAIXAS_CUSTOM) if (meses >= f.min) return f.mes;
+  return 19.9;
+}
+function precoCustom(mesesBruto) {
+  const meses = Math.max(1, Math.min(24, Math.floor(Number(mesesBruto) || 1)));
+  return { meses, total: Math.round(meses * precoMesCustom(meses) * 100) / 100 };
+}
+
 // Estado efetivo da licença de um usuário (considera expiração).
 function licencaPublica(u) {
   const l = u && u.licenca;
@@ -213,7 +230,11 @@ async function tratarApi(req, res, rota) {
 
   // GET /api/planos  (público — preços e o que está disponível)
   if (rota === "/api/planos" && req.method === "GET") {
-    return responderJson(res, 200, { precos: PRECOS, checkoutAtivo: !!process.env.MP_TOKEN });
+    return responderJson(res, 200, {
+      precos: PRECOS,
+      checkoutAtivo: !!process.env.MP_TOKEN,
+      custom: { min: 1, max: 24, faixas: FAIXAS_CUSTOM },
+    });
   }
 
   // POST /api/licenca/resgatar { codigo }  (autenticado) — resgata código
@@ -238,15 +259,27 @@ async function tratarApi(req, res, rota) {
     if (!nome) return responderJson(res, 401, { erro: "Faça login pra assinar." });
     const corpo = await lerCorpo(req);
     const tier = String(corpo.tier || "");
-    if (!PRECOS[tier]) return responderJson(res, 400, { erro: "Plano inválido. O vitalício e o escola não são vendidos por aqui." });
+    let unitPrice, titulo, externalRef;
+    if (tier === "custom") {
+      const c = precoCustom(corpo.meses);
+      unitPrice = c.total;
+      titulo = "AWS CLI Quest Pro — " + c.meses + (c.meses === 1 ? " mês" : " meses");
+      externalRef = nome + "|custom|" + c.meses;
+    } else if (PRECOS[tier]) {
+      unitPrice = PRECOS[tier];
+      titulo = TITULO_PLANO[tier];
+      externalRef = nome + "|" + tier;
+    } else {
+      return responderJson(res, 400, { erro: "Plano inválido. O vitalício e o escola não são vendidos por aqui." });
+    }
     if (!process.env.MP_TOKEN) {
       return responderJson(res, 503, { erro: "Checkout automático ainda não está ativo. Use um código de ativação.", fallback: "codigo" });
     }
     try {
       const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
       const pref = {
-        items: [{ title: TITULO_PLANO[tier], quantity: 1, unit_price: PRECOS[tier], currency_id: "BRL" }],
-        external_reference: nome + "|" + tier,
+        items: [{ title: titulo, quantity: 1, unit_price: unitPrice, currency_id: "BRL" }],
+        external_reference: externalRef,
         back_urls: { success: base + "/?pago=1", failure: base + "/?pago=0", pending: base + "/?pago=pendente" },
         auto_return: "approved",
         notification_url: base + "/api/mp/webhook",
@@ -278,10 +311,18 @@ async function tratarApi(req, res, rota) {
         });
         const pag = await r.json();
         if (pag.status === "approved" && pag.external_reference) {
-          const [usuario, tier] = String(pag.external_reference).split("|");
-          if (bd.usuarios[usuario] && PRECOS[tier]) {
-            concederLicenca(bd.usuarios[usuario], tier, { por: "mercadopago:" + pagamentoId });
-            salvarBd();
+          const partes = String(pag.external_reference).split("|");
+          const usuario = partes[0];
+          const tier = partes[1];
+          if (bd.usuarios[usuario]) {
+            if (tier === "custom") {
+              const meses = Math.max(1, Math.min(24, parseInt(partes[2], 10) || 1));
+              concederLicenca(bd.usuarios[usuario], "custom", { dias: meses * 30, por: "mercadopago:" + pagamentoId });
+              salvarBd();
+            } else if (PRECOS[tier]) {
+              concederLicenca(bd.usuarios[usuario], tier, { por: "mercadopago:" + pagamentoId });
+              salvarBd();
+            }
           }
         }
       }
