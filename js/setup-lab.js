@@ -14,11 +14,21 @@
 
 const DESAFIOS_SETUP = [
   {
-    id: "setup-1", servico: "setup", nivel: 1, xp: 40,
+    id: "setup-1", servico: "setup", nivel: 1, xp: 50,
     titulo: "Conecte na instância (SSH)",
-    descricao: "Tudo começa entrando na máquina. Estabeleça uma conexão <b>SSH</b> na instância Red Hat usando a chave <b>labsuser.pem</b> e o usuário <b>ec2-user</b> (o IP do lab é <b>54.81.12.34</b>).",
-    dicas: ["O formato é: ssh -i <chave> <usuário>@<ip>", "ssh -i labsuser.pem ec2-user@54.81.12.34"],
-    solucao: ["ssh -i labsuser.pem ec2-user@54.81.12.34"],
+    descricao:
+      "Tudo começa entrando na máquina pelo <b>SSH</b> — o jeito seguro de abrir o terminal de um servidor remoto. " +
+      "Ao criar a instância, a AWS te dá uma <b>chave privada</b> (o arquivo <b>labsuser.pem</b>): ela é a sua identidade pra entrar. " +
+      "São <b>dois passos</b>: " +
+      "<b>1)</b> o SSH só aceita a chave se ela for legível <b>só por você</b> — ajuste as permissões com <code>chmod 400 labsuser.pem</code> (pule isso e ele recusa a chave). " +
+      "<b>2)</b> conecte com <code>ssh -i labsuser.pem ec2-user@&lt;ip&gt;</code>, onde <b>ec2-user</b> é o usuário padrão das instâncias Amazon Linux/Red Hat e o IP do lab é <b>54.81.12.34</b>. " +
+      "<small>Novo nos comandos de terminal? A trilha 🐧 <b>Linux essencial</b> te dá a base (inclusive o chmod).</small>",
+    dicas: [
+      "Primeiro proteja a chave: chmod 400 labsuser.pem (deixa o arquivo legível só pra você).",
+      "Depois conecte no formato: ssh -i <chave> <usuário>@<ip>",
+      "Os comandos completos: chmod 400 labsuser.pem  →  ssh -i labsuser.pem ec2-user@54.81.12.34",
+    ],
+    solucao: ["chmod 400 labsuser.pem", "ssh -i labsuser.pem ec2-user@54.81.12.34"],
     validar: (conta) => !!(conta.setup && conta.setup.ssh),
   },
   {
@@ -88,6 +98,17 @@ const DESAFIOS_SETUP = [
     jogo.conta.setup = jogo.conta.setup || {};
     return jogo.conta.setup;
   }
+  // A chave está protegida se o chmod 400 foi aplicado. O comando chmod é tratado
+  // pelo linux-lab (que carrega depois e intercepta), então a fonte da verdade é a
+  // permissão real do arquivo no filesystem simulado; o flag do setup é fallback.
+  function chaveProtegida() {
+    const st = jogo.conta.setup || {};
+    if (st.chaveProtegida) return true;
+    try {
+      const lar = jogo.conta.fs.filhos.home.filhos["ec2-user"].filhos;
+      return !!lar["labsuser.pem"] && lar["labsuser.pem"].modo === "400";
+    } catch (e) { return false; }
+  }
   function eco(linha) {
     imprimirComando(linha);
     ui.historicoCmd.push(linha);
@@ -141,6 +162,22 @@ const DESAFIOS_SETUP = [
     eco(c);
 
     if (/^ssh\s+-i\s+\S+\s+ec2-user@\S+/.test(c)) {
+      // Fiel à AWS real: sem o chmod 400, o OpenSSH recusa a chave "aberta demais".
+      if (!chaveProtegida()) {
+        imprimir(
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" +
+          "@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @\n" +
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" +
+          "Permissions 0644 for 'labsuser.pem' are too open.\n" +
+          "It is required that your private key files are NOT accessible by others.\n" +
+          "This private key will be ignored.\n" +
+          "Load key \"labsuser.pem\": bad permissions\n" +
+          "ec2-user@54.81.12.34: Permission denied (publickey).\n\n" +
+          "Dica: a chave está aberta demais. Rode 'chmod 400 labsuser.pem' antes de conectar.",
+          "erro"
+        );
+        return fechar(null);
+      }
       st.ssh = true;
       imprimir("The authenticity of host can't be established.\nWarning: Permanently added to the list of known hosts.\n\n       __|  __|_  )\n       _|  (     /   Red Hat Enterprise Linux\n      ___|\\___|___|\n\n[ec2-user@ip-172-31-10-5 ~]$  (conectado! agora você está dentro da instância)", "ok");
       return fechar({ servico: "setup", sub: "ssh", posicionais: [], flags: {} });
@@ -168,7 +205,8 @@ const DESAFIOS_SETUP = [
       return fechar({ servico: "setup", sub: "version", posicionais: [], flags: {} });
     }
     if (/^chmod\s+400\b/.test(c)) {
-      imprimir("(permissões da chave ajustadas)", "ok");
+      st.chaveProtegida = true;
+      imprimir("(permissões da chave ajustadas — agora só você pode ler labsuser.pem)", "ok");
       return fechar(null);
     }
     // não deveria chegar aqui
