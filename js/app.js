@@ -296,6 +296,8 @@ function executarLinha(linha) {
 
   const resultado = executarComandoAws(jogo.conta, comando);
   imprimir(resultado.saida, resultado.ok ? "" : "erro");
+  // aviso do CLImb: explicação separada da saída do CLI (não é saída do AWS)
+  if (resultado.aviso) imprimir(resultado.aviso, "aviso-climb");
   salvarJogo();
 
   if (resultado.ok) verificarDesafios(resultado.cmd);

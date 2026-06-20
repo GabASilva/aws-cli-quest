@@ -266,6 +266,25 @@ pre.linha { font-family: var(--fonte-mono); }
 .linha.erro { color: var(--vermelho); }
 .linha.ok { color: var(--verde); }
 .linha.eco { color: var(--texto); margin-top: 6px; }
+/* Aviso do CLImb: claramente FORA da saída do CLI (não é resposta do AWS) */
+#saidaTerminal .linha.aviso-climb {
+  color: var(--texto-fraco);
+  font-family: "Segoe UI", system-ui, sans-serif; /* fonte da UI, não mono — destaca que não é CLI */
+  background: rgba(255, 153, 0, 0.08);
+  border-left: 3px solid var(--laranja);
+  border-radius: 0 6px 6px 0;
+  padding: 7px 11px;
+  margin: 6px 0 4px;
+  font-size: 0.86rem;
+}
+#saidaTerminal .linha.aviso-climb::before {
+  content: "⚡ CLImb";
+  display: block;
+  color: var(--laranja);
+  font-weight: 700;
+  font-size: 0.74rem;
+  margin-bottom: 2px;
+}
 .prompt { color: var(--laranja); font-weight: 700; }
 
 .linha-entrada { display: flex; align-items: center; gap: 8px; margin-top: 6px; }

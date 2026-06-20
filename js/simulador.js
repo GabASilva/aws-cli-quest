@@ -7,6 +7,14 @@
 // ---------- Erro de CLI (mensagens no estilo do AWS CLI real) ----------
 class ErroCli extends Error {}
 
+// ---------- Aviso do CLImb ----------
+// A saída do comando deve ser FIEL ao AWS de verdade (mesmo que seja vazia).
+// Quando algo merece explicação (ex.: "a AWS não mostra nada quando não há
+// buckets"), o handler chama avisarClimb(...) e o terminal mostra esse texto
+// SEPARADO da saída do CLI, deixando claro que é um aviso do CLImb — não do CLI.
+let _avisoClimb = null;
+function avisarClimb(texto) { _avisoClimb = texto; }
+
 // ---------- Conta virtual ----------
 function criarContaAws() {
   const conta = {
@@ -256,7 +264,7 @@ const cmdS3 = {
     const b = exigirBucket(conta, uri.bucket, "DeleteBucket");
     const chaves = Object.keys(b.objetos);
     if (chaves.length && !flags.force) {
-      throw new ErroCli(`remove_bucket failed: s3://${uri.bucket} An error occurred (BucketNotEmpty) when calling the DeleteBucket operation: The bucket you tried to delete is not empty. Use --force para apagar o bucket junto com os objetos.`);
+      throw new ErroCli(`remove_bucket failed: s3://${uri.bucket} An error occurred (BucketNotEmpty) when calling the DeleteBucket operation: The bucket you tried to delete is not empty.`);
     }
     const linhas = chaves.map((c) => `delete: s3://${uri.bucket}/${c}`);
     delete conta.s3.buckets[uri.bucket];
@@ -267,7 +275,11 @@ const cmdS3 = {
   ls: (conta, pos) => {
     if (!pos.length) {
       const nomes = Object.keys(conta.s3.buckets);
-      if (!nomes.length) return "(você ainda não tem nenhum bucket)";
+      // Fiel à AWS: sem buckets, o comando não imprime nada (saída vazia).
+      if (!nomes.length) {
+        avisarClimb("A AWS não mostra nada quando você ainda não tem nenhum bucket — isso é normal, não é erro. Crie o primeiro com:  aws s3 mb s3://nome-do-bucket");
+        return "";
+      }
       return nomes.map((n) => `${conta.s3.buckets[n].criadoEm} ${n}`).join("\n");
     }
     const uri = parsearUriS3(pos[0]);
@@ -284,7 +296,12 @@ const cmdS3 = {
       else linhas.push(`${obj.enviadoEm} ${String(obj.tamanho).padStart(10)} ${chave}`);
     }
     const saida = [...[...subpastas].map((p) => `${" ".repeat(27)}PRE ${p}`), ...linhas];
-    return saida.length ? saida.join("\n") : "(vazio)";
+    // Fiel à AWS: bucket/prefixo vazio não imprime nada.
+    if (!saida.length) {
+      avisarClimb(`O bucket "${uri.bucket}" está vazio (ou não há nada com esse prefixo). A AWS não imprime nada nesse caso. Envie um arquivo com:  aws s3 cp arquivo s3://${uri.bucket}/`);
+      return "";
+    }
+    return saida.join("\n");
   },
 
   cp: (conta, pos) => {
@@ -296,7 +313,11 @@ const cmdS3 = {
     if (!uriOrigem && uriDestino) {
       // upload: local -> s3
       const arq = arquivoLocal(origem);
-      if (!arq) throw new ErroCli(`upload failed: ${origem} O arquivo local não existe. Digite 'ls' para ver os arquivos disponíveis.`);
+      if (!arq) {
+        let chaveDest = uriDestino.chave;
+        if (!chaveDest || chaveDest.endsWith("/")) chaveDest += origem.split("/").pop();
+        throw new ErroCli(`upload failed: ${origem} to s3://${uriDestino.bucket}/${chaveDest} [Errno 2] No such file or directory: '${origem}'`);
+      }
       const b = exigirBucket(conta, uriDestino.bucket, "PutObject");
       let chave = uriDestino.chave;
       if (!chave || chave.endsWith("/")) chave += arq.caminho.split("/").pop();
@@ -461,11 +482,17 @@ const cmdEc2 = {
 
   "run-instances": (conta, pos, flags) => {
     const imagem = exigirFlag(flags, "image-id");
-    if (!/^ami-[0-9a-f]+$/i.test(imagem)) throw new ErroCli(`An error occurred (InvalidAMIID.Malformed) when calling the RunInstances operation: Invalid id: "${imagem}" (esperado algo como ami-0abcd1234ef567890)`);
+    if (!/^ami-[0-9a-f]+$/i.test(imagem)) {
+      throw new ErroCli(`An error occurred (InvalidAMIID.Malformed) when calling the RunInstances operation: Invalid id: "${imagem}"`);
+    }
     const tipo = exigirFlag(flags, "instance-type");
-    if (!TIPOS_INSTANCIA.includes(tipo)) throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the RunInstances operation: Invalid value '${tipo}' for InstanceType.\nTipos aceitos no simulador: ${TIPOS_INSTANCIA.join(", ")}`);
+    if (!TIPOS_INSTANCIA.includes(tipo)) {
+      throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the RunInstances operation: Invalid value '${tipo}' for InstanceType.`);
+    }
     const quantidade = parseInt(flags.count || "1", 10);
-    if (!(quantidade >= 1 && quantidade <= 10)) throw new ErroCli("An error occurred (InvalidParameterValue): --count precisa ser entre 1 e 10.");
+    if (!(quantidade >= 1 && quantidade <= 10)) {
+      throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the RunInstances operation: Invalid value '${flags.count}' for parameter maxCount.`);
+    }
     const chave = typeof flags["key-name"] === "string" ? flags["key-name"] : null;
     if (chave && !conta.ec2.keyPairs[chave]) throw new ErroCli(`An error occurred (InvalidKeyPair.NotFound) when calling the RunInstances operation: The key pair '${chave}' does not exist`);
     const sgs = flags["security-groups"] ? [].concat(flags["security-groups"]) : [];
@@ -1126,7 +1153,7 @@ function executarComandoAws(conta, linha) {
   if (alvo && r.ok) {
     conta.arquivosSalvos = conta.arquivosSalvos || {};
     conta.arquivosSalvos[alvo] = r.saida;
-    return { ok: true, saida: `(saída salva em ${alvo})`, cmd: r.cmd };
+    return { ok: true, saida: `(saída salva em ${alvo})`, cmd: r.cmd, aviso: r.aviso };
   }
   return r;
 }
@@ -1176,14 +1203,15 @@ function executarComandoAwsBase(conta, linha) {
 
   const { posicionais, flags } = parsearArgs(tokens.slice(3));
   const cmd = { servico, sub, posicionais, flags, linha };
+  _avisoClimb = null; // zera antes de cada handler (ele pode chamar avisarClimb)
   try {
     let saida = handler(conta, posicionais, flags);
     if (flags.query !== undefined || flags.output !== undefined) {
       saida = aplicarQueryEOutput(saida, flags);
     }
-    return { ok: true, saida, cmd };
+    return { ok: true, saida, cmd, aviso: _avisoClimb };
   } catch (e) {
-    if (e instanceof ErroCli) return { ok: false, saida: e.message, cmd };
+    if (e instanceof ErroCli) return { ok: false, saida: e.message, cmd, aviso: _avisoClimb };
     return { ok: false, saida: "Erro interno do simulador: " + e.message, cmd };
   }
 }

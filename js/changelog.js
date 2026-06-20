@@ -21,6 +21,7 @@
       titulo: "🎯 Saídas mais fiéis à AWS",
       itens: [
         "Afinamos as saídas e mensagens de erro dos comandos (EC2 e S3) pra ficarem <b>idênticas às da AWS de verdade</b> — assim o que você aprende aqui é exatamente o que vai ver lá.",
+        "Quando a AWS não mostra nada (ex.: <code>aws s3 ls</code> sem buckets), agora o terminal também não mostra — mas aparece um <b>aviso do CLImb</b> (⚡) explicando o que aconteceu, separado da saída do comando.",
       ],
     },
     {

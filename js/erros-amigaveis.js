@@ -28,6 +28,7 @@ const REGRAS_ERRO = [
   // EC2
   [/InvalidAMIID/i, "O id da imagem (AMI) está errado. Use o formato ami-0abcd1234ef567890."],
   [/Invalid value.*InstanceType|InstanceType/i, "Esse tipo de instância não é aceito aqui. Exemplos: t2.micro, t3.small, t3.medium."],
+  [/for parameter (maxCount|minCount)/i, "Neste simulador dá pra subir de 1 a 10 instâncias por vez (--count)."],
   [/InvalidInstanceID\.NotFound/i, "Não existe instância com esse id. Pegue o id certo com 'aws ec2 describe-instances'."],
   [/InvalidKeyPair\.NotFound/i, "Esse par de chaves não existe. Crie antes com 'aws ec2 create-key-pair --key-name <nome>'."],
   [/InvalidKeyPair\.Duplicate/i, "Já existe um par de chaves com esse nome."],
