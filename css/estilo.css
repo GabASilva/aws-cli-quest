@@ -286,6 +286,18 @@ footer {
 }
 footer button { font-size: 0.72rem; padding: 4px 10px; }
 
+.aviso-marca {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 6px 20px 10px;
+  background: var(--painel);
+  color: var(--texto-fraco);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  text-align: center;
+  border-top: 1px solid var(--borda);
+}
+
 /* ---------- Modais ---------- */
 .modal {
   display: none;
