@@ -125,6 +125,8 @@
     if (view.tela === "home") corpo.innerHTML = telaHome();
     else if (view.tela === "s3-buckets") corpo.innerHTML = telaBuckets();
     else if (view.tela === "s3-objetos") corpo.innerHTML = telaObjetos();
+    else if (view.tela === "ec2-instancias") corpo.innerHTML = telaInstancias();
+    else if (view.tela === "ec2-launch") corpo.innerHTML = formLaunch();
     else corpo.innerHTML = telaHome();
     corpo.scrollTop = 0;
   }
@@ -133,9 +135,10 @@
   function telaHome() {
     const c = conta();
     const nBuckets = Object.keys(c.s3.buckets).length;
+    const nInst = Object.values(c.ec2.instancias).filter((i) => i.estado !== "terminated").length;
     const servicos = [
       { id: "s3", icone: "🪣", nome: "S3", desc: "Armazenamento de objetos", ativo: true, extra: `${nBuckets} bucket(s)` },
-      { id: "ec2", icone: "🖧", nome: "EC2", desc: "Máquinas virtuais", ativo: false },
+      { id: "ec2", icone: "🖥️", nome: "EC2", desc: "Máquinas virtuais", ativo: true, extra: `${nInst} instância(s)` },
       { id: "iam", icone: "🔑", nome: "IAM", desc: "Usuários e permissões", ativo: false },
       { id: "lambda", icone: "λ", nome: "Lambda", desc: "Funções serverless", ativo: false },
       { id: "dynamodb", icone: "🗄️", nome: "DynamoDB", desc: "Banco NoSQL", ativo: false },
@@ -342,6 +345,96 @@
       </div>`;
   }
 
+  // ---------- EC2: badge de estado ----------
+  function badgeEstado(estado) {
+    const cls = {
+      running: "ok", pending: "pend", stopping: "pend", "shutting-down": "pend",
+      stopped: "off", terminated: "fim",
+    }[estado] || "off";
+    return `<span class="caws-estado ${cls}">● ${esc(estado)}</span>`;
+  }
+
+  // ---------- EC2: lista de instâncias ----------
+  function telaInstancias() {
+    const c = conta();
+    const ids = Object.keys(c.ec2.instancias);
+    const linhas = ids.length
+      ? ids.map((id) => {
+          const i = c.ec2.instancias[id];
+          const acoes = [];
+          if (i.estado === "running") acoes.push(`<button class="caws-link" data-acao="ec2-stop" data-id="${esc(id)}">Parar</button>`);
+          if (i.estado === "stopped") acoes.push(`<button class="caws-link" data-acao="ec2-start" data-id="${esc(id)}">Iniciar</button>`);
+          if (i.estado !== "terminated") acoes.push(`<button class="caws-link-perigo" data-acao="ec2-terminate" data-id="${esc(id)}">Encerrar</button>`);
+          return `
+            <tr>
+              <td>${esc(id)}</td>
+              <td>${badgeEstado(i.estado)}</td>
+              <td>${esc(i.tipo)}</td>
+              <td>${esc(i.imagem)}</td>
+              <td>${esc(i.chave || "—")}</td>
+              <td>${acoes.join(" ") || "—"}</td>
+            </tr>`;
+        }).join("")
+      : `<tr><td colspan="6" class="caws-vazio">Nenhuma instância. Clique em <strong>Executar instância</strong> para criar a primeira.</td></tr>`;
+
+    return `
+      ${migalha([["Console", "home"], ["EC2", "ec2-instancias"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico">
+          <h1>🖥️ EC2 — Instâncias</h1>
+          <button class="caws-btn-primario" data-acao="ec2-form-launch">Executar instância</button>
+        </div>
+        <table class="caws-tabela">
+          <thead><tr><th>ID da instância</th><th>Estado</th><th>Tipo</th><th>AMI</th><th>Par de chaves</th><th></th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        ${dicaCli("Listar instâncias no CLI:", "aws ec2 describe-instances")}
+      </div>
+    `;
+  }
+
+  // ---------- EC2: executar instância (wizard) ----------
+  function formLaunch() {
+    const c = conta();
+    const tipos = (typeof TIPOS_INSTANCIA !== "undefined" ? TIPOS_INSTANCIA : ["t2.micro", "t3.small"]);
+    const optTipos = tipos.map((t) => `<option value="${esc(t)}"${t === "t2.micro" ? " selected" : ""}>${esc(t)}</option>`).join("");
+    const chaves = Object.keys(c.ec2.keyPairs || {});
+    const optChaves = `<option value="">(nenhuma)</option>` + chaves.map((k) => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+    return `
+      ${migalha([["Console", "home"], ["EC2", "ec2-instancias"], ["Executar instância", null]])}
+      <div class="caws-pagina caws-form">
+        <h1>Executar instância</h1>
+        <form data-form="launch">
+          <label class="caws-campo">
+            <span>Imagem (AMI)</span>
+            <input name="ami" value="ami-0abcd1234ef567890" autocomplete="off" spellcheck="false">
+            <small>O ID da imagem que vira o disco da máquina. Começa com <code>ami-</code>.</small>
+          </label>
+          <label class="caws-campo">
+            <span>Tipo da instância</span>
+            <select name="tipo">${optTipos}</select>
+            <small>Define CPU e memória. <code>t2.micro</code> é o do nível gratuito.</small>
+          </label>
+          <label class="caws-campo">
+            <span>Par de chaves (opcional)</span>
+            <select name="chave">${optChaves}</select>
+            <small>É a chave de SSH pra acessar a máquina. Crie uma na CLI com <code>aws ec2 create-key-pair</code>.</small>
+          </label>
+          <label class="caws-campo">
+            <span>Quantidade</span>
+            <input name="count" type="number" min="1" max="10" value="1">
+          </label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes">
+            <button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="ec2-instancias">Cancelar</button>
+            <button type="submit" class="caws-btn-primario">Executar instância</button>
+          </div>
+        </form>
+        ${dicaCli("Mesma coisa no CLI:", "aws ec2 run-instances --image-id AMI --instance-type TIPO [--key-name CHAVE] [--count N]")}
+      </div>
+    `;
+  }
+
   // ---------- Componentes reutilizáveis ----------
   function migalha(itens) {
     return `<div class="caws-migalha">` + itens.map(([nome, tela], i) => {
@@ -371,6 +464,7 @@
 
     if (acao === "abrir-servico") {
       if (alvo.dataset.servico === "s3") { view = { tela: "s3-buckets", bucket: null, prefixo: "" }; render(); }
+      else if (alvo.dataset.servico === "ec2") { view = { tela: "ec2-instancias", bucket: null, prefixo: "" }; render(); }
       return;
     }
     if (acao === "ver-roadmap") {
@@ -430,6 +524,30 @@
       avisar("🗑️ Bucket excluído");
       return;
     }
+
+    // ----- EC2 -----
+    if (acao === "ec2-form-launch") {
+      overlay.querySelector("#cawsCorpo").innerHTML = formLaunch(); return;
+    }
+    if (acao === "ec2-stop") {
+      const i = c.ec2.instancias[alvo.dataset.id];
+      if (i && i.estado === "running") { i.estado = "stopped"; ecoTerminal(`(stop-instances) ${i.id}: running → stopping`, "ok"); persistir(); render(); avisar(`⏸️ Instância ${esc(i.id)} parada`); }
+      return;
+    }
+    if (acao === "ec2-start") {
+      const i = c.ec2.instancias[alvo.dataset.id];
+      if (i && i.estado === "stopped") { i.estado = "running"; ecoTerminal(`(start-instances) ${i.id}: stopped → pending`, "ok"); persistir(); render(); avisar(`▶️ Instância ${esc(i.id)} iniciada`); }
+      return;
+    }
+    if (acao === "ec2-terminate") {
+      const i = c.ec2.instancias[alvo.dataset.id];
+      if (!i || i.estado === "terminated") return;
+      if (!confirm(`Encerrar a instância ${i.id}? Encerrar é definitivo (diferente de parar).`)) return;
+      i.estado = "terminated";
+      ecoTerminal(`(terminate-instances) ${i.id}: shutting-down`, "ok");
+      persistir(); render(); avisar(`🗑️ Instância ${esc(i.id)} encerrada`);
+      return;
+    }
   }
 
   // ---------- Tratamento de formulários ----------
@@ -478,6 +596,26 @@
       b.objetos[chave] = { tamanho: 0, enviadoEm: dataConsole() };
       ecoTerminal(`make_folder: s3://${view.bucket}/${chave}`, "ok");
       persistir(); render(); avisar(`📁 Pasta ${esc(nome)} criada`);
+      return;
+    }
+
+    if (tipo === "launch") {
+      const ami = (form.ami.value || "").trim();
+      const tipoInst = form.tipo.value;
+      const chave = form.chave.value || null;
+      const count = parseInt(form.count.value, 10) || 1;
+      if (!/^ami-[0-9a-f]+$/i.test(ami)) { erro("AMI inválida. Comece com 'ami-' seguido de hexadecimal (ex.: ami-0abcd1234ef567890)."); return; }
+      if (!(count >= 1 && count <= 10)) { erro("A quantidade precisa ser de 1 a 10."); return; }
+      const ids = [];
+      for (let k = 0; k < count; k++) {
+        const id = "i-0" + (typeof hexAleatorio === "function" ? hexAleatorio(16) : Date.now().toString(16));
+        c.ec2.instancias[id] = { id, imagem: ami, tipo: tipoInst, chave, sgs: [], estado: "running", criadaEm: (typeof agoraIso === "function" ? agoraIso() : new Date().toISOString()) };
+        ids.push(id);
+      }
+      ecoTerminal(`(run-instances) ${count} instância(s) ${tipoInst} iniciada(s): ${ids.join(", ")}`, "ok");
+      persistir();
+      view = { tela: "ec2-instancias", bucket: null, prefixo: "" }; render();
+      avisar(`✅ ${count} instância(s) <strong>${esc(tipoInst)}</strong> executada(s)`);
       return;
     }
   }

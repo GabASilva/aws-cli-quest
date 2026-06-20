@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20e",
+      data: "20 jun 2026",
+      titulo: "🖥️ EC2 no Console",
+      itens: [
+        "O Console agora também tem <b>EC2</b>: execute instâncias, pare, inicie e encerre — tudo no clique.",
+        "Igual ao S3, <b>espelha a linha de comando</b>: o que você faz aqui aparece no <code>aws ec2 describe-instances</code>, e vice-versa.",
+      ],
+    },
+    {
       versao: "2026-06-20d",
       data: "20 jun 2026",
       titulo: "🎯 Saídas mais fiéis à AWS",

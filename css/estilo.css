@@ -739,6 +739,15 @@ body.console-aberto { overflow: hidden; }
 .caws-btn-perigo { background: #fff; color: #d13212; border: 1px solid #d13212; }
 .caws-btn-perigo:hover { background: #fdf0ee; }
 .caws-link-perigo { background: none; border: none; color: #d13212; cursor: pointer; font-size: 0.82rem; text-decoration: underline; }
+.caws-link { background: none; border: none; color: #0073bb; cursor: pointer; font-size: 0.82rem; text-decoration: underline; margin-right: 8px; }
+.caws-link:hover { color: #005a94; }
+
+/* Badge de estado de instância EC2 */
+.caws-estado { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.caws-estado.ok { color: #1d8102; }
+.caws-estado.pend { color: #b35900; }
+.caws-estado.off { color: #687078; }
+.caws-estado.fim { color: #d13212; }
 
 .caws-tabela { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d5dbdb; border-radius: 8px; overflow: hidden; }
 .caws-tabela th { text-align: left; font-size: 0.78rem; color: #5f6b7a; text-transform: uppercase; letter-spacing: .03em; padding: 11px 14px; border-bottom: 1px solid #eaeded; background: #fafafa; }
