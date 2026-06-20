@@ -244,7 +244,7 @@ const cmdS3 = {
       throw new ErroCli(`make_bucket failed: s3://${uri.bucket} Parameter validation failed: nome de bucket inválido (use só letras minúsculas, números e hífens, 3 a 63 caracteres).`);
     }
     if (conta.s3.buckets[uri.bucket]) {
-      throw new ErroCli(`make_bucket failed: s3://${uri.bucket} An error occurred (BucketAlreadyOwnedByYou): Your previous request to create the named bucket succeeded and you already own it.`);
+      throw new ErroCli(`make_bucket failed: s3://${uri.bucket} An error occurred (BucketAlreadyOwnedByYou) when calling the CreateBucket operation: Your previous request to create the named bucket succeeded and you already own it.`);
     }
     conta.s3.buckets[uri.bucket] = { criadoEm: dataFormatada(), objetos: {}, website: null, politica: null, versionamento: null };
     return `make_bucket: ${uri.bucket}`;
@@ -256,7 +256,7 @@ const cmdS3 = {
     const b = exigirBucket(conta, uri.bucket, "DeleteBucket");
     const chaves = Object.keys(b.objetos);
     if (chaves.length && !flags.force) {
-      throw new ErroCli(`remove_bucket failed: s3://${uri.bucket} An error occurred (BucketNotEmpty): The bucket you tried to delete is not empty. Use --force para apagar o bucket junto com os objetos.`);
+      throw new ErroCli(`remove_bucket failed: s3://${uri.bucket} An error occurred (BucketNotEmpty) when calling the DeleteBucket operation: The bucket you tried to delete is not empty. Use --force para apagar o bucket junto com os objetos.`);
     }
     const linhas = chaves.map((c) => `delete: s3://${uri.bucket}/${c}`);
     delete conta.s3.buckets[uri.bucket];
@@ -422,13 +422,19 @@ const cmdS3api = {
 // ---------- EC2 ----------
 const TIPOS_INSTANCIA = ["t2.nano", "t2.micro", "t2.small", "t3.nano", "t3.micro", "t3.small", "t3.medium", "m5.large", "c5.large"];
 
+// Códigos de estado iguais aos da AWS (o JSON real traz Code + Name).
+const COD_ESTADO_EC2 = { pending: 0, running: 16, "shutting-down": 32, terminated: 48, stopping: 64, stopped: 80 };
+function estadoEc2(nome) {
+  return { Code: COD_ESTADO_EC2[nome] != null ? COD_ESTADO_EC2[nome] : 0, Name: nome };
+}
+
 function instanciasJson(lista) {
   return lista.map((i) => ({
     InstanceId: i.id,
     ImageId: i.imagem,
     InstanceType: i.tipo,
     KeyName: i.chave || null,
-    State: { Name: i.estado },
+    State: estadoEc2(i.estado),
     SecurityGroups: i.sgs.map((nome) => ({ GroupName: nome })),
     LaunchTime: i.criadaEm,
   }));
@@ -474,7 +480,12 @@ const cmdEc2 = {
       conta.ec2.instancias[inst.id] = inst;
       novas.push(inst);
     }
-    return js({ Instances: novas.map((i) => ({ InstanceId: i.id, ImageId: i.imagem, InstanceType: i.tipo, KeyName: i.chave, State: { Name: "pending" } })) });
+    return js({
+      Groups: [],
+      Instances: novas.map((i) => ({ InstanceId: i.id, ImageId: i.imagem, InstanceType: i.tipo, KeyName: i.chave || null, State: estadoEc2("pending") })),
+      OwnerId: conta.contaId,
+      ReservationId: "r-" + hexAleatorio(17),
+    });
   },
 
   "stop-instances": (conta, pos, flags) => {
@@ -482,7 +493,7 @@ const cmdEc2 = {
     const saida = insts.map((i) => {
       const anterior = i.estado;
       i.estado = "stopped";
-      return { InstanceId: i.id, CurrentState: { Name: "stopping" }, PreviousState: { Name: anterior } };
+      return { CurrentState: estadoEc2("stopping"), InstanceId: i.id, PreviousState: estadoEc2(anterior) };
     });
     return js({ StoppingInstances: saida });
   },
@@ -492,7 +503,7 @@ const cmdEc2 = {
     const saida = insts.map((i) => {
       const anterior = i.estado;
       i.estado = "running";
-      return { InstanceId: i.id, CurrentState: { Name: "pending" }, PreviousState: { Name: anterior } };
+      return { CurrentState: estadoEc2("pending"), InstanceId: i.id, PreviousState: estadoEc2(anterior) };
     });
     return js({ StartingInstances: saida });
   },
@@ -502,7 +513,7 @@ const cmdEc2 = {
     const saida = insts.map((i) => {
       const anterior = i.estado;
       i.estado = "terminated";
-      return { InstanceId: i.id, CurrentState: { Name: "shutting-down" }, PreviousState: { Name: anterior } };
+      return { CurrentState: estadoEc2("shutting-down"), InstanceId: i.id, PreviousState: estadoEc2(anterior) };
     });
     return js({ TerminatingInstances: saida });
   },
@@ -511,7 +522,8 @@ const cmdEc2 = {
     const nome = exigirFlag(flags, "key-name");
     if (conta.ec2.keyPairs[nome]) throw new ErroCli(`An error occurred (InvalidKeyPair.Duplicate) when calling the CreateKeyPair operation: The keypair '${nome}' already exists.`);
     conta.ec2.keyPairs[nome] = { criadoEm: agoraIso() };
-    return js({ KeyName: nome, KeyPairId: "key-0" + hexAleatorio(16), KeyMaterial: "-----BEGIN RSA PRIVATE KEY-----\n(chave privada simulada — guarde com carinho)\n-----END RSA PRIVATE KEY-----" });
+    const digitos = hexAleatorio(40).match(/.{2}/g).join(":");
+    return js({ KeyFingerprint: digitos, KeyMaterial: "-----BEGIN RSA PRIVATE KEY-----\n(chave privada simulada — guarde com carinho)\n-----END RSA PRIVATE KEY-----", KeyName: nome, KeyPairId: "key-0" + hexAleatorio(16) });
   },
 
   "describe-key-pairs": (conta) => {

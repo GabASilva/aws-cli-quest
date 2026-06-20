@@ -16,6 +16,14 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20d",
+      data: "20 jun 2026",
+      titulo: "🎯 Saídas mais fiéis à AWS",
+      itens: [
+        "Afinamos as saídas e mensagens de erro dos comandos (EC2 e S3) pra ficarem <b>idênticas às da AWS de verdade</b> — assim o que você aprende aqui é exatamente o que vai ver lá.",
+      ],
+    },
+    {
       versao: "2026-06-20c",
       data: "20 jun 2026",
       titulo: "✉️ Entre com usuário ou e-mail",
