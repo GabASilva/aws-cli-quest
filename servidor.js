@@ -322,12 +322,20 @@ async function tratarApi(req, res, rota) {
       return responderJson(res, 429, { erro: "Muitas tentativas. Espere alguns minutos e tente de novo." });
     }
     const corpo = await lerCorpo(req);
-    const nome = String(corpo.usuario || "").trim();
+    const entrada = String(corpo.usuario || "").trim();
+    // Aceita login por NOME de usuário OU por e-mail. Como o e-mail é único
+    // (validado no cadastro e no /api/email), não há ambiguidade.
+    let nome = entrada;
+    let u = bd.usuarios[nome];
+    if (!u && entrada.includes("@")) {
+      const email = entrada.toLowerCase();
+      const achado = Object.entries(bd.usuarios).find(([, x]) => x.email && x.email === email);
+      if (achado) { nome = achado[0]; u = achado[1]; }
+    }
     const bloq = segundosBloqueado(nome);
     if (bloq) {
       return responderJson(res, 429, { erro: `Conta bloqueada por tentativas demais. Tente em ${bloq}s.` });
     }
-    const u = bd.usuarios[nome];
     // contas criadas só via Google não têm senha — não dá pra logar por senha
     // (mas podem definir uma usando "Esqueci minha senha", já que têm e-mail)
     if (!u || !u.hash || !conferirSenha(String(corpo.senha || ""), u.salt, u.hash)) {

@@ -416,6 +416,10 @@ function trocarAbaConta(aba) {
   $("#btnEnviarConta").textContent = aba === "login" ? "Entrar" : "Criar conta e jogar";
   $("#labelEmail").style.display = aba === "cadastro" ? "" : "none"; // e-mail só no cadastro
   $("#linkEsqueci").parentElement.style.display = aba === "login" ? "" : "none";
+  // no login dá pra usar usuário OU e-mail (e-mail pode passar de 20 chars)
+  $("#labelUsuario").textContent = aba === "login" ? "Usuário ou e-mail" : "Usuário";
+  $("#campoUsuario").placeholder = aba === "login" ? "usuário ou e-mail" : "ex.: gabriel";
+  $("#campoUsuario").maxLength = aba === "login" ? 120 : 20;
   $("#contaErro").textContent = "";
 }
 
