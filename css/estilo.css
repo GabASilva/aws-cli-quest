@@ -496,7 +496,9 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   white-space: nowrap;
 }
 .bloco-pro .servico-cab { opacity: 0.92; }
-#btnPlano { border-color: var(--laranja); color: var(--laranja); }
+/* "Assinar Pro" (estado free): texto laranja sobre fundo escuro pra chamar atenção.
+   Estado "Pro" (fundo laranja sólido): texto escuro, como o botão Ranking. */
+#btnPlano.secundario { border-color: var(--laranja); color: var(--laranja); }
 
 .grade-planos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 4px; }
 .cartao-plano {
