@@ -16,6 +16,14 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20b",
+      data: "20 jun 2026",
+      titulo: "🔑 Primeiro lab (SSH) mais fiel",
+      itens: [
+        "O lab de conexão agora <b>ensina o SSH de verdade</b>: o que é a chave <code>.pem</code>, o usuário <b>ec2-user</b> e o passo do <code>chmod 400</code> — que na AWS real é obrigatório (sem ele o SSH recusa a chave).",
+      ],
+    },
+    {
       versao: "2026-06-20",
       data: "20 jun 2026",
       titulo: "🖥️ Console de gerenciamento (S3)",
