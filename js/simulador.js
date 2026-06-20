@@ -14,6 +14,12 @@ class ErroCli extends Error {}
 // SEPARADO da saída do CLI, deixando claro que é um aviso do CLImb — não do CLI.
 let _avisoClimb = null;
 function avisarClimb(texto) { _avisoClimb = texto; }
+// Sucesso "silencioso": muitos delete/put da AWS não respondem nada quando dão
+// certo. Mantemos isso (saída vazia, fiel) e explicamos no aviso do CLImb.
+function okSilencioso(oque) {
+  avisarClimb(`${oque} A AWS não imprime nada quando uma operação dessas dá certo — por isso o terminal fica em branco.`);
+  return "";
+}
 
 // ---------- Conta virtual ----------
 function criarContaAws() {
@@ -410,7 +416,7 @@ const cmdS3api = {
       throw new ErroCli("An error occurred (MalformedXML) when calling the PutBucketVersioning operation: Status precisa ser 'Enabled' ou 'Suspended'.");
     }
     b.versionamento = conf.Status;
-    return "";
+    return okSilencioso(`Versionamento ${conf.Status === "Enabled" ? "ativado" : "suspenso"} no bucket "${nome}". Confira com: aws s3api get-bucket-versioning --bucket ${nome}.`);
   },
 
   "get-bucket-versioning": (conta, pos, flags) => {
@@ -430,7 +436,7 @@ const cmdS3api = {
       catch (e) { throw new ErroCli("An error occurred (MalformedPolicy) when calling the PutBucketPolicy operation: Policies must be valid JSON"); }
     }
     b.politica = politica;
-    return "";
+    return okSilencioso(`Política aplicada ao bucket "${nome}". Confira com: aws s3api get-bucket-policy --bucket ${nome}.`);
   },
 
   "get-bucket-policy": (conta, pos, flags) => {
@@ -624,7 +630,7 @@ const cmdIam = {
     if (!conta.iam.usuarios[nome]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteUser operation: The user with name ${nome} cannot be found.`);
     delete conta.iam.usuarios[nome];
     for (const g of Object.values(conta.iam.grupos)) g.membros = g.membros.filter((m) => m !== nome);
-    return "";
+    return okSilencioso(`Usuário "${nome}" apagado.`);
   },
 
   "create-group": (conta, pos, flags) => {
@@ -645,7 +651,7 @@ const cmdIam = {
     const g = conta.iam.grupos[grupo];
     if (!g) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the AddUserToGroup operation: The group with name ${grupo} cannot be found.`);
     if (!g.membros.includes(usuario)) g.membros.push(usuario);
-    return "";
+    return okSilencioso(`"${usuario}" entrou no grupo "${grupo}". Confira com: aws iam get-group --group-name ${grupo}.`);
   },
 
   "get-group": (conta, pos, flags) => {
@@ -664,7 +670,7 @@ const cmdIam = {
     if (!u) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the AttachUserPolicy operation: The user with name ${usuario} cannot be found.`);
     const arn = exigirArnPolitica(flags);
     if (!u.politicas.includes(arn)) u.politicas.push(arn);
-    return "";
+    return okSilencioso(`Política anexada ao usuário "${usuario}". Confira com: aws iam list-attached-user-policies --user-name ${usuario}.`);
   },
 
   "attach-group-policy": (conta, pos, flags) => {
@@ -673,7 +679,7 @@ const cmdIam = {
     if (!g) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the AttachGroupPolicy operation: The group with name ${grupo} cannot be found.`);
     const arn = exigirArnPolitica(flags);
     if (!g.politicas.includes(arn)) g.politicas.push(arn);
-    return "";
+    return okSilencioso(`Política anexada ao grupo "${grupo}".`);
   },
 
   "list-attached-user-policies": (conta, pos, flags) => {
@@ -801,7 +807,7 @@ const cmdIam = {
   "delete-policy": (conta, pos, flags) => {
     const p = exigirPolitica(conta, flags, "DeletePolicy");
     delete conta.iam.policies[p.nome];
-    return "";
+    return okSilencioso(`Política "${p.nome}" apagada.`);
   },
 
   // ----- Desanexar e remover (gestão / faxina) -----
@@ -810,7 +816,7 @@ const cmdIam = {
     if (!u) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DetachUserPolicy operation: o usuário não existe.");
     const arn = exigirArnPolitica(flags);
     u.politicas = u.politicas.filter((a) => a !== arn);
-    return "";
+    return okSilencioso("Política desanexada do usuário.");
   },
 
   "detach-group-policy": (conta, pos, flags) => {
@@ -818,7 +824,7 @@ const cmdIam = {
     if (!g) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DetachGroupPolicy operation: o grupo não existe.");
     const arn = exigirArnPolitica(flags);
     g.politicas = g.politicas.filter((a) => a !== arn);
-    return "";
+    return okSilencioso("Política desanexada do grupo.");
   },
 
   "detach-role-policy": (conta, pos, flags) => {
@@ -826,7 +832,7 @@ const cmdIam = {
     if (!r) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DetachRolePolicy operation: a role não existe.");
     const arn = exigirArnPolitica(flags);
     r.politicas = r.politicas.filter((a) => a !== arn);
-    return "";
+    return okSilencioso("Política desanexada da role.");
   },
 
   "remove-user-from-group": (conta, pos, flags) => {
@@ -834,7 +840,7 @@ const cmdIam = {
     const g = conta.iam.grupos[exigirFlag(flags, "group-name")];
     if (!g) throw new ErroCli("An error occurred (NoSuchEntity) when calling the RemoveUserFromGroup operation: o grupo não existe.");
     g.membros = g.membros.filter((m) => m !== usuario);
-    return "";
+    return okSilencioso(`"${usuario}" removido do grupo.`);
   },
 
   "delete-group": (conta, pos, flags) => {
@@ -843,14 +849,14 @@ const cmdIam = {
     if (!g) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteGroup operation: The group with name ${nome} cannot be found.`);
     if (g.membros.length) throw new ErroCli(`An error occurred (DeleteConflict) when calling the DeleteGroup operation: Cannot delete entity, must remove users from group first. Use remove-user-from-group antes.`);
     delete conta.iam.grupos[nome];
-    return "";
+    return okSilencioso(`Grupo "${nome}" apagado.`);
   },
 
   "delete-role": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "role-name");
     if (!conta.iam.roles[nome]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteRole operation: Role ${nome} cannot be found.`);
     delete conta.iam.roles[nome];
-    return "";
+    return okSilencioso(`Role "${nome}" apagada.`);
   },
 };
 
@@ -958,7 +964,7 @@ const cmdLambda = {
     const nome = exigirFlag(flags, "function-name");
     exigirFuncao(conta, flags, "DeleteFunction");
     delete conta.lambda.funcoes[nome];
-    return "";
+    return okSilencioso(`Função "${nome}" apagada.`);
   },
 };
 
@@ -1031,13 +1037,14 @@ const cmdDynamo = {
 
   "put-item": (conta, pos, flags) => {
     const t = exigirTabela(conta, flags, "PutItem");
+    const nomeTabela = exigirFlag(flags, "table-name");
     const item = parsearJsonFlag(flags, "item");
     const hash = chaveHash(t);
     if (!item[hash]) throw new ErroCli(`An error occurred (ValidationException) when calling the PutItem operation: One or more parameter values were invalid: Missing the key ${hash} in the item`);
     const chave = JSON.stringify(item[hash]);
     t.itens = t.itens.filter((i) => JSON.stringify(i[hash]) !== chave);
     t.itens.push(item);
-    return "";
+    return okSilencioso(`Item gravado na tabela. Confira com: aws dynamodb scan --table-name ${nomeTabela}.`);
   },
 
   "get-item": (conta, pos, flags) => {
@@ -1047,7 +1054,11 @@ const cmdDynamo = {
     if (!chave[hash]) throw new ErroCli(`An error occurred (ValidationException) when calling the GetItem operation: The provided key element does not match the schema (esperado: ${hash})`);
     const alvo = JSON.stringify(chave[hash]);
     const item = t.itens.find((i) => JSON.stringify(i[hash]) === alvo);
-    return item ? js({ Item: item }) : "(nenhum item encontrado com essa chave)";
+    if (!item) {
+      avisarClimb("Nenhum item com essa chave. A AWS não retorna nada no get-item quando o item não existe (a resposta vem sem o campo \"Item\") — por isso o terminal fica em branco.");
+      return "";
+    }
+    return js({ Item: item });
   },
 
   scan: (conta, pos, flags) => {
