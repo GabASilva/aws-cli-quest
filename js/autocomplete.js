@@ -101,7 +101,7 @@ function aoApertarTab(ev, input) {
     } else {
       // sem como avançar sozinho: lista as opções no terminal
       if (typeof imprimir === "function") {
-        imprimir(`aws-quest $ ${valor}`, "eco-tab");
+        imprimir(`climb $ ${valor}`, "eco-tab");
         imprimir(cands.join("    "), "sugestao");
         if (typeof rolarTerminal === "function") rolarTerminal();
       }

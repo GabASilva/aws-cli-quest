@@ -1,8 +1,11 @@
-# ⚡ AWS CLI Quest
+# ⚡ CLImb — treinador de AWS CLI
 
-Simulador gamificado de AWS CLI — aprenda a usar o CLI da AWS no estilo
+Simulador gamificado pra aprender a linha de comando da AWS no estilo
 boot.dev: XP, níveis, sequência de acertos com bônus, ranking e projetos
 finais onde você monta sistemas completos só com comandos.
+
+> Projeto independente e educativo, **sem afiliação, patrocínio ou endosso
+> da Amazon**. "AWS" e "Amazon Web Services" são marcas da Amazon.com, Inc.
 
 **Zero dependências, zero custo, zero risco**: tudo roda no navegador com uma
 conta AWS 100% simulada. Nenhum comando toca a AWS de verdade.

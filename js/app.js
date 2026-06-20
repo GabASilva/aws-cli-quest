@@ -241,7 +241,7 @@ function imprimir(texto, classe) {
 function imprimirComando(comando) {
   const linha = document.createElement("div");
   linha.className = "linha eco";
-  linha.innerHTML = `<span class="prompt">aws-quest&nbsp;$</span> <span>${escaparHtml(comando)}</span>`;
+  linha.innerHTML = `<span class="prompt">climb&nbsp;$</span> <span>${escaparHtml(comando)}</span>`;
   $("#saidaTerminal").appendChild(linha);
 }
 
@@ -549,7 +549,7 @@ async function iniciar() {
 
 function boasVindas() {
   imprimir(`╔══════════════════════════════════════════════╗
-║   ⚡ AWS CLI Quest — bem-vindo(a) a bordo!   ║
+║   ⚡ CLImb — bem-vindo(a) a bordo!           ║
 ╚══════════════════════════════════════════════╝
 Você tem uma conta AWS simulada só sua. Nada aqui custa dinheiro
 e nada quebra de verdade — pode experimentar à vontade.

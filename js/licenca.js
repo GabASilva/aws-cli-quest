@@ -210,7 +210,7 @@ function podeAcessar(d) {
     modal.id = "modalPlanos";
     modal.innerHTML = `
       <div class="modal-caixa modal-largo">
-        <h2>⭐ AWS CLI Quest Pro</h2>
+        <h2>⭐ CLImb Pro</h2>
         <p id="planosAviso" class="conta-explica"></p>
         <div id="planosGrade" class="grade-planos"></div>
         <div id="planoCustom" class="plano-custom"></div>

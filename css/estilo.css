@@ -44,6 +44,14 @@ header {
   color: var(--laranja);
   white-space: nowrap;
 }
+.logo small {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--texto-fraco);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-left: 2px;
+}
 
 .nivel-box {
   flex: 1;

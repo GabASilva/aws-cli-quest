@@ -49,7 +49,7 @@ async function enviarEmail(para, assunto, html) {
       method: "POST",
       headers: { Authorization: "Bearer " + process.env.RESEND_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM || "AWS CLI Quest <onboarding@resend.dev>",
+        from: process.env.RESEND_FROM || "CLImb <onboarding@resend.dev>",
         to: para,
         subject: assunto,
         html,
@@ -253,7 +253,7 @@ function perfilPublico(nome) {
 // ---------- Licenças ----------
 const PRECOS = { mensal: 19.9, semestral: 89.9, anual: 149.9 };
 const DIAS = { mensal: 30, semestral: 182, anual: 365 };
-const TITULO_PLANO = { mensal: "AWS CLI Quest Pro — Mensal", semestral: "AWS CLI Quest Pro — Semestral", anual: "AWS CLI Quest Pro — Anual" };
+const TITULO_PLANO = { mensal: "CLImb Pro — Mensal", semestral: "CLImb Pro — Semestral", anual: "CLImb Pro — Anual" };
 
 // Plano personalizado: você escolhe quantos meses, e o preço por mês cai
 // progressivamente (ancorado no mensal/semestral/anual).
@@ -453,7 +453,7 @@ async function tratarApi(req, res, rota) {
     if (tier === "custom") {
       const c = precoCustom(corpo.meses);
       unitPrice = c.total;
-      titulo = "AWS CLI Quest Pro — " + c.meses + (c.meses === 1 ? " mês" : " meses");
+      titulo = "CLImb Pro — " + c.meses + (c.meses === 1 ? " mês" : " meses");
       externalRef = nome + "|custom|" + c.meses;
     } else if (PRECOS[tier]) {
       unitPrice = PRECOS[tier];
@@ -518,8 +518,8 @@ async function tratarApi(req, res, rota) {
       const link = `${base}/?reset=${token}`;
       await enviarEmail(
         email,
-        "Redefinir sua senha — AWS CLI Quest",
-        `<p>Olá, <strong>${entrada[0]}</strong>!</p><p>Recebemos um pedido pra redefinir sua senha no AWS CLI Quest. Clique no link abaixo (vale por 1 hora):</p><p><a href="${link}">${link}</a></p><p>Se não foi você, pode ignorar este e-mail — sua senha continua a mesma.</p>`
+        "Redefinir sua senha — CLImb",
+        `<p>Olá, <strong>${entrada[0]}</strong>!</p><p>Recebemos um pedido pra redefinir sua senha no CLImb. Clique no link abaixo (vale por 1 hora):</p><p><a href="${link}">${link}</a></p><p>Se não foi você, pode ignorar este e-mail — sua senha continua a mesma.</p>`
       );
     }
     // resposta sempre igual, exista ou não a conta (não vaza quais e-mails existem)
@@ -557,8 +557,8 @@ async function tratarApi(req, res, rota) {
     const secret = base32Encode(crypto.randomBytes(20));
     u.twofaTmp = secret;
     salvarBd();
-    const label = encodeURIComponent("AWS CLI Quest:" + nome);
-    const otpauth = `otpauth://totp/${label}?secret=${secret}&issuer=AWS%20CLI%20Quest&period=30&digits=6`;
+    const label = encodeURIComponent("CLImb:" + nome);
+    const otpauth = `otpauth://totp/${label}?secret=${secret}&issuer=CLImb&period=30&digits=6`;
     return responderJson(res, 200, { secret, otpauth });
   }
 
@@ -729,4 +729,4 @@ http
       responderJson(res, 400, { erro: e.message || "erro" });
     }
   })
-  .listen(PORTA, () => console.log(`AWS CLI Quest no ar: http://localhost:${PORTA}`));
+  .listen(PORTA, () => console.log(`CLImb no ar: http://localhost:${PORTA}`));
