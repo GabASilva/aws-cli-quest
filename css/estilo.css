@@ -761,3 +761,46 @@ body.console-aberto { overflow: hidden; }
   .caws-busca { display: none; }
   .caws-pagina, .caws-migalha { padding-left: 14px; padding-right: 14px; }
 }
+
+/* ============================================================
+   Changelog / Novidades (changelog.js) — tema escuro do app
+   ============================================================ */
+/* Fica acima do overlay do Console (z-index 5000) pra poder ser aberto de lá */
+#modalChangelog { z-index: 6000; }
+.cl-caixa { width: min(620px, 94vw); }
+
+.cl-selo {
+  display: none; background: var(--laranja); color: #16191f;
+  font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: 9px;
+  margin-left: 4px; vertical-align: middle; text-transform: uppercase;
+}
+
+.cl-abas { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--borda); }
+.cl-aba {
+  background: none; border: none; cursor: pointer; color: var(--texto-fraco);
+  font-size: 0.9rem; font-weight: 700; padding: 8px 12px; border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.cl-aba:hover { color: var(--texto); }
+.cl-aba.ativa { color: var(--laranja); border-bottom-color: var(--laranja); }
+
+.cl-versao { padding: 12px 0; border-bottom: 1px solid var(--borda); }
+.cl-versao:last-child { border-bottom: none; }
+.cl-versao-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cl-versao h3 { margin: 0; font-size: 1rem; color: var(--texto); }
+.cl-data { font-size: 0.78rem; color: var(--texto-fraco); white-space: nowrap; }
+.cl-atual {
+  font-style: normal; background: var(--laranja); color: #16191f;
+  font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;
+  margin-left: 4px; text-transform: uppercase;
+}
+.cl-versao ul { margin: 8px 0 0; padding-left: 20px; }
+.cl-versao li { font-size: 0.88rem; line-height: 1.5; margin-bottom: 5px; color: var(--texto); }
+.cl-versao code { background: var(--painel-2); color: var(--laranja); padding: 1px 5px; border-radius: 4px; font-size: 0.84em; }
+
+.cl-breve-intro { font-size: 0.86rem; color: var(--texto-fraco); margin: 0 0 14px; }
+.cl-breve-item { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--borda); }
+.cl-breve-item:last-child { border-bottom: none; }
+.cl-breve-ic { font-size: 1.5rem; width: 34px; text-align: center; flex: 0 0 auto; }
+.cl-breve-item strong { display: block; font-size: 0.92rem; color: var(--texto); margin-bottom: 3px; }
+.cl-breve-item p { margin: 0; font-size: 0.84rem; line-height: 1.45; color: var(--texto-fraco); }

@@ -151,7 +151,7 @@
         <h2 class="caws-secao">Serviços</h2>
         <div class="caws-grade">
           ${servicos.map((s) => `
-            <div class="caws-servico ${s.ativo ? "" : "desativado"}" ${s.ativo ? `data-acao="abrir-servico" data-servico="${s.id}"` : ""}>
+            <div class="caws-servico ${s.ativo ? "" : "desativado"}" ${s.ativo ? `data-acao="abrir-servico" data-servico="${s.id}"` : `data-acao="ver-roadmap"`}>
               <div class="caws-servico-ic">${s.icone}</div>
               <div class="caws-servico-info">
                 <strong>${s.nome}</strong>
@@ -161,8 +161,6 @@
             </div>
           `).join("")}
         </div>
-        <p class="caws-dica-rodape">💡 Mais serviços do Console chegam aqui em breve. Por ora, o S3 está completo:
-        criar bucket, enviar arquivos, criar pastas e apagar — tudo refletindo no CLI.</p>
       </div>
     `;
   }
@@ -373,6 +371,12 @@
 
     if (acao === "abrir-servico") {
       if (alvo.dataset.servico === "s3") { view = { tela: "s3-buckets", bucket: null, prefixo: "" }; render(); }
+      return;
+    }
+    if (acao === "ver-roadmap") {
+      // serviço ainda não disponível -> manda pro roadmap centralizado (changelog)
+      if (typeof abrirChangelog === "function") abrirChangelog("breve");
+      else avisar("Esse serviço chega em breve no Console. 🚧");
       return;
     }
     if (acao === "ir") {
