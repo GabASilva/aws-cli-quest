@@ -632,3 +632,132 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   .grade-conceitos { grid-template-columns: 1fr; }
   .grade-planos { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Console AWS emulado (console-aws.js) — tema CLARO, estilo AWS
+   ============================================================ */
+body.console-aberto { overflow: hidden; }
+
+#consoleOverlay {
+  position: fixed; inset: 0; z-index: 5000;
+  display: none; flex-direction: column;
+  background: #f2f3f3; color: #16191f;
+  font-family: "Amazon Ember", "Helvetica Neue", Arial, sans-serif;
+}
+#consoleOverlay.aberto { display: flex; }
+
+.caws-topo {
+  display: flex; align-items: center; gap: 16px;
+  background: #232f3e; color: #fff;
+  padding: 0 18px; height: 52px; flex: 0 0 auto;
+}
+.caws-logo { font-weight: 700; font-size: 1.05rem; white-space: nowrap; }
+.caws-logo span { color: #ff9900; }
+.caws-busca { flex: 1; max-width: 480px; }
+.caws-busca input {
+  width: 100%; padding: 7px 12px; border-radius: 6px;
+  border: 1px solid #4b5563; background: #fff; color: #16191f; font-size: 0.9rem;
+}
+.caws-topo-dir { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.caws-regiao { font-size: 0.85rem; opacity: 0.9; }
+.caws-sair {
+  background: #ff9900; color: #16191f; border: none; cursor: pointer;
+  font-weight: 700; padding: 7px 14px; border-radius: 6px; font-size: 0.85rem;
+}
+.caws-sair:hover { background: #ffac31; }
+
+.caws-corpo { flex: 1; overflow-y: auto; }
+.caws-pagina { max-width: 1060px; margin: 0 auto; padding: 24px 28px 60px; }
+
+.caws-migalha {
+  max-width: 1060px; margin: 0 auto; padding: 12px 28px 0;
+  font-size: 0.82rem; color: #5f6b7a;
+}
+.caws-migalha a { color: #0073bb; text-decoration: none; }
+.caws-migalha a:hover { text-decoration: underline; }
+.caws-migalha em { font-style: normal; color: #aab2bd; }
+
+.caws-banner {
+  background: linear-gradient(110deg, #232f3e, #31465f);
+  color: #fff; border-radius: 10px; padding: 22px 26px; margin-bottom: 22px;
+}
+.caws-banner h1 { margin: 0 0 8px; font-size: 1.4rem; }
+.caws-banner p { margin: 0; font-size: 0.92rem; line-height: 1.5; opacity: 0.92; }
+.caws-banner code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; }
+
+.caws-secao { font-size: 1rem; margin: 0 0 14px; color: #16191f; }
+.caws-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.caws-servico {
+  display: flex; gap: 12px; align-items: center;
+  background: #fff; border: 1px solid #d5dbdb; border-radius: 8px; padding: 14px;
+  cursor: pointer; transition: box-shadow .15s, border-color .15s;
+}
+.caws-servico:not(.desativado):hover { border-color: #0073bb; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.caws-servico.desativado { opacity: 0.55; cursor: default; }
+.caws-servico-ic { font-size: 1.7rem; width: 40px; text-align: center; }
+.caws-servico-info { display: flex; flex-direction: column; gap: 2px; }
+.caws-servico-info strong { font-size: 0.98rem; }
+.caws-servico-info small { color: #5f6b7a; font-size: 0.78rem; }
+.caws-tag {
+  margin-top: 4px; align-self: flex-start; font-size: 0.7rem; font-weight: 700;
+  background: #ecf3ff; color: #0073bb; padding: 1px 8px; border-radius: 10px;
+}
+.caws-tag.cinza { background: #eef0f1; color: #879196; }
+.caws-dica-rodape { margin-top: 22px; font-size: 0.85rem; color: #5f6b7a; }
+
+.caws-cab-servico { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.caws-cab-servico h1 { font-size: 1.35rem; margin: 0; }
+.caws-acoes-grupo { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.caws-btn-primario, .caws-btn-secundario, .caws-btn-perigo {
+  border: none; cursor: pointer; font-weight: 700; padding: 8px 16px;
+  border-radius: 6px; font-size: 0.85rem;
+}
+.caws-btn-primario { background: #ff9900; color: #16191f; }
+.caws-btn-primario:hover { background: #ec8b00; }
+.caws-btn-secundario { background: #fff; color: #16191f; border: 1px solid #545b64; }
+.caws-btn-secundario:hover { background: #f2f3f3; }
+.caws-btn-perigo { background: #fff; color: #d13212; border: 1px solid #d13212; }
+.caws-btn-perigo:hover { background: #fdf0ee; }
+.caws-link-perigo { background: none; border: none; color: #d13212; cursor: pointer; font-size: 0.82rem; text-decoration: underline; }
+
+.caws-tabela { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d5dbdb; border-radius: 8px; overflow: hidden; }
+.caws-tabela th { text-align: left; font-size: 0.78rem; color: #5f6b7a; text-transform: uppercase; letter-spacing: .03em; padding: 11px 14px; border-bottom: 1px solid #eaeded; background: #fafafa; }
+.caws-tabela td { padding: 11px 14px; border-bottom: 1px solid #eaeded; font-size: 0.88rem; }
+.caws-tabela tr:last-child td { border-bottom: none; }
+.caws-tabela a { color: #0073bb; text-decoration: none; font-weight: 600; }
+.caws-tabela a:hover { text-decoration: underline; }
+.caws-vazio { text-align: center; color: #5f6b7a; padding: 28px 14px !important; }
+
+.caws-prefixo-nav { margin-bottom: 12px; font-size: 0.85rem; color: #5f6b7a; }
+.caws-prefixo-nav a { color: #0073bb; text-decoration: none; }
+.caws-prefixo-nav a:hover { text-decoration: underline; }
+
+.caws-form { max-width: 600px; }
+.caws-form h1 { font-size: 1.3rem; margin: 0 0 18px; }
+.caws-campo { display: block; margin-bottom: 16px; }
+.caws-campo > span { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 5px; }
+.caws-campo input, .caws-campo select { width: 100%; padding: 8px 11px; border: 1px solid #aab7b8; border-radius: 6px; font-size: 0.9rem; background: #fff; }
+.caws-campo input:disabled { background: #eef0f1; color: #687078; }
+.caws-campo small { display: block; color: #5f6b7a; font-size: 0.76rem; margin-top: 4px; }
+.caws-check { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px; font-size: 0.88rem; }
+.caws-check input { margin-top: 2px; }
+.caws-check small { color: #5f6b7a; }
+.caws-erro { color: #d13212; font-size: 0.82rem; min-height: 1em; margin: 4px 0; }
+.caws-form-acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+.caws-painel { background: #fff; border: 1px solid #d5dbdb; border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+.caws-painel h3 { margin: 0 0 14px; font-size: 1.05rem; }
+
+.caws-cli {
+  display: flex; align-items: center; gap: 12px; margin-top: 20px;
+  background: #232f3e; color: #e7eaf0; border-radius: 8px; padding: 12px 16px;
+}
+.caws-cli-ic { font-size: 1.3rem; }
+.caws-cli-txt small { display: block; color: #aab2bd; font-size: 0.76rem; margin-bottom: 3px; }
+.caws-cli-txt code { font-family: "SFMono-Regular", Consolas, monospace; color: #ff9900; font-size: 0.92rem; }
+
+@media (max-width: 640px) {
+  .caws-busca { display: none; }
+  .caws-pagina, .caws-migalha { padding-left: 14px; padding-right: 14px; }
+}
