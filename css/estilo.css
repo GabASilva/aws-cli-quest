@@ -298,6 +298,34 @@ footer button { font-size: 0.72rem; padding: 4px 10px; }
   border-top: 1px solid var(--borda);
 }
 
+/* ---------- Tutorial (tour guiado) ---------- */
+#tourOverlay { position: fixed; inset: 0; z-index: 200; }
+#tourSpot {
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(8, 10, 15, 0.78);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+#tourBox {
+  position: fixed;
+  z-index: 201;
+  background: var(--painel);
+  border: 1px solid var(--laranja);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+}
+#tourBox h3 { margin: 0 0 6px; color: var(--laranja); font-size: 1rem; }
+#tourBox p { margin: 0; font-size: 0.9rem; line-height: 1.5; }
+#tourBox code { background: var(--painel-2); padding: 1px 5px; border-radius: 5px; font-family: var(--fonte-mono); font-size: 0.82rem; }
+.tour-acoes { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 10px; }
+.tour-nav { display: flex; align-items: center; gap: 8px; }
+.tour-passo { font-size: 0.75rem; color: var(--texto-fraco); }
+.tour-pular, .tour-voltar { background: transparent; border: none; color: var(--texto-fraco); cursor: pointer; font-size: 0.84rem; }
+.tour-pular:hover, .tour-voltar:hover { color: var(--texto); }
+.tour-prox { padding: 6px 14px; }
+
 /* ---------- Modais ---------- */
 .modal {
   display: none;
