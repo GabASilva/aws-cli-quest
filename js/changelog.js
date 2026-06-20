@@ -16,6 +16,14 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20c",
+      data: "20 jun 2026",
+      titulo: "✉️ Entre com usuário ou e-mail",
+      itens: [
+        "Agora dá pra fazer login usando o <b>e-mail</b> cadastrado, não só o nome de usuário — o que for mais fácil de lembrar.",
+      ],
+    },
+    {
       versao: "2026-06-20b",
       data: "20 jun 2026",
       titulo: "🔑 Primeiro lab (SSH) mais fiel",
