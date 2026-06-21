@@ -682,6 +682,72 @@ USO
     aws sts get-caller-identity
 
 Retorna o id da conta, o usuário e o ARN da sessão atual.`,
+
+  cloudformation: `aws cloudformation — Infraestrutura como Código (IaC)
+
+Em vez de criar recursos um a um, você descreve tudo num TEMPLATE
+(YAML ou JSON) e o CloudFormation cria/atualiza/apaga em conjunto,
+como uma "stack". Apagar a stack remove todos os recursos dela.
+
+COMANDOS
+    create-stack               provisiona os recursos de um template
+    list-stacks                lista as stacks da conta
+    describe-stacks            detalhes de uma ou de todas as stacks
+    describe-stack-resources   recursos criados por uma stack
+    validate-template          confere se o template é válido
+    delete-stack               apaga a stack e seus recursos
+
+Tipos de recurso suportados no simulador: AWS::S3::Bucket,
+AWS::IAM::User, AWS::EC2::Instance, AWS::Lambda::Function,
+AWS::DynamoDB::Table. Há templates prontos: file://site-s3.yaml e
+file://infra.yaml.`,
+
+  "cloudformation.create-stack": `aws cloudformation create-stack
+
+USO
+    aws cloudformation create-stack --stack-name <nome> --template-body <template>
+
+O --template-body aceita um arquivo (file://infra.yaml) ou o conteúdo
+direto. Cada recurso do template é criado de verdade na conta.
+
+EXEMPLO
+    aws cloudformation create-stack --stack-name app --template-body file://infra.yaml`,
+
+  "cloudformation.list-stacks": `aws cloudformation list-stacks
+
+USO
+    aws cloudformation list-stacks
+
+Lista as stacks da conta com nome e status.`,
+
+  "cloudformation.describe-stacks": `aws cloudformation describe-stacks
+
+USO
+    aws cloudformation describe-stacks [--stack-name <nome>]
+
+Sem --stack-name, mostra todas. Traz status, descrição e id da stack.`,
+
+  "cloudformation.describe-stack-resources": `aws cloudformation describe-stack-resources
+
+USO
+    aws cloudformation describe-stack-resources --stack-name <nome>
+
+Lista os recursos (lógico -> físico) que a stack criou.`,
+
+  "cloudformation.validate-template": `aws cloudformation validate-template
+
+USO
+    aws cloudformation validate-template --template-body <template>
+
+Confere se o template é válido (tem a seção Resources) antes de criar.`,
+
+  "cloudformation.delete-stack": `aws cloudformation delete-stack
+
+USO
+    aws cloudformation delete-stack --stack-name <nome>
+
+Apaga a stack e TODOS os recursos que ela criou. Não responde nada
+quando dá certo (igual ao AWS de verdade).`,
 };
 
 function obterManual(caminho) {

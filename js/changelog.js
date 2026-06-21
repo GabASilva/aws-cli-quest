@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20i",
+      data: "20 jun 2026",
+      titulo: "📄 CloudFormation (infra como código)",
+      itens: [
+        "Nova trilha <b>CloudFormation</b>: descreva seus recursos num template (<b>YAML</b> ou JSON) e o <code>create-stack</code> cria tudo de uma vez.",
+        "Os recursos são <b>de verdade</b>: um bucket no template aparece no <code>aws s3 ls</code>; um <code>delete-stack</code> apaga tudo junto. Tem template pronto pra começar.",
+      ],
+    },
+    {
       versao: "2026-06-20h",
       data: "20 jun 2026",
       titulo: "🎯 Missões guiadas no Console",
@@ -141,9 +150,9 @@
   // mais serviços no Console e multiplayer assíncrono).
   const EM_BREVE = [
     {
-      icone: "📄",
-      titulo: "Infraestrutura como código (CloudFormation)",
-      desc: "Monte sua infra escrevendo YAML, com ajuda de IA pra desenhar arquiteturas (Bedrock).",
+      icone: "🤖",
+      titulo: "Arquiteturas com IA (Bedrock)",
+      desc: "Descreva em português o que você quer e receba um template de CloudFormation pronto pra rodar.",
     },
     {
       icone: "👥",
