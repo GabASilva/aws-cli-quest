@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21a",
+      data: "21 jun 2026",
+      titulo: "🔬 Saídas ainda mais fiéis à AWS de verdade",
+      itens: [
+        "Varredura de fidelidade comparando o CLImb com uma AWS real rodando na bancada: o <code>describe-instances</code> agora traz o JSON completo (IP privado/público, VPC, sub-rede, AZ, monitoramento...) e agrupa por reserva igual à AWS.",
+        "<b>IAM</b> mais completo: grupos, roles e políticas agora mostram <code>GroupId</code>/<code>RoleId</code>/<code>PolicyId</code>, <code>Path</code>, contagem de anexos e o documento de confiança da role — tudo no mesmo formato da AWS.",
+        "Ajustes finos: <code>dynamodb create-table</code> recusa nome com menos de 3 letras, <code>s3 rm</code> de objeto inexistente é idempotente (não dá erro), e a Lambda só mostra <code>Environment</code> quando há variáveis.",
+      ],
+    },
+    {
       versao: "2026-06-20i",
       data: "20 jun 2026",
       titulo: "📄 CloudFormation (infra como código)",

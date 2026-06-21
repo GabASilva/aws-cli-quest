@@ -56,6 +56,7 @@ function semearLabPolicy(conta) {
     arn: `arn:aws:iam::${conta.contaId}:policy/lab_policy`,
     scope: "Local",
     defaultVersionId: "v1",
+    policyId: "ANPAEXAMPLELABPOLICY1",
     criadoEm: "2026-01-15T12:00:00+00:00",
     versions: { v1: { documento: doc, criadoEm: "2026-01-15T12:00:00+00:00" } },
   };
@@ -358,7 +359,8 @@ const cmdS3 = {
     const uri = parsearUriS3(pos[0] || "");
     if (!uri || !uri.chave) throw new ErroCli("uso: aws s3 rm s3://<bucket>/<chave>");
     const b = exigirBucket(conta, uri.bucket, "DeleteObject");
-    if (!b.objetos[uri.chave]) throw new ErroCli(`delete failed: s3://${uri.bucket}/${uri.chave} O objeto não existe.`);
+    // Fiel à AWS: DeleteObject é idempotente — apagar uma chave que não existe
+    // também responde "delete: ..." com sucesso (não é erro).
     delete b.objetos[uri.chave];
     return `delete: s3://${uri.bucket}/${uri.chave}`;
   },
@@ -455,16 +457,64 @@ function estadoEc2(nome) {
   return { Code: COD_ESTADO_EC2[nome] != null ? COD_ESTADO_EC2[nome] : 0, Name: nome };
 }
 
-function instanciasJson(lista) {
-  return lista.map((i) => ({
-    InstanceId: i.id,
-    ImageId: i.imagem,
-    InstanceType: i.tipo,
-    KeyName: i.chave || null,
-    State: estadoEc2(i.estado),
-    SecurityGroups: i.sgs.map((nome) => ({ GroupName: nome })),
-    LaunchTime: i.criadaEm,
-  }));
+// VPC/sub-rede padrão fictícios (todas as instâncias do lab nascem aqui, igual
+// à VPC default da AWS — por isso são constantes compartilhadas, não aleatórias).
+const VPC_PADRAO = "vpc-0a1b2c3d4e5f6a7b8";
+const SUBNET_PADRAO = "subnet-0a1b2c3d4e5f6a7b8";
+
+// IPs estáveis derivados do id da instância (mesma instância => mesmo IP em todo
+// describe-instances), na faixa 172.31.x.y da VPC default.
+function ipsEc2(id) {
+  const h = id.replace(/[^0-9a-f]/gi, "").padEnd(6, "0");
+  const a = parseInt(h.slice(0, 2), 16) % 16; // /20 -> 0..15
+  const b = parseInt(h.slice(2, 4), 16);
+  const c = parseInt(h.slice(4, 6), 16);
+  return { priv: `172.31.${a}.${b}`, pub: `54.${b}.${c}.${(a % 254) + 1}` };
+}
+
+function sgsJson(conta, inst) {
+  if (inst.sgs && inst.sgs.length) {
+    return inst.sgs.map((nome) => {
+      const g = Object.values(conta.ec2.securityGroups).find((x) => x.nome === nome);
+      return g ? { GroupName: nome, GroupId: g.id } : { GroupName: nome };
+    });
+  }
+  // Sem --security-groups, a AWS coloca a instância no grupo "default" da VPC.
+  return [{ GroupName: "default", GroupId: "sg-0" + inst.id.replace(/[^0-9a-f]/gi, "").slice(0, 16) }];
+}
+
+function instanciasJson(conta, lista) {
+  const az = conta.regiao + "a";
+  return lista.map((i) => {
+    const ip = ipsEc2(i.id);
+    const j = {
+      InstanceId: i.id,
+      ImageId: i.imagem,
+      InstanceType: i.tipo,
+      KeyName: i.chave || null,
+      State: estadoEc2(i.estado),
+      AmiLaunchIndex: 0,
+      Architecture: "x86_64",
+      Hypervisor: "xen",
+      VirtualizationType: "hvm",
+      RootDeviceName: "/dev/xvda",
+      RootDeviceType: "ebs",
+      PrivateDnsName: `ip-${ip.priv.replace(/\./g, "-")}.ec2.internal`,
+      PrivateIpAddress: ip.priv,
+      Placement: { AvailabilityZone: az, Tenancy: "default" },
+      Monitoring: { State: "disabled" },
+      SubnetId: SUBNET_PADRAO,
+      VpcId: VPC_PADRAO,
+      SecurityGroups: sgsJson(conta, i),
+      LaunchTime: i.criadaEm,
+    };
+    // Instância ligada na VPC default ganha IP público; parada/encerrada perde.
+    if (i.estado === "running" || i.estado === "pending") {
+      j.PublicIpAddress = ip.pub;
+      j.PublicDnsName = `ec2-${ip.pub.replace(/\./g, "-")}.compute-1.amazonaws.com`;
+    }
+    return j;
+  });
 }
 
 function exigirInstancias(conta, flags, operacao) {
@@ -482,8 +532,20 @@ function exigirInstancias(conta, flags, operacao) {
 
 const cmdEc2 = {
   "describe-instances": (conta) => {
-    const lista = Object.values(conta.ec2.instancias);
-    return js({ Reservations: lista.length ? [{ ReservationId: "r-" + hexAleatorio(17), Instances: instanciasJson(lista) }] : [] });
+    // A AWS agrupa as instâncias por "reserva" (cada run-instances é uma reserva).
+    const grupos = {};
+    for (const i of Object.values(conta.ec2.instancias)) {
+      if (!i.resId) i.resId = "r-0" + i.id.replace(/[^0-9a-f]/gi, "").slice(0, 16); // backfill estável p/ saves antigos
+      (grupos[i.resId] = grupos[i.resId] || []).push(i);
+    }
+    return js({
+      Reservations: Object.entries(grupos).map(([resId, insts]) => ({
+        ReservationId: resId,
+        OwnerId: conta.contaId,
+        Groups: [],
+        Instances: instanciasJson(conta, insts),
+      })),
+    });
   },
 
   "run-instances": (conta, pos, flags) => {
@@ -507,18 +569,16 @@ const cmdEc2 = {
         throw new ErroCli(`An error occurred (InvalidGroup.NotFound) when calling the RunInstances operation: The security group '${sg}' does not exist`);
       }
     }
+    const resId = "r-0" + hexAleatorio(16);
     const novas = [];
     for (let i = 0; i < quantidade; i++) {
-      const inst = { id: "i-0" + hexAleatorio(16), imagem, tipo, chave, sgs, estado: "running", criadaEm: agoraIso() };
+      const inst = { id: "i-0" + hexAleatorio(16), imagem, tipo, chave, sgs, estado: "running", criadaEm: agoraIso(), resId };
       conta.ec2.instancias[inst.id] = inst;
       novas.push(inst);
     }
-    return js({
-      Groups: [],
-      Instances: novas.map((i) => ({ InstanceId: i.id, ImageId: i.imagem, InstanceType: i.tipo, KeyName: i.chave || null, State: estadoEc2("pending") })),
-      OwnerId: conta.contaId,
-      ReservationId: "r-" + hexAleatorio(17),
-    });
+    // run-instances mostra o estado transitório "pending" (igual à AWS real).
+    const Instances = instanciasJson(conta, novas).map((j) => ({ ...j, State: estadoEc2("pending") }));
+    return js({ Groups: [], Instances, OwnerId: conta.contaId, ReservationId: resId });
   },
 
   "stop-instances": (conta, pos, flags) => {
@@ -554,13 +614,19 @@ const cmdEc2 = {
   "create-key-pair": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "key-name");
     if (conta.ec2.keyPairs[nome]) throw new ErroCli(`An error occurred (InvalidKeyPair.Duplicate) when calling the CreateKeyPair operation: The keypair '${nome}' already exists.`);
-    conta.ec2.keyPairs[nome] = { criadoEm: agoraIso() };
     const digitos = hexAleatorio(40).match(/.{2}/g).join(":");
-    return js({ KeyFingerprint: digitos, KeyMaterial: "-----BEGIN RSA PRIVATE KEY-----\n(chave privada simulada — guarde com carinho)\n-----END RSA PRIVATE KEY-----", KeyName: nome, KeyPairId: "key-0" + hexAleatorio(16) });
+    const keyPairId = "key-0" + hexAleatorio(16);
+    conta.ec2.keyPairs[nome] = { criadoEm: agoraIso(), fingerprint: digitos, keyPairId };
+    return js({ KeyFingerprint: digitos, KeyMaterial: "-----BEGIN RSA PRIVATE KEY-----\n(chave privada simulada — guarde com carinho)\n-----END RSA PRIVATE KEY-----", KeyName: nome, KeyPairId: keyPairId });
   },
 
   "describe-key-pairs": (conta) => {
-    return js({ KeyPairs: Object.keys(conta.ec2.keyPairs).map((KeyName) => ({ KeyName })) });
+    return js({ KeyPairs: Object.entries(conta.ec2.keyPairs).map(([KeyName, k]) => {
+      // backfill estável p/ key pairs de saves antigos (criados sem id/fingerprint)
+      if (!k.keyPairId) k.keyPairId = "key-0" + hexAleatorio(16);
+      if (!k.fingerprint) k.fingerprint = hexAleatorio(40).match(/.{2}/g).join(":");
+      return { KeyPairId: k.keyPairId, KeyName, KeyFingerprint: k.fingerprint };
+    }) });
   },
 
   "create-security-group": (conta, pos, flags) => {
@@ -613,6 +679,67 @@ function exigirArnPolitica(flags) {
   return arn;
 }
 
+// ID único de IAM (ABCD + 17 chars base32) estável a partir de um texto — usado
+// pras políticas gerenciadas pela AWS, que não ficam guardadas na conta.
+function idEstavelIam(prefixo, str) {
+  let s = "";
+  for (let i = 0; i < 17; i++) {
+    const code = str.charCodeAt(i % str.length) + i * 7;
+    s += "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[code % 32];
+  }
+  return prefixo + s;
+}
+
+// Conta quantas identidades (usuários, grupos, roles) têm a política anexada.
+function contarAnexos(conta, arn) {
+  let n = 0;
+  for (const u of Object.values(conta.iam.usuarios)) if (u.politicas && u.politicas.includes(arn)) n++;
+  for (const g of Object.values(conta.iam.grupos)) if (g.politicas && g.politicas.includes(arn)) n++;
+  for (const r of Object.values(conta.iam.roles)) if (r.politicas && r.politicas.includes(arn)) n++;
+  return n;
+}
+
+function usuarioJson(conta, nome, u) {
+  if (!u.userId) u.userId = "AIDA" + hexAleatorio(17).toUpperCase(); // backfill estável p/ contas antigas
+  return { Path: "/", UserName: nome, UserId: u.userId, Arn: arnIam(conta, "user", nome), CreateDate: u.criadoEm };
+}
+
+function grupoJson(conta, nome, g) {
+  if (!g.groupId) g.groupId = "AGPA" + hexAleatorio(17).toUpperCase();
+  return { Path: "/", GroupName: nome, GroupId: g.groupId, Arn: arnIam(conta, "group", nome), CreateDate: g.criadoEm };
+}
+
+const TRUST_PADRAO = { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Service: "ec2.amazonaws.com" }, Action: "sts:AssumeRole" }] };
+
+function roleJson(conta, nome, r) {
+  if (!r.roleId) r.roleId = "AROA" + hexAleatorio(17).toUpperCase();
+  return {
+    Path: "/",
+    RoleName: nome,
+    RoleId: r.roleId,
+    Arn: arnIam(conta, "role", nome),
+    CreateDate: r.criadoEm,
+    AssumeRolePolicyDocument: r.trustDoc || TRUST_PADRAO,
+    Description: "",
+    MaxSessionDuration: 3600,
+  };
+}
+
+function politicaJson(conta, p) {
+  if (!p.policyId) p.policyId = "ANPA" + hexAleatorio(17).toUpperCase();
+  return {
+    PolicyName: p.nome,
+    PolicyId: p.policyId,
+    Arn: p.arn,
+    Path: "/",
+    DefaultVersionId: p.defaultVersionId,
+    AttachmentCount: contarAnexos(conta, p.arn),
+    IsAttachable: true,
+    CreateDate: p.criadoEm,
+    UpdateDate: p.atualizadoEm || p.criadoEm,
+  };
+}
+
 const cmdIam = {
   "create-user": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "user-name");
@@ -640,12 +767,12 @@ const cmdIam = {
   "create-group": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "group-name");
     if (conta.iam.grupos[nome]) throw new ErroCli(`An error occurred (EntityAlreadyExists) when calling the CreateGroup operation: Group with name ${nome} already exists.`);
-    conta.iam.grupos[nome] = { criadoEm: agoraIso(), membros: [], politicas: [] };
-    return js({ Group: { Path: "/", GroupName: nome, GroupId: "AGPA" + hexAleatorio(17).toUpperCase(), Arn: arnIam(conta, "group", nome), CreateDate: conta.iam.grupos[nome].criadoEm } });
+    conta.iam.grupos[nome] = { criadoEm: agoraIso(), membros: [], politicas: [], groupId: "AGPA" + hexAleatorio(17).toUpperCase() };
+    return js({ Group: grupoJson(conta, nome, conta.iam.grupos[nome]) });
   },
 
   "list-groups": (conta) => {
-    return js({ Groups: Object.entries(conta.iam.grupos).map(([nome, g]) => ({ GroupName: nome, Arn: arnIam(conta, "group", nome), CreateDate: g.criadoEm })) });
+    return js({ Groups: Object.entries(conta.iam.grupos).map(([nome, g]) => grupoJson(conta, nome, g)) });
   },
 
   "add-user-to-group": (conta, pos, flags) => {
@@ -663,8 +790,11 @@ const cmdIam = {
     const g = conta.iam.grupos[nome];
     if (!g) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the GetGroup operation: The group with name ${nome} cannot be found.`);
     return js({
-      Group: { GroupName: nome, Arn: arnIam(conta, "group", nome) },
-      Users: g.membros.map((m) => ({ UserName: m, Arn: arnIam(conta, "user", m) })),
+      Group: grupoJson(conta, nome, g),
+      Users: g.membros.map((m) => {
+        const u = conta.iam.usuarios[m];
+        return u ? usuarioJson(conta, m, u) : { Path: "/", UserName: m, Arn: arnIam(conta, "user", m) };
+      }),
     });
   },
 
@@ -697,18 +827,20 @@ const cmdIam = {
     const nome = exigirFlag(flags, "role-name");
     if (conta.iam.roles[nome]) throw new ErroCli(`An error occurred (EntityAlreadyExists) when calling the CreateRole operation: Role with name ${nome} already exists.`);
     const doc = exigirFlag(flags, "assume-role-policy-document");
+    let trustDoc;
     if (doc.startsWith("file://")) {
       if (!arquivoLocal(doc.slice(7))) throw new ErroCli(`Error parsing parameter '--assume-role-policy-document': Unable to load paramfile ${doc}: arquivo não existe. Digite 'ls' (existe um trust.json pronto).`);
+      trustDoc = TRUST_PADRAO; // o trust.json pronto confia no serviço EC2
     } else {
-      try { JSON.parse(doc); }
+      try { trustDoc = JSON.parse(doc); }
       catch (e) { throw new ErroCli("An error occurred (MalformedPolicyDocument) when calling the CreateRole operation: JSON strings must not have leading spaces / documento inválido."); }
     }
-    conta.iam.roles[nome] = { criadoEm: agoraIso(), politicas: [], trust: doc };
-    return js({ Role: { Path: "/", RoleName: nome, RoleId: "AROA" + hexAleatorio(17).toUpperCase(), Arn: arnIam(conta, "role", nome), CreateDate: conta.iam.roles[nome].criadoEm } });
+    conta.iam.roles[nome] = { criadoEm: agoraIso(), politicas: [], trust: doc, trustDoc, roleId: "AROA" + hexAleatorio(17).toUpperCase() };
+    return js({ Role: roleJson(conta, nome, conta.iam.roles[nome]) });
   },
 
   "list-roles": (conta) => {
-    return js({ Roles: Object.entries(conta.iam.roles).map(([nome, r]) => ({ RoleName: nome, Arn: arnIam(conta, "role", nome), CreateDate: r.criadoEm })) });
+    return js({ Roles: Object.entries(conta.iam.roles).map(([nome, r]) => roleJson(conta, nome, r)) });
   },
 
   "attach-role-policy": (conta, pos, flags) => {
@@ -738,27 +870,31 @@ const cmdIam = {
       arn: arnIam(conta, "policy", nome),
       scope: "Local",
       defaultVersionId: "v1",
+      policyId: "ANPA" + hexAleatorio(17).toUpperCase(),
       criadoEm: agoraIso(),
       versions: { v1: { documento, criadoEm: agoraIso() } },
     };
-    const p = conta.iam.policies[nome];
-    return js({ Policy: { PolicyName: nome, Arn: p.arn, DefaultVersionId: "v1", CreateDate: p.criadoEm } });
+    return js({ Policy: politicaJson(conta, conta.iam.policies[nome]) });
   },
 
   "list-policies": (conta, pos, flags) => {
     const escopo = typeof flags.scope === "string" ? flags.scope : "All";
     if (!["Local", "AWS", "All"].includes(escopo)) throw new ErroCli(`An error occurred (ValidationError) when calling the ListPolicies operation: --scope precisa ser Local, AWS ou All (recebido '${escopo}').`);
-    const locais = Object.values(conta.iam.policies).map((p) => ({
-      PolicyName: p.nome,
-      Arn: p.arn,
-      DefaultVersionId: p.defaultVersionId,
-      CreateDate: p.criadoEm,
-    }));
-    const awsManaged = POLITICAS_AWS.map((n) => ({
-      PolicyName: n,
-      Arn: `arn:aws:iam::aws:policy/${n}`,
-      DefaultVersionId: "v1",
-    }));
+    const locais = Object.values(conta.iam.policies).map((p) => politicaJson(conta, p));
+    const awsManaged = POLITICAS_AWS.map((n) => {
+      const arn = `arn:aws:iam::aws:policy/${n}`;
+      return {
+        PolicyName: n,
+        PolicyId: idEstavelIam("ANPA", n),
+        Arn: arn,
+        Path: "/",
+        DefaultVersionId: "v1",
+        AttachmentCount: contarAnexos(conta, arn),
+        IsAttachable: true,
+        CreateDate: "2015-02-06T18:39:00+00:00",
+        UpdateDate: "2015-02-06T18:39:00+00:00",
+      };
+    });
     let lista = [];
     if (escopo === "Local") lista = locais;
     else if (escopo === "AWS") lista = awsManaged;
@@ -768,7 +904,7 @@ const cmdIam = {
 
   "get-policy": (conta, pos, flags) => {
     const p = exigirPolitica(conta, flags, "GetPolicy");
-    return js({ Policy: { PolicyName: p.nome, Arn: p.arn, DefaultVersionId: p.defaultVersionId, CreateDate: p.criadoEm } });
+    return js({ Policy: politicaJson(conta, p) });
   },
 
   "list-policy-versions": (conta, pos, flags) => {
@@ -804,7 +940,7 @@ const cmdIam = {
     const num = Object.keys(p.versions).length + 1;
     const vid = "v" + num;
     p.versions[vid] = { documento, criadoEm: agoraIso() };
-    if (flags["set-as-default"] !== undefined) p.defaultVersionId = vid;
+    if (flags["set-as-default"] !== undefined) { p.defaultVersionId = vid; p.atualizadoEm = agoraIso(); }
     return js({ PolicyVersion: { VersionId: vid, IsDefaultVersion: vid === p.defaultVersionId, CreateDate: p.versions[vid].criadoEm } });
   },
 
@@ -897,7 +1033,7 @@ function parsearEnvironment(str) {
 }
 
 function funcaoJson(conta, nome, f) {
-  return {
+  const j = {
     FunctionName: nome,
     FunctionArn: `arn:aws:lambda:${conta.regiao}:${conta.contaId}:function:${nome}`,
     Runtime: f.runtime,
@@ -905,10 +1041,12 @@ function funcaoJson(conta, nome, f) {
     Handler: f.handler,
     Timeout: f.timeout,
     MemorySize: f.memoria,
-    Environment: { Variables: f.env },
-    State: "Active",
-    LastModified: f.criadaEm,
   };
+  // Fiel à AWS: o campo Environment só aparece quando há variáveis definidas.
+  if (f.env && Object.keys(f.env).length) j.Environment = { Variables: f.env };
+  j.State = "Active";
+  j.LastModified = f.criadaEm;
+  return j;
 }
 
 const cmdLambda = {
@@ -942,7 +1080,8 @@ const cmdLambda = {
     const f = exigirFuncao(conta, flags, "Invoke");
     if (!pos[0]) throw new ErroCli("uso: aws lambda invoke --function-name <nome> <arquivo-de-saida>\nEx.: aws lambda invoke --function-name ola-mundo saida.json");
     f.invocada = true;
-    return js({ StatusCode: 200, ExecutedVersion: "$LATEST" }) + `\n(resposta da função gravada em ${pos[0]} — simulado)`;
+    avisarClimb(`A resposta da função foi gravada no arquivo "${pos[0]}" — é lá que sai o retorno da Lambda. O StatusCode 200 acima só diz que a invocação deu certo.`);
+    return js({ StatusCode: 200, ExecutedVersion: "$LATEST" });
   },
 
   "update-function-configuration": (conta, pos, flags) => {
@@ -1000,6 +1139,9 @@ function tabelaJson(conta, nome, t, status) {
 const cmdDynamo = {
   "create-table": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "table-name");
+    if (String(nome).length < 3) {
+      throw new ErroCli(`An error occurred (ValidationException) when calling the CreateTable operation: 1 validation error detected: Value '${nome}' at 'tableName' failed to satisfy constraint: Member must have length greater than or equal to 3`);
+    }
     if (conta.dynamodb.tabelas[nome]) throw new ErroCli(`An error occurred (ResourceInUseException) when calling the CreateTable operation: Table already exists: ${nome}`);
     const defsBrutas = flags["attribute-definitions"];
     if (defsBrutas === undefined || defsBrutas === true) throw new ErroCli("aws: error: the following arguments are required: --attribute-definitions");
