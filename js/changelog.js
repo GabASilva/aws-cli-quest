@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20h",
+      data: "20 jun 2026",
+      titulo: "🎯 Missões guiadas no Console",
+      itens: [
+        "Um <b>passeio guiado</b> dentro do Console: 8 missões que você cumpre <b>fazendo</b> (criar bucket, subir instância, dar permissão...) — com XP e progresso, igual aos desafios do terminal.",
+        "Abra o Console e clique em <b>🎯 Missões</b> no topo pra começar.",
+      ],
+    },
+    {
       versao: "2026-06-20g",
       data: "20 jun 2026",
       titulo: "⚡🗄️ Lambda e DynamoDB no Console",
@@ -140,11 +149,6 @@
       icone: "👥",
       titulo: "Modo multiplayer",
       desc: "Salas e turmas pra estudar junto, e competições assíncronas com a galera — no seu tempo, sem pressão de tempo real.",
-    },
-    {
-      icone: "🎯",
-      titulo: "Desafios guiados no Console",
-      desc: "Missões feitas direto na interface visual, não só no terminal.",
     },
   ];
 

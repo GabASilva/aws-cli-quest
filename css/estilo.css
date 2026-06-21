@@ -791,9 +791,44 @@ body.console-aberto { overflow: hidden; }
 .caws-cli-txt small { display: block; color: #aab2bd; font-size: 0.76rem; margin-bottom: 3px; }
 .caws-cli-txt code { font-family: "SFMono-Regular", Consolas, monospace; color: #ff9900; font-size: 0.92rem; }
 
+/* Missões guiadas no Console (console-desafios.js) */
+.caws-missoes-btn {
+  background: #1d2b3a; color: #fff; border: 1px solid #3a4a5e; cursor: pointer;
+  font-weight: 700; padding: 7px 12px; border-radius: 6px; font-size: 0.84rem; white-space: nowrap;
+}
+.caws-missoes-btn:hover { background: #243648; }
+.mc-badge { background: #4b5563; color: #fff; border-radius: 9px; padding: 0 7px; margin-left: 5px; font-size: 0.74rem; }
+.mc-badge.ativa { background: #ff9900; color: #16191f; }
+
+.caws-missoes-painel {
+  position: fixed; right: 18px; bottom: 18px; width: min(340px, calc(100vw - 36px));
+  background: #fff; color: #16191f; border: 1px solid #d5dbdb; border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.22); z-index: 5500; overflow: hidden;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+.mc-cab { display: flex; align-items: center; gap: 8px; background: #232f3e; color: #fff; padding: 10px 12px; }
+.mc-cab strong { font-size: 0.9rem; flex: 1; }
+.mc-prog { font-size: 0.78rem; background: #ff9900; color: #16191f; font-weight: 700; padding: 1px 8px; border-radius: 9px; }
+.mc-x { background: none; border: none; color: #cdd5df; cursor: pointer; font-size: 0.95rem; padding: 0 2px; }
+.mc-x:hover { color: #fff; }
+.mc-corpo { padding: 13px 14px; }
+.mc-num { font-size: 0.72rem; font-weight: 700; color: #b35900; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+.mc-corpo h4 { margin: 0 0 6px; font-size: 1rem; }
+.mc-corpo p { margin: 0; font-size: 0.86rem; line-height: 1.45; color: #2c3640; }
+.mc-corpo b { color: #16191f; }
+.mc-acoes { display: flex; gap: 8px; margin: 12px 0 0; }
+.mc-ir { background: #ff9900; color: #16191f; border: none; cursor: pointer; font-weight: 700; padding: 7px 14px; border-radius: 6px; font-size: 0.82rem; }
+.mc-ir:hover { background: #ec8b00; }
+.mc-dica-btn { background: #fff; color: #16191f; border: 1px solid #aab7b8; cursor: pointer; padding: 7px 12px; border-radius: 6px; font-size: 0.82rem; }
+.mc-dica { display: none; margin-top: 10px !important; padding: 8px 10px; background: #fff8ec; border-left: 3px solid #ff9900; border-radius: 0 6px 6px 0; font-size: 0.82rem !important; }
+.mc-dica.aberta { display: block; }
+.mc-parabens { font-weight: 700; font-size: 0.95rem !important; }
+.mc-sub { color: #5f6b7a !important; margin-top: 6px !important; }
+
 @media (max-width: 640px) {
   .caws-busca { display: none; }
   .caws-pagina, .caws-migalha { padding-left: 14px; padding-right: 14px; }
+  .caws-missoes-painel { right: 10px; left: 10px; bottom: 10px; width: auto; }
 }
 
 /* ============================================================

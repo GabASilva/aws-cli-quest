@@ -43,6 +43,7 @@ function estadoInicial() {
     revelados: {}, // id -> true (revelou antes de concluir)
     etapasProjetos: {}, // id do projeto -> [bool, bool, ...]
     sequenciasPerdidas: [], // últimas 3 sequências mais altas antes de perder
+    missoesConsole: {}, // id da missão do Console -> true (concluída)
     conta: criarContaAws(),
   };
 }
@@ -83,6 +84,7 @@ function sincronizarNuvem() {
         revelados: jogo.revelados,
         etapasProjetos: jogo.etapasProjetos,
         sequenciasPerdidas: jogo.sequenciasPerdidas,
+        missoesConsole: jogo.missoesConsole,
         conta: jogo.conta,
       },
     });
@@ -112,6 +114,7 @@ function aplicarProgressoNuvem(perfil, progresso) {
     jogo.revelados = progresso.revelados || {};
     jogo.etapasProjetos = progresso.etapasProjetos || {};
     jogo.sequenciasPerdidas = progresso.sequenciasPerdidas || [];
+    jogo.missoesConsole = progresso.missoesConsole || {};
     if (progresso.conta) jogo.conta = progresso.conta;
   }
   jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)

@@ -27,6 +27,8 @@
       if (typeof salvarJogo === "function") salvarJogo();
       if (typeof sincronizarNuvem === "function") sincronizarNuvem();
     } catch (e) {}
+    // gancho pras missões guiadas do Console (console-desafios.js)
+    if (typeof window.aposAcaoConsole === "function") { try { window.aposAcaoConsole(); } catch (e) {} }
   }
   function ecoTerminal(texto, classe) {
     // Mostra a saída no terminal do CLI, como se o comando tivesse sido digitado.
@@ -1083,6 +1085,12 @@
     montar();
   }
 
-  // Exposto pra outros módulos (ex.: futuros desafios de console) abrirem o console.
+  // Exposto pra outros módulos (ex.: desafios de console) abrirem e navegarem.
   window.abrirConsoleAws = abrir;
+  window.consoleIrPara = function (tela, extra) {
+    if (!overlay) return;
+    if (!overlay.classList.contains("aberto")) abrir();
+    view = Object.assign({ tela: tela, bucket: null, prefixo: "" }, extra || {});
+    render();
+  };
 })();
