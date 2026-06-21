@@ -116,12 +116,14 @@
       "      UserName: app-deploy\n",
   };
 
-  function corpoDoTemplate(flags) {
+  function corpoDoTemplate(conta, flags) {
     const tb = exigirFlag(flags, "template-body");
     let texto;
     if (String(tb).startsWith("file://")) {
       const nome = String(tb).slice(7);
-      texto = CFN_TEMPLATES[nome];
+      // templates prontos OU arquivos que o usuário salvou (ex.: gerados pelo Arquiteto IA, ou via ">")
+      const salvos = (conta && conta.arquivosSalvos) || {};
+      texto = CFN_TEMPLATES[nome] !== undefined ? CFN_TEMPLATES[nome] : salvos[nome];
       if (texto === undefined) {
         throw new ErroCli(`Error parsing parameter '--template-body': Unable to load paramfile ${tb}: arquivo não existe. Templates prontos: ${Object.keys(CFN_TEMPLATES).join(", ")}.`);
       }
@@ -198,7 +200,7 @@
       const nome = exigirFlag(flags, "stack-name");
       const st = cfn(conta);
       if (st.stacks[nome]) throw new ErroCli(`An error occurred (AlreadyExistsException) when calling the CreateStack operation: Stack [${nome}] already exists`);
-      const template = corpoDoTemplate(flags);
+      const template = corpoDoTemplate(conta, flags);
       const recursos = template.Resources;
       if (!recursos || typeof recursos !== "object" || !Object.keys(recursos).length) {
         throw new ErroCli("An error occurred (ValidationError) when calling the CreateStack operation: Template format error: o template precisa de uma seção 'Resources' com pelo menos um recurso.");
@@ -251,7 +253,7 @@
     },
 
     "validate-template": (conta, pos, flags) => {
-      const template = corpoDoTemplate(flags);
+      const template = corpoDoTemplate(conta, flags);
       if (!template.Resources || !Object.keys(template.Resources).length) {
         throw new ErroCli("An error occurred (ValidationError) when calling the ValidateTemplate operation: Template format error: falta a seção 'Resources'.");
       }

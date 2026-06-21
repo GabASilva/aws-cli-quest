@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21c",
+      data: "21 jun 2026",
+      titulo: "🤖 Arquiteto IA (gera infra a partir de texto)",
+      itens: [
+        "Descreva em português o que você quer (\"um site com banco de dados e uma função\") e o <b>Arquiteto IA</b> monta um <b>template de CloudFormation</b> pra você.",
+        "Dá pra <b>criar o stack na hora</b> — os recursos passam a existir de verdade na sua conta. Botão <b>🤖 Arquiteto IA</b> no rodapé.",
+      ],
+    },
+    {
       versao: "2026-06-21b",
       data: "21 jun 2026",
       titulo: "🛡️ Ranking mais justo e seguro",
@@ -167,11 +176,6 @@
   // O que vem por aí — alinhado ao que combinamos (Console → CloudFormation,
   // mais serviços no Console e multiplayer assíncrono).
   const EM_BREVE = [
-    {
-      icone: "🤖",
-      titulo: "Arquiteturas com IA (Bedrock)",
-      desc: "Descreva em português o que você quer e receba um template de CloudFormation pronto pra rodar.",
-    },
     {
       icone: "👥",
       titulo: "Modo multiplayer",

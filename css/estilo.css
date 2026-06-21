@@ -873,3 +873,37 @@ body.console-aberto { overflow: hidden; }
 .cl-breve-ic { font-size: 1.5rem; width: 34px; text-align: center; flex: 0 0 auto; }
 .cl-breve-item strong { display: block; font-size: 0.92rem; color: var(--texto); margin-bottom: 3px; }
 .cl-breve-item p { margin: 0; font-size: 0.84rem; line-height: 1.45; color: var(--texto-fraco); }
+
+/* ============================================================
+   Arquiteto IA (arquiteto-ia.js) — modal no tema escuro do app
+   ============================================================ */
+#modalIa { z-index: 6000; }
+.ia-caixa { width: min(680px, 94vw); }
+.ia-intro { font-size: 0.9rem; color: var(--texto-fraco); line-height: 1.5; margin: 0 0 14px; }
+.ia-intro small { display: block; margin-top: 4px; opacity: 0.8; }
+#iaDesc {
+  width: 100%; box-sizing: border-box; resize: vertical; padding: 10px 12px;
+  background: var(--painel-2); border: 1px solid var(--borda); border-radius: 8px;
+  color: var(--texto); font-size: 0.92rem; font-family: inherit;
+}
+.ia-exemplos { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.ia-chip {
+  background: var(--painel-2); border: 1px solid var(--borda); color: var(--texto-fraco);
+  border-radius: 14px; padding: 4px 11px; font-size: 0.78rem; cursor: pointer;
+}
+.ia-chip:hover { border-color: var(--laranja); color: var(--texto); }
+.ia-acoes-topo { margin-top: 14px; }
+.ia-h3 { font-size: 0.95rem; color: var(--laranja); margin: 18px 0 8px; }
+.ia-lista { margin: 0; padding-left: 20px; }
+.ia-lista li { font-size: 0.88rem; line-height: 1.6; color: var(--texto); }
+.ia-lista code, .ia-cli code { background: var(--painel-2); color: var(--laranja); padding: 1px 5px; border-radius: 4px; font-size: 0.84em; }
+.ia-yaml {
+  background: #0c1118; border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px;
+  font-family: var(--fonte-mono); font-size: 0.82rem; color: #cfe3ff; overflow-x: auto;
+  white-space: pre; max-height: 260px; overflow-y: auto;
+}
+.ia-acoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.ia-nota { font-size: 0.84rem; color: var(--azul); margin: 0 0 8px; }
+.ia-erro { color: var(--vermelho); font-size: 0.86rem; white-space: pre-wrap; }
+.ia-ok { color: var(--verde); font-size: 0.88rem; line-height: 1.5; margin-top: 12px; }
+.ia-cli { font-size: 0.8rem; color: var(--texto-fraco); margin: 14px 0 0; word-break: break-all; }
