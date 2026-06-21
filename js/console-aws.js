@@ -129,6 +129,9 @@
     else if (view.tela === "ec2-launch") corpo.innerHTML = formLaunch();
     else if (view.tela === "iam-usuarios") corpo.innerHTML = telaIamUsuarios();
     else if (view.tela === "iam-user") corpo.innerHTML = telaIamUserDetail();
+    else if (view.tela === "lambda-funcoes") corpo.innerHTML = telaLambda();
+    else if (view.tela === "dynamo-tabelas") corpo.innerHTML = telaDynamo();
+    else if (view.tela === "dynamo-tabela") corpo.innerHTML = telaDynamoDetail();
     else corpo.innerHTML = telaHome();
     corpo.scrollTop = 0;
   }
@@ -139,12 +142,14 @@
     const nBuckets = Object.keys(c.s3.buckets).length;
     const nInst = Object.values(c.ec2.instancias).filter((i) => i.estado !== "terminated").length;
     const nUsers = Object.keys(c.iam.usuarios).length;
+    const nFn = Object.keys(c.lambda.funcoes).length;
+    const nTab = Object.keys(c.dynamodb.tabelas).length;
     const servicos = [
       { id: "s3", icone: "🪣", nome: "S3", desc: "Armazenamento de objetos", ativo: true, extra: `${nBuckets} bucket(s)` },
       { id: "ec2", icone: "🖥️", nome: "EC2", desc: "Máquinas virtuais", ativo: true, extra: `${nInst} instância(s)` },
       { id: "iam", icone: "🔑", nome: "IAM", desc: "Usuários e permissões", ativo: true, extra: `${nUsers} usuário(s)` },
-      { id: "lambda", icone: "λ", nome: "Lambda", desc: "Funções serverless", ativo: false },
-      { id: "dynamodb", icone: "🗄️", nome: "DynamoDB", desc: "Banco NoSQL", ativo: false },
+      { id: "lambda", icone: "λ", nome: "Lambda", desc: "Funções serverless", ativo: true, extra: `${nFn} função(ões)` },
+      { id: "dynamodb", icone: "🗄️", nome: "DynamoDB", desc: "Banco NoSQL", ativo: true, extra: `${nTab} tabela(s)` },
     ];
     return `
       <div class="caws-pagina">
@@ -546,6 +551,175 @@
     `;
   }
 
+  // ---------- Lambda ----------
+  function telaLambda() {
+    const c = conta();
+    const nomes = Object.keys(c.lambda.funcoes);
+    const linhas = nomes.length
+      ? nomes.map((n) => {
+          const f = c.lambda.funcoes[n];
+          return `
+            <tr>
+              <td>λ ${esc(n)}</td>
+              <td>${esc(f.runtime)}</td>
+              <td>${esc(f.handler)}</td>
+              <td>${f.memoria} MB</td>
+              <td>${f.timeout}s</td>
+              <td>
+                <button class="caws-link" data-acao="lambda-invoke" data-fn="${esc(n)}">Testar</button>
+                <button class="caws-link-perigo" data-acao="lambda-delete" data-fn="${esc(n)}">Excluir</button>
+              </td>
+            </tr>`;
+        }).join("")
+      : `<tr><td colspan="6" class="caws-vazio">Nenhuma função. Clique em <strong>Criar função</strong> para começar.</td></tr>`;
+
+    return `
+      ${migalha([["Console", "home"], ["Lambda", "lambda-funcoes"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico">
+          <h1>⚡ Lambda — Funções</h1>
+          <button class="caws-btn-primario" data-acao="lambda-form-criar">Criar função</button>
+        </div>
+        <table class="caws-tabela">
+          <thead><tr><th>Nome</th><th>Runtime</th><th>Handler</th><th>Memória</th><th>Timeout</th><th></th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        ${dicaCli("Listar funções no CLI:", "aws lambda list-functions")}
+      </div>
+    `;
+  }
+
+  function formLambda() {
+    const runtimes = (typeof RUNTIMES !== "undefined" ? RUNTIMES : ["python3.12", "nodejs20.x"]);
+    const optR = runtimes.map((r) => `<option value="${esc(r)}"${r === "python3.12" ? " selected" : ""}>${esc(r)}</option>`).join("");
+    let zips = arquivosLocais().filter((f) => f.endsWith(".zip"));
+    if (!zips.length) zips = ["app.zip"];
+    const optZ = zips.map((z) => `<option value="${esc(z)}">${esc(z)}</option>`).join("");
+    return `
+      ${migalha([["Console", "home"], ["Lambda", "lambda-funcoes"], ["Criar função", null]])}
+      <div class="caws-pagina caws-form">
+        <h1>Criar função</h1>
+        <form data-form="lambda-criar">
+          <label class="caws-campo"><span>Nome da função</span>
+            <input name="nome" autocomplete="off" spellcheck="false" placeholder="ex.: ola-mundo"></label>
+          <label class="caws-campo"><span>Runtime</span><select name="runtime">${optR}</select>
+            <small>A linguagem/versão que executa o código.</small></label>
+          <label class="caws-campo"><span>Handler</span>
+            <input name="handler" value="index.handler">
+            <small>É <code>arquivo.função</code> que a Lambda chama ao ser invocada.</small></label>
+          <label class="caws-campo"><span>Role (ARN)</span>
+            <input name="role" value="arn:aws:iam::123456789012:role/lambda-exec">
+            <small>As permissões com que a função roda.</small></label>
+          <label class="caws-campo"><span>Código (.zip)</span><select name="zip">${optZ}</select>
+            <small>O pacote com o código da função (do seu "disco" fictício).</small></label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes">
+            <button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="lambda-funcoes">Cancelar</button>
+            <button type="submit" class="caws-btn-primario">Criar função</button>
+          </div>
+        </form>
+        ${dicaCli("Mesma coisa no CLI:", "aws lambda create-function --function-name NOME --runtime RUNTIME --role ARN --handler index.handler --zip-file fileb://app.zip")}
+      </div>
+    `;
+  }
+
+  // ---------- DynamoDB ----------
+  function pkDaTabela(t) { return (t.esquema.find((k) => k.KeyType === "HASH") || {}).AttributeName; }
+  function tipoDoAttr(t, nome) { return ((t.defs.find((d) => d.AttributeName === nome) || {}).AttributeType) || "S"; }
+
+  function telaDynamo() {
+    const c = conta();
+    const nomes = Object.keys(c.dynamodb.tabelas);
+    const linhas = nomes.length
+      ? nomes.map((n) => {
+          const t = c.dynamodb.tabelas[n];
+          return `
+            <tr>
+              <td><a href="#" data-acao="dynamo-abrir-tabela" data-tabela="${esc(n)}">🗄️ ${esc(n)}</a></td>
+              <td>${esc(pkDaTabela(t) || "—")}</td>
+              <td>${t.itens.length} item(ns)</td>
+              <td>${esc(t.cobranca)}</td>
+              <td><button class="caws-link-perigo" data-acao="dynamo-delete-table" data-tabela="${esc(n)}">Excluir</button></td>
+            </tr>`;
+        }).join("")
+      : `<tr><td colspan="5" class="caws-vazio">Nenhuma tabela. Clique em <strong>Criar tabela</strong> para começar.</td></tr>`;
+
+    return `
+      ${migalha([["Console", "home"], ["DynamoDB", "dynamo-tabelas"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico">
+          <h1>🗄️ DynamoDB — Tabelas</h1>
+          <button class="caws-btn-primario" data-acao="dynamo-form-criar">Criar tabela</button>
+        </div>
+        <table class="caws-tabela">
+          <thead><tr><th>Nome</th><th>Chave de partição</th><th>Itens</th><th>Cobrança</th><th></th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        ${dicaCli("Listar tabelas no CLI:", "aws dynamodb list-tables")}
+      </div>
+    `;
+  }
+
+  function formDynamoTable() {
+    return `
+      ${migalha([["Console", "home"], ["DynamoDB", "dynamo-tabelas"], ["Criar tabela", null]])}
+      <div class="caws-pagina caws-form">
+        <h1>Criar tabela</h1>
+        <form data-form="dynamo-criar">
+          <label class="caws-campo"><span>Nome da tabela</span>
+            <input name="nome" autocomplete="off" spellcheck="false" placeholder="ex.: Tarefas">
+            <small>De 3 a 255 caracteres (letras, números, <code>_.-</code>).</small></label>
+          <label class="caws-campo"><span>Chave de partição</span>
+            <input name="pk" autocomplete="off" spellcheck="false" placeholder="ex.: id">
+            <small>O atributo que identifica cada item.</small></label>
+          <label class="caws-campo"><span>Tipo da chave</span>
+            <select name="tipo"><option value="S">String (S)</option><option value="N">Número (N)</option><option value="B">Binário (B)</option></select></label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes">
+            <button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="dynamo-tabelas">Cancelar</button>
+            <button type="submit" class="caws-btn-primario">Criar tabela</button>
+          </div>
+        </form>
+        ${dicaCli("Mesma coisa no CLI:", "aws dynamodb create-table --table-name NOME --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST")}
+      </div>
+    `;
+  }
+
+  function telaDynamoDetail() {
+    const c = conta();
+    const n = view.tabela;
+    const t = c.dynamodb.tabelas[n];
+    if (!t) { view = { tela: "dynamo-tabelas" }; return telaDynamo(); }
+    const pk = pkDaTabela(t);
+    const tipoPk = tipoDoAttr(t, pk);
+    const rows = t.itens.length
+      ? t.itens.map((it, idx) => `<tr><td><code>${esc(JSON.stringify(it))}</code></td><td><button class="caws-link-perigo" data-acao="dynamo-del-item" data-idx="${idx}">Excluir</button></td></tr>`).join("")
+      : `<tr><td colspan="2" class="caws-vazio">Tabela vazia. Adicione um item abaixo.</td></tr>`;
+    return `
+      ${migalha([["Console", "home"], ["DynamoDB", "dynamo-tabelas"], [n, null]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico">
+          <h1>🗄️ ${esc(n)}</h1>
+          <button class="caws-btn-perigo" data-acao="dynamo-delete-table" data-tabela="${esc(n)}">Excluir tabela</button>
+        </div>
+        <p class="caws-sub">Chave de partição: <code>${esc(pk)}</code> (${esc(tipoPk)}) · ${t.itens.length} item(ns)</p>
+        <h2 class="caws-secao">Adicionar item</h2>
+        <form data-form="dynamo-item" class="caws-inline-form">
+          <input name="pkval" placeholder="valor de ${esc(pk)} (${esc(tipoPk)})" autocomplete="off">
+          <input name="attrNome" placeholder="atributo extra (opcional)" autocomplete="off">
+          <input name="attrVal" placeholder="valor do extra" autocomplete="off">
+          <button type="submit" class="caws-btn-secundario">Adicionar item</button>
+        </form>
+        <p class="caws-erro" data-erro></p>
+        <table class="caws-tabela">
+          <thead><tr><th>Item (formato DynamoDB)</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${dicaCli("Adicionar item no CLI:", `aws dynamodb put-item --table-name ${n} --item '{"${pk}":{"${tipoPk}":"valor"}}'`)}
+      </div>
+    `;
+  }
+
   // ---------- Componentes reutilizáveis ----------
   function migalha(itens) {
     return `<div class="caws-migalha">` + itens.map(([nome, tela], i) => {
@@ -577,6 +751,8 @@
       if (alvo.dataset.servico === "s3") { view = { tela: "s3-buckets", bucket: null, prefixo: "" }; render(); }
       else if (alvo.dataset.servico === "ec2") { view = { tela: "ec2-instancias", bucket: null, prefixo: "" }; render(); }
       else if (alvo.dataset.servico === "iam") { view = { tela: "iam-usuarios" }; render(); }
+      else if (alvo.dataset.servico === "lambda") { view = { tela: "lambda-funcoes" }; render(); }
+      else if (alvo.dataset.servico === "dynamodb") { view = { tela: "dynamo-tabelas" }; render(); }
       return;
     }
     if (acao === "ver-roadmap") {
@@ -694,6 +870,53 @@
       persistir(); render(); avisar("Removido do grupo");
       return;
     }
+
+    // ----- Lambda -----
+    if (acao === "lambda-form-criar") {
+      overlay.querySelector("#cawsCorpo").innerHTML = formLambda(); return;
+    }
+    if (acao === "lambda-delete") {
+      const n = alvo.dataset.fn;
+      if (!c.lambda.funcoes[n]) return;
+      if (!confirm(`Excluir a função "${n}"?`)) return;
+      delete c.lambda.funcoes[n];
+      ecoTerminal(`(delete-function) função ${n} removida`, "ok");
+      persistir(); render(); avisar(`🗑️ Função ${esc(n)} excluída`);
+      return;
+    }
+    if (acao === "lambda-invoke") {
+      const f = c.lambda.funcoes[alvo.dataset.fn];
+      if (!f) return;
+      f.invocada = true;
+      ecoTerminal(`(invoke) ${alvo.dataset.fn} -> StatusCode 200 ($LATEST)`, "ok");
+      persistir(); avisar(`▶️ Função ${esc(alvo.dataset.fn)} invocada (StatusCode 200)`);
+      return;
+    }
+
+    // ----- DynamoDB -----
+    if (acao === "dynamo-form-criar") {
+      overlay.querySelector("#cawsCorpo").innerHTML = formDynamoTable(); return;
+    }
+    if (acao === "dynamo-abrir-tabela") {
+      view = { tela: "dynamo-tabela", tabela: alvo.dataset.tabela }; render(); return;
+    }
+    if (acao === "dynamo-delete-table") {
+      const n = alvo.dataset.tabela;
+      if (!c.dynamodb.tabelas[n]) return;
+      if (!confirm(`Excluir a tabela "${n}" e todos os seus itens?`)) return;
+      delete c.dynamodb.tabelas[n];
+      ecoTerminal(`(delete-table) tabela ${n} removida`, "ok");
+      persistir(); view = { tela: "dynamo-tabelas" }; render(); avisar(`🗑️ Tabela ${esc(n)} excluída`);
+      return;
+    }
+    if (acao === "dynamo-del-item") {
+      const t = c.dynamodb.tabelas[view.tabela];
+      if (!t) return;
+      t.itens.splice(parseInt(alvo.dataset.idx, 10), 1);
+      ecoTerminal(`(delete-item) item removido de ${view.tabela}`, "ok");
+      persistir(); render(); avisar("🗑️ Item excluído");
+      return;
+    }
   }
 
   // ---------- Tratamento de formulários ----------
@@ -797,6 +1020,58 @@
       if (!grupo.membros.includes(view.usuario)) grupo.membros.push(view.usuario);
       ecoTerminal(`(add-user-to-group) ${view.usuario} entrou em ${form.grupo.value}`, "ok");
       persistir(); render(); avisar(`👥 Adicionado ao grupo ${esc(form.grupo.value)}`);
+      return;
+    }
+
+    if (tipo === "lambda-criar") {
+      const nome = (form.nome.value || "").trim();
+      if (!/^[a-zA-Z0-9_-]{1,64}$/.test(nome)) { erro("Nome inválido. Use letras, números, hífen e underline (até 64 caracteres)."); return; }
+      if (c.lambda.funcoes[nome]) { erro("Já existe uma função com esse nome."); return; }
+      const role = (form.role.value || "").trim();
+      if (!/^arn:aws:iam::\d{12}:role\/.+$/.test(role)) { erro("Role inválida. Ex.: arn:aws:iam::123456789012:role/lambda-exec"); return; }
+      c.lambda.funcoes[nome] = { runtime: form.runtime.value, role, handler: (form.handler.value || "index.handler").trim(), timeout: 3, memoria: 128, env: {}, invocada: false, criadaEm: (typeof agoraIso === "function" ? agoraIso() : new Date().toISOString()) };
+      ecoTerminal(`(create-function) função ${nome} criada (${form.runtime.value})`, "ok");
+      persistir(); view = { tela: "lambda-funcoes" }; render();
+      avisar(`✅ Função <strong>${esc(nome)}</strong> criada`);
+      return;
+    }
+
+    if (tipo === "dynamo-criar") {
+      const nome = (form.nome.value || "").trim();
+      const pk = (form.pk.value || "").trim();
+      const tp = form.tipo.value;
+      if (!/^[a-zA-Z0-9_.-]{3,255}$/.test(nome)) { erro("Nome inválido. De 3 a 255 caracteres (letras, números, _.-)."); return; }
+      if (c.dynamodb.tabelas[nome]) { erro("Já existe uma tabela com esse nome."); return; }
+      if (!pk) { erro("Informe o nome da chave de partição."); return; }
+      c.dynamodb.tabelas[nome] = {
+        defs: [{ AttributeName: pk, AttributeType: tp }],
+        esquema: [{ AttributeName: pk, KeyType: "HASH" }],
+        cobranca: "PAY_PER_REQUEST", itens: [],
+        criadaEm: (typeof agoraIso === "function" ? agoraIso() : new Date().toISOString()),
+      };
+      ecoTerminal(`(create-table) tabela ${nome} criada (chave ${pk})`, "ok");
+      persistir(); view = { tela: "dynamo-tabela", tabela: nome }; render();
+      avisar(`✅ Tabela <strong>${esc(nome)}</strong> criada`);
+      return;
+    }
+
+    if (tipo === "dynamo-item") {
+      const t = c.dynamodb.tabelas[view.tabela];
+      if (!t) return;
+      const pk = pkDaTabela(t);
+      const tipoPk = tipoDoAttr(t, pk);
+      const pkval = (form.pkval.value || "").trim();
+      if (!pkval) { erro("Informe o valor da chave de partição."); return; }
+      if (tipoPk === "N" && isNaN(Number(pkval))) { erro(`A chave "${pk}" é do tipo Número (N) — digite um número.`); return; }
+      const item = {}; item[pk] = {}; item[pk][tipoPk] = pkval;
+      const an = (form.attrNome.value || "").trim();
+      const av = (form.attrVal.value || "").trim();
+      if (an) item[an] = { S: av };
+      // dedup por chave de partição (igual ao put-item real)
+      t.itens = t.itens.filter((i) => JSON.stringify(i[pk]) !== JSON.stringify(item[pk]));
+      t.itens.push(item);
+      ecoTerminal(`(put-item) item gravado em ${view.tabela}`, "ok");
+      persistir(); render(); avisar("✅ Item adicionado");
       return;
     }
   }

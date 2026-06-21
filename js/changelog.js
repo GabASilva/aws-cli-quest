@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20g",
+      data: "20 jun 2026",
+      titulo: "⚡🗄️ Lambda e DynamoDB no Console",
+      itens: [
+        "Chegaram <b>Lambda</b> (criar/testar/excluir função) e <b>DynamoDB</b> (criar tabela, adicionar itens, excluir) ao Console.",
+        "Com isso o Console já tem os <b>5 serviços</b>: S3, EC2, IAM, Lambda e DynamoDB — todos espelhando a linha de comando.",
+      ],
+    },
+    {
       versao: "2026-06-20f",
       data: "20 jun 2026",
       titulo: "🔑 IAM no Console",
@@ -122,11 +131,6 @@
   // O que vem por aí — alinhado ao que combinamos (Console → CloudFormation,
   // mais serviços no Console e multiplayer assíncrono).
   const EM_BREVE = [
-    {
-      icone: "🧩",
-      titulo: "Mais serviços no Console",
-      desc: "Lambda e DynamoDB também na interface visual — S3, EC2 e IAM já estão lá.",
-    },
     {
       icone: "📄",
       titulo: "Infraestrutura como código (CloudFormation)",
