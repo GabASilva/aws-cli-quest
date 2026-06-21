@@ -16,6 +16,14 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21b",
+      data: "21 jun 2026",
+      titulo: "🛡️ Ranking mais justo e seguro",
+      itens: [
+        "Reforçamos as validações do servidor pra manter o <b>ranking justo</b> — pontuação e progresso agora passam por checagens de sanidade antes de serem salvos. Obrigado a quem reportou! 🙌",
+      ],
+    },
+    {
       versao: "2026-06-21a",
       data: "21 jun 2026",
       titulo: "🔬 Saídas ainda mais fiéis à AWS de verdade",

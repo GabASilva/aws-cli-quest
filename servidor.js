@@ -294,6 +294,60 @@ function concederLicenca(u, tier, opts) {
   return licencaPublica(u);
 }
 
+// ---------- Sanidade do progresso (anti-tampering do ranking) ----------
+// O XP é calculado no cliente (jogo no navegador), então o servidor NÃO tem como
+// provar que foi ganho honestamente — ainda mais com o "treino aleatório", que é
+// repetível e infinito. O que dá pra fazer (e fazemos) é LIMITAR tudo a faixas
+// plausíveis e SANEAR o payload, pra ninguém botar 5 milhões de XP, lotar o banco
+// ou injetar lixo. O que realmente importa (licença, dados de outros, contas) é
+// protegido em outras camadas.
+const TETO_XP = 100000; // ranking: teto de sanidade (antes era 5.000.000)
+const TETO_STREAK = 10000; // sequência: teto de sanidade
+const TETO_XP_DESAFIO = 1000; // xpGanho por desafio (folga p/ bônus de sequência)
+const MAX_CONCLUIDOS = 3000; // nº máximo de desafios guardados por conta
+const MAX_CHAVES_OBJ = 3000; // teto genérico de chaves em mapas do progresso
+const CHAVE_PROIBIDA = (k) => k === "__proto__" || k === "constructor" || k === "prototype";
+
+function intLimitado(v, teto) {
+  const n = Math.floor(Number(v));
+  if (!isFinite(n) || n < 0) return 0;
+  return Math.min(n, teto);
+}
+// Mapa id->valor com chaves seguras e quantidade limitada
+function mapaSeguro(obj, maxChaves, transformarValor) {
+  const out = {};
+  if (!obj || typeof obj !== "object") return out;
+  let n = 0;
+  for (const k of Object.keys(obj)) {
+    if (n >= maxChaves) break;
+    if (typeof k !== "string" || k.length > 80 || CHAVE_PROIBIDA(k)) continue;
+    out[k] = transformarValor ? transformarValor(obj[k]) : obj[k];
+    n++;
+  }
+  return out;
+}
+// Reconstrói só os campos conhecidos do progresso, em faixas seguras. Campos
+// desconhecidos enviados pelo cliente são descartados (anti mass-assignment).
+function sanearProgresso(p) {
+  if (!p || typeof p !== "object") return null;
+  const out = {};
+  out.streak = intLimitado(p.streak, TETO_STREAK);
+  out.concluidos = mapaSeguro(p.concluidos, MAX_CONCLUIDOS, (v) => ({
+    xpGanho: intLimitado(v && v.xpGanho, TETO_XP_DESAFIO),
+    revelado: !!(v && v.revelado),
+  }));
+  out.revelados = mapaSeguro(p.revelados, MAX_CONCLUIDOS, (v) => !!v);
+  out.etapasProjetos = mapaSeguro(p.etapasProjetos, MAX_CHAVES_OBJ, (v) =>
+    Array.isArray(v) ? v.slice(0, 50).map(Boolean) : []);
+  out.missoesConsole = mapaSeguro(p.missoesConsole, 200, (v) => !!v);
+  out.sequenciasPerdidas = Array.isArray(p.sequenciasPerdidas)
+    ? p.sequenciasPerdidas.slice(0, 3).map((x) => intLimitado(x, TETO_STREAK)) : [];
+  // `conta` é o estado da AWS simulada do próprio usuário — guarda como veio
+  // (já limitado pelo teto de 100KB do corpo). Só barra chaves perigosas no topo.
+  if (p.conta && typeof p.conta === "object") out.conta = mapaSeguro(p.conta, 50, (v) => v);
+  return out;
+}
+
 // ---------- API ----------
 async function tratarApi(req, res, rota) {
   // POST /api/cadastrar { usuario, senha }
@@ -367,16 +421,19 @@ async function tratarApi(req, res, rota) {
   if (rota === "/api/progresso" && req.method === "POST") {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
+    if (!dentroDoLimite("prog:" + nome, 60, 60000)) {
+      return responderJson(res, 429, { erro: "Salvando rápido demais. Espere um instante." });
+    }
     const corpo = await lerCorpo(req);
     const u = bd.usuarios[nome];
-    // teto de sanidade (evita XP/streak absurdos no ranking)
-    if (typeof corpo.xp === "number" && corpo.xp >= 0) u.xp = Math.min(Math.floor(corpo.xp), 5000000);
-    if (typeof corpo.melhorStreak === "number" && corpo.melhorStreak >= 0) u.melhorStreak = Math.min(Math.floor(corpo.melhorStreak), 100000);
-    if (corpo.progresso && typeof corpo.progresso === "object") {
-      const p = corpo.progresso;
-      delete p.licenca; // a LICENÇA nunca vem do cliente — só de código/pagamento/admin
-      u.progresso = p;
-    }
+    // XP/streak entram só em faixas plausíveis (o cálculo é no cliente — aqui é
+    // teto de sanidade pro ranking, não prova de honestidade).
+    if (typeof corpo.xp === "number") u.xp = intLimitado(corpo.xp, TETO_XP);
+    if (typeof corpo.melhorStreak === "number") u.melhorStreak = intLimitado(corpo.melhorStreak, TETO_STREAK);
+    // progresso é RECONSTRUÍDO só com os campos conhecidos e saneados — nunca
+    // guardamos o objeto cru do cliente (corta mass-assignment, lixo e a licença).
+    const limpo = sanearProgresso(corpo.progresso);
+    if (limpo) u.progresso = limpo;
     salvarBd();
     return responderJson(res, 200, { ok: true });
   }
