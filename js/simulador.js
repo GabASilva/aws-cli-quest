@@ -617,12 +617,16 @@ const cmdIam = {
   "create-user": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "user-name");
     if (conta.iam.usuarios[nome]) throw new ErroCli(`An error occurred (EntityAlreadyExists) when calling the CreateUser operation: User with name ${nome} already exists.`);
-    conta.iam.usuarios[nome] = { criadoEm: agoraIso(), politicas: [] };
-    return js({ User: { Path: "/", UserName: nome, UserId: "AIDA" + hexAleatorio(17).toUpperCase(), Arn: arnIam(conta, "user", nome), CreateDate: conta.iam.usuarios[nome].criadoEm } });
+    conta.iam.usuarios[nome] = { criadoEm: agoraIso(), politicas: [], userId: "AIDA" + hexAleatorio(17).toUpperCase() };
+    const u = conta.iam.usuarios[nome];
+    return js({ User: { Path: "/", UserName: nome, UserId: u.userId, Arn: arnIam(conta, "user", nome), CreateDate: u.criadoEm } });
   },
 
   "list-users": (conta) => {
-    return js({ Users: Object.entries(conta.iam.usuarios).map(([nome, u]) => ({ UserName: nome, Arn: arnIam(conta, "user", nome), CreateDate: u.criadoEm })) });
+    return js({ Users: Object.entries(conta.iam.usuarios).map(([nome, u]) => {
+      if (!u.userId) u.userId = "AIDA" + hexAleatorio(17).toUpperCase(); // backfill estável p/ contas antigas
+      return { Path: "/", UserName: nome, UserId: u.userId, Arn: arnIam(conta, "user", nome), CreateDate: u.criadoEm };
+    }) });
   },
 
   "delete-user": (conta, pos, flags) => {
