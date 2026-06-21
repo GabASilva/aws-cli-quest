@@ -9,6 +9,8 @@
 //   licenca <usuario> <tier> [dias]         concede licença direto (colega, vitalício, escola)
 //   codigo <tier> [qtd] [dias] [escola]     gera código(s) de ativação pra resgatar no app
 //   codigos                                 lista os códigos gerados
+//   alertas [n]                             lista os últimos n alertas antifraude (XP/cadastro)
+//   resetxp <usuario>                       zera XP/sequência de uma conta (ex.: trapaceiro)
 //
 // tiers: mensal | semestral | anual | vitalicio | escola
 // Toda escrita grava um backup quest-dados.json.bak.<timestamp> antes.
@@ -26,6 +28,7 @@ function carregar() {
   const d = JSON.parse(fs.readFileSync(ARQ, "utf8"));
   d.usuarios = d.usuarios || {};
   d.codigos = d.codigos || {};
+  d.alertas = d.alertas || [];
   return d;
 }
 function salvar(d) {
@@ -125,11 +128,35 @@ if (cmd === "listar") {
   }));
   console.table(linhas);
   console.log("Total: " + linhas.length + " código(s).");
+} else if (cmd === "alertas") {
+  const d = carregar();
+  const n = parseInt(args[0] || "30", 10);
+  const linhas = (d.alertas || []).slice(-n).reverse().map((a) => ({
+    quando: (a.quando || "").replace("T", " ").slice(0, 19),
+    tipo: a.tipo,
+    detalhe: a.detalhe || "",
+  }));
+  if (!linhas.length) { console.log("Nenhum alerta registrado. 🎉"); }
+  else { console.table(linhas); console.log("Mostrando os últimos " + linhas.length + " (de " + d.alertas.length + ")."); }
+} else if (cmd === "resetxp") {
+  const [usuario] = args;
+  if (!usuario) { console.error("uso: node /app/scripts/admin.js resetxp <usuario>"); process.exit(1); }
+  const d = carregar();
+  const u = d.usuarios[usuario];
+  if (!u) { console.error("Usuário não encontrado: '" + usuario + "'."); process.exit(1); }
+  u.xp = 0;
+  u.melhorStreak = 0;
+  if (u.progresso) { u.progresso.streak = 0; u.progresso.concluidos = {}; u.progresso.revelados = {}; u.progresso.missoesConsole = {}; }
+  delete u.xpDia;
+  salvar(d);
+  console.log("OK: XP e progresso de '" + usuario + "' zerados.");
 } else {
-  console.log("Comandos: listar | streak | licenca | codigo | codigos");
+  console.log("Comandos: listar | streak | licenca | codigo | codigos | alertas | resetxp");
   console.log("  node /app/scripts/admin.js listar");
   console.log("  node /app/scripts/admin.js streak <usuario> <atual> [<melhor>]");
   console.log("  node /app/scripts/admin.js licenca <usuario> <mensal|semestral|anual|vitalicio|escola> [dias]");
   console.log("  node /app/scripts/admin.js codigo <tier> [qtd] [dias] [escola]");
   console.log("  node /app/scripts/admin.js codigos");
+  console.log("  node /app/scripts/admin.js alertas [n]");
+  console.log("  node /app/scripts/admin.js resetxp <usuario>");
 }

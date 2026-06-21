@@ -78,7 +78,35 @@ flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js licenca <usua
 flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js codigo anual 10"               # gerar 10 códigos anuais
 flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js codigo escola 30 365 escola"   # 30 códigos escola (1 ano)
 flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js codigos"                        # listar códigos
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js alertas"                         # ver alertas antifraude
+flyctl ssh console -a aws-cli-quest -C "node /app/scripts/admin.js resetxp <usuario>"              # zerar XP de trapaceiro
 ```
+
+## Antifraude / alertas (ranking e competições)
+
+O servidor monitora anomalias e registra um **alerta** (visível em
+`admin.js alertas`). Se você setar `ALERTA_EMAIL`, ele também te avisa por e-mail
+(usa o Resend; precisa do `RESEND_KEY`).
+
+```
+flyctl secrets set ALERTA_EMAIL="voce@exemplo.com" -a aws-cli-quest
+```
+
+Gatilhos (todos ajustáveis por env; valores padrão):
+
+- `ALERTA_XP_DIA` (5000) — XP ganho por um usuário num dia acima disso → alerta.
+- `ALERTA_XP_SALTO` (3000) — pulo de XP num único save → alerta.
+- `ALERTA_CADASTRO_IP_DIA` (10) — contas criadas do mesmo IP num dia → alerta
+  (pode ser uma turma estudando junto atrás do mesmo Wi-Fi — você confere).
+
+> ⚠️ Honestidade técnica: como o XP é calculado no navegador (e o treino é
+> infinito), não dá pra *provar* honestidade no servidor — esses alertas servem
+> pra **você revisar** manualmente. Pra competição "pra valer", o caminho é
+> exigir e-mail verificado / conta Pro pra entrar, ou apurar os campeões pelos
+> alertas antes de premiar.
+
+Criação de contas em massa já tem **limite de 5 contas por IP por hora** no
+cadastro; o alerta acima cobre o acúmulo ao longo do dia.
 
 Planos e preços: Mensal R$ 19,90 · Semestral R$ 89,90 · Anual R$ 149,90 ·
 Personalizado (1–24 meses, desconto progressivo) · Escola R$ 49,90/aluno/ano ·

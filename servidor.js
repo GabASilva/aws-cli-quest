@@ -32,8 +32,9 @@ function carregarBd() {
     if (!bd.sessoes) bd.sessoes = {};
     if (!bd.codigos) bd.codigos = {};
     if (!bd.resets) bd.resets = {};
+    if (!bd.alertas) bd.alertas = [];
   } catch (e) {
-    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {} };
+    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [] };
   }
 }
 
@@ -348,6 +349,59 @@ function sanearProgresso(p) {
   return out;
 }
 
+// ---------- Monitoramento / alertas (antifraude) ----------
+// Não dá pra PROVAR honestidade do XP no servidor, mas dá pra DETECTAR anomalias
+// e avisar o dono pra revisão manual (importante quando entrar competição).
+const ALERTA_XP_DIA = Number(process.env.ALERTA_XP_DIA) || 5000; // XP ganho num dia acima disso -> alerta
+const ALERTA_XP_SALTO = Number(process.env.ALERTA_XP_SALTO) || 3000; // pulo de XP num save só -> alerta
+const ALERTA_CADASTRO_IP_DIA = Number(process.env.ALERTA_CADASTRO_IP_DIA) || 10; // contas/IP/dia -> alerta
+
+function diaHoje() { return new Date().toISOString().slice(0, 10); }
+
+// Registra um alerta no banco (últimos 500) e, se houver ALERTA_EMAIL, avisa por e-mail.
+function registrarAlerta(tipo, dados) {
+  if (!bd.alertas) bd.alertas = [];
+  const ev = Object.assign({ tipo, quando: new Date().toISOString() }, dados);
+  bd.alertas.push(ev);
+  if (bd.alertas.length > 500) bd.alertas = bd.alertas.slice(-500);
+  salvarBd();
+  console.warn("[ALERTA] " + tipo + " :: " + (dados.detalhe || JSON.stringify(dados)));
+  const dest = process.env.ALERTA_EMAIL;
+  if (dest) {
+    enviarEmail(dest, "⚠️ CLImb — alerta: " + tipo,
+      `<p>Alerta de <b>${tipo}</b> no CLImb:</p><p>${dados.detalhe || JSON.stringify(dados)}</p>` +
+      `<p>Veja todos com: <code>node scripts/admin.js alertas</code></p>`);
+  }
+}
+
+// XP suspeito: acumula o ganho do dia por usuário e dispara 1 alerta/dia.
+function checarXpSuspeito(nome, u, delta) {
+  const hoje = diaHoje();
+  if (!u.xpDia || u.xpDia.dia !== hoje) u.xpDia = { dia: hoje, ganho: 0, alertado: false };
+  if (delta > 0) u.xpDia.ganho += delta;
+  if (u.xpDia.alertado) return;
+  let motivo = null;
+  if (u.xpDia.ganho >= ALERTA_XP_DIA) motivo = `ganhou ${u.xpDia.ganho} XP hoje`;
+  else if (delta >= ALERTA_XP_SALTO) motivo = `salto de +${delta} XP num save só`;
+  if (motivo) {
+    u.xpDia.alertado = true;
+    registrarAlerta("xp_suspeito", { usuario: nome, detalhe: `${nome} ${motivo} (total ${u.xp} XP). Verifique se é jogo limpo.`, ganhoDia: u.xpDia.ganho, xp: u.xp });
+  }
+}
+
+// Criação de contas em massa: conta cadastros por IP/dia (em memória) e dispara 1 alerta/dia/IP.
+const _cadastroDia = new Map(); // ip -> { dia, n, alertado }
+function checarCadastroMassa(ip) {
+  const hoje = diaHoje();
+  let e = _cadastroDia.get(ip);
+  if (!e || e.dia !== hoje) { e = { dia: hoje, n: 0, alertado: false }; _cadastroDia.set(ip, e); }
+  e.n++;
+  if (e.n >= ALERTA_CADASTRO_IP_DIA && !e.alertado) {
+    e.alertado = true;
+    registrarAlerta("cadastro_massa", { ip, detalhe: `${e.n} contas criadas do IP ${ip} hoje. Pode ser uma turma estudando junto — ou abuso.`, contas: e.n });
+  }
+}
+
 // ---------- API ----------
 async function tratarApi(req, res, rota) {
   // POST /api/cadastrar { usuario, senha }
@@ -366,6 +420,7 @@ async function tratarApi(req, res, rota) {
     const { salt, hash } = criarSenha(String(corpo.senha));
     bd.usuarios[nome] = { salt, hash, email: email || null, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
     salvarBd();
+    checarCadastroMassa(ipDe(req)); // antifraude: avisa o dono se um IP criar muitas contas
     const token = novaSessao(nome);
     return responderJson(res, 201, { token, perfil: perfilPublico(nome), licenca: licencaPublica(bd.usuarios[nome]), email: email || null });
   }
@@ -428,8 +483,10 @@ async function tratarApi(req, res, rota) {
     const u = bd.usuarios[nome];
     // XP/streak entram só em faixas plausíveis (o cálculo é no cliente — aqui é
     // teto de sanidade pro ranking, não prova de honestidade).
+    const xpAnterior = u.xp || 0;
     if (typeof corpo.xp === "number") u.xp = intLimitado(corpo.xp, TETO_XP);
     if (typeof corpo.melhorStreak === "number") u.melhorStreak = intLimitado(corpo.melhorStreak, TETO_STREAK);
+    checarXpSuspeito(nome, u, u.xp - xpAnterior); // antifraude: avisa o dono se subir demais
     // progresso é RECONSTRUÍDO só com os campos conhecidos e saneados — nunca
     // guardamos o objeto cru do cliente (corta mass-assignment, lixo e a licença).
     const limpo = sanearProgresso(corpo.progresso);
