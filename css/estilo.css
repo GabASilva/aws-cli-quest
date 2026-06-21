@@ -922,3 +922,34 @@ body.console-aberto { overflow: hidden; }
 .banner-email .botao { padding: 5px 12px; font-size: 0.8rem; }
 .banner-x { background: none; border: none; color: var(--texto-fraco); cursor: pointer; font-size: 0.95rem; padding: 0 4px; }
 .banner-x:hover { color: var(--texto); }
+
+/* ============================================================
+   Turmas / Salas (multiplayer.js)
+   ============================================================ */
+.sala-caixa { width: min(620px, 94vw); }
+.sala-intro { font-size: 0.86rem; color: var(--texto-fraco); margin: 0 0 14px; }
+.sala-botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.sala-form { display: flex; gap: 8px; margin: 0 0 12px; }
+.sala-form input {
+  flex: 1; padding: 8px 11px; background: var(--painel-2); border: 1px solid var(--borda);
+  border-radius: 8px; color: var(--texto); font-size: 0.9rem;
+}
+.sala-aviso { font-size: 0.8rem; color: var(--laranja); margin: 4px 0 0; }
+.sala-lista { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.sala-card { background: var(--painel-2); border: 1px solid var(--borda); border-radius: 10px; padding: 13px 15px; }
+.sala-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.sala-cab strong { font-size: 0.98rem; }
+.sala-tag { font-size: 0.66rem; font-weight: 700; background: rgba(255,153,0,0.15); color: var(--laranja); padding: 1px 7px; border-radius: 9px; vertical-align: middle; }
+.sala-cod { font-size: 0.78rem; color: var(--texto-fraco); margin-top: 3px; }
+.sala-cod code { background: var(--fundo); color: var(--laranja); padding: 1px 6px; border-radius: 4px; letter-spacing: 1px; }
+.sala-link { background: none; border: none; color: var(--azul); cursor: pointer; font-size: 0.76rem; text-decoration: underline; }
+.sala-link-perigo { background: none; border: none; color: var(--vermelho); cursor: pointer; font-size: 0.78rem; text-decoration: underline; }
+.sala-rank { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 4px 0; }
+.sala-rank td { padding: 4px 6px; border-bottom: 1px solid var(--borda); }
+.sala-rank tr:last-child td { border-bottom: none; }
+.sala-pos { width: 36px; text-align: center; }
+.sala-xp { text-align: right; color: var(--laranja); font-weight: 600; white-space: nowrap; }
+.sala-rank tr.sala-voce td { background: rgba(255,153,0,0.12); font-weight: 700; }
+.sala-voce small { color: var(--texto-fraco); font-weight: 400; }
+.sala-vazia, .sala-total { font-size: 0.78rem; color: var(--texto-fraco); }
+.sala-total { display: block; margin-top: 6px; }

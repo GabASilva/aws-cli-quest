@@ -193,3 +193,20 @@ async function apiRanking() {
     return null;
   }
 }
+
+// ---------- Turmas / Salas (multiplayer assíncrono) ----------
+async function apiSalasListar() {
+  return apiFetch("/api/salas"); // { salas, exigeEmail }
+}
+async function apiSalaCriar(nome) {
+  return apiFetch("/api/salas/criar", { method: "POST", body: JSON.stringify({ nome }) });
+}
+async function apiSalaEntrar(codigo) {
+  return apiFetch("/api/salas/entrar", { method: "POST", body: JSON.stringify({ codigo }) });
+}
+async function apiSalaSair(codigo) {
+  return apiFetch("/api/salas/sair", { method: "POST", body: JSON.stringify({ codigo }) });
+}
+async function apiSalaApagar(codigo) {
+  return apiFetch("/api/salas/apagar", { method: "POST", body: JSON.stringify({ codigo }) });
+}

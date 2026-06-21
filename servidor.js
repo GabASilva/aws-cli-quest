@@ -34,8 +34,9 @@ function carregarBd() {
     if (!bd.resets) bd.resets = {};
     if (!bd.alertas) bd.alertas = [];
     if (!bd.verificacoes) bd.verificacoes = {};
+    if (!bd.salas) bd.salas = {};
   } catch (e) {
-    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [], verificacoes: {} };
+    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [], verificacoes: {}, salas: {} };
   }
 }
 
@@ -311,6 +312,41 @@ function concederLicenca(u, tier, opts) {
   return licencaPublica(u);
 }
 
+// ---------- Salas / Turmas (multiplayer assíncrono) ----------
+const MAX_SALAS_USUARIO = 20; // em quantas turmas um usuário pode estar
+const MAX_MEMBROS_SALA = 300; // teto de membros por turma
+const NOME_SALA_OK = /^[\wÀ-ÿ0-9 .,!?@#&+-]{1,40}$/; // nome amigável, sem HTML
+const ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem O/0/I/1 (ambíguos)
+// Algumas operações de competição podem exigir e-mail confirmado — ligado por env
+// (deixe desligado até verificar um domínio no Resend, senão ninguém entra).
+function exigeEmailVerificado() {
+  return process.env.COMPETICAO_EXIGE_EMAIL === "1" || process.env.COMPETICAO_EXIGE_EMAIL === "true";
+}
+function gerarCodigoSala() {
+  let cod;
+  do {
+    cod = "";
+    for (let i = 0; i < 6; i++) cod += ALFABETO_CODIGO[Math.floor(Math.random() * ALFABETO_CODIGO.length)];
+  } while (bd.salas && bd.salas[cod]);
+  return cod;
+}
+function salasDoUsuario(nome) {
+  if (!bd.salas) return [];
+  return Object.values(bd.salas).filter((s) => s.membros.includes(nome));
+}
+// Visão pública de uma turma: dados + ranking dos membros (por XP).
+function salaPublica(sala, euNome) {
+  const ranking = sala.membros
+    .filter((n) => bd.usuarios[n])
+    .map((n) => Object.assign(perfilPublico(n), { ehVoce: n === euNome }))
+    .sort((a, b) => b.xp - a.xp)
+    .slice(0, 100);
+  return {
+    codigo: sala.codigo, nome: sala.nome, dono: sala.dono, ehDono: sala.dono === euNome,
+    criadoEm: sala.criadoEm, total: sala.membros.length, ranking,
+  };
+}
+
 // ---------- Sanidade do progresso (anti-tampering do ranking) ----------
 // O XP é calculado no cliente (jogo no navegador), então o servidor NÃO tem como
 // provar que foi ganho honestamente — ainda mais com o "treino aleatório", que é
@@ -519,6 +555,76 @@ async function tratarApi(req, res, rota) {
       .sort((a, b) => b.xp - a.xp)
       .slice(0, 50);
     return responderJson(res, 200, { ranking: lista });
+  }
+
+  // GET /api/salas  (autenticado) — turmas em que estou, com ranking de cada
+  if (rota === "/api/salas" && req.method === "GET") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra ver suas turmas." });
+    const salas = salasDoUsuario(nome).map((s) => salaPublica(s, nome)).sort((a, b) => b.criadoEm - a.criadoEm);
+    return responderJson(res, 200, { salas, exigeEmail: exigeEmailVerificado() });
+  }
+
+  // POST /api/salas/criar { nome }  (autenticado)
+  if (rota === "/api/salas/criar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra criar uma turma." });
+    const u = bd.usuarios[nome];
+    if (exigeEmailVerificado() && !u.emailVerificado) return responderJson(res, 403, { erro: "Confirme seu e-mail pra criar uma turma de competição." });
+    if (!dentroDoLimite("salacriar:" + nome, 10, 3600000)) return responderJson(res, 429, { erro: "Você criou turmas demais agora há pouco. Espere um pouco." });
+    const corpo = await lerCorpo(req);
+    const nomeSala = String(corpo.nome || "").trim();
+    if (!NOME_SALA_OK.test(nomeSala)) return responderJson(res, 400, { erro: "Nome de turma inválido (1 a 40 caracteres, sem símbolos estranhos)." });
+    if (salasDoUsuario(nome).length >= MAX_SALAS_USUARIO) return responderJson(res, 400, { erro: `Você já está em ${MAX_SALAS_USUARIO} turmas (o máximo).` });
+    const codigo = gerarCodigoSala();
+    bd.salas[codigo] = { codigo, nome: nomeSala, dono: nome, criadoEm: Date.now(), membros: [nome] };
+    salvarBd();
+    return responderJson(res, 201, { sala: salaPublica(bd.salas[codigo], nome) });
+  }
+
+  // POST /api/salas/entrar { codigo }  (autenticado)
+  if (rota === "/api/salas/entrar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra entrar numa turma." });
+    const u = bd.usuarios[nome];
+    if (exigeEmailVerificado() && !u.emailVerificado) return responderJson(res, 403, { erro: "Confirme seu e-mail pra entrar numa turma de competição." });
+    const corpo = await lerCorpo(req);
+    const codigo = String(corpo.codigo || "").trim().toUpperCase();
+    const sala = bd.salas[codigo];
+    if (!sala) return responderJson(res, 404, { erro: "Código de turma não encontrado." });
+    if (sala.membros.includes(nome)) return responderJson(res, 200, { sala: salaPublica(sala, nome), jaEra: true });
+    if (sala.membros.length >= MAX_MEMBROS_SALA) return responderJson(res, 400, { erro: "Essa turma já está cheia." });
+    if (salasDoUsuario(nome).length >= MAX_SALAS_USUARIO) return responderJson(res, 400, { erro: `Você já está em ${MAX_SALAS_USUARIO} turmas (o máximo).` });
+    sala.membros.push(nome);
+    salvarBd();
+    return responderJson(res, 200, { sala: salaPublica(sala, nome) });
+  }
+
+  // POST /api/salas/sair { codigo }  (autenticado) — sair; se o dono sair, passa o posto ou apaga
+  if (rota === "/api/salas/sair" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const corpo = await lerCorpo(req);
+    const sala = bd.salas[String(corpo.codigo || "").trim().toUpperCase()];
+    if (!sala) return responderJson(res, 404, { erro: "Turma não encontrada." });
+    sala.membros = sala.membros.filter((m) => m !== nome);
+    if (!sala.membros.length) delete bd.salas[sala.codigo];
+    else if (sala.dono === nome) sala.dono = sala.membros[0]; // passa o posto pro próximo
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // POST /api/salas/apagar { codigo }  (autenticado, só o dono)
+  if (rota === "/api/salas/apagar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const corpo = await lerCorpo(req);
+    const sala = bd.salas[String(corpo.codigo || "").trim().toUpperCase()];
+    if (!sala) return responderJson(res, 404, { erro: "Turma não encontrada." });
+    if (sala.dono !== nome) return responderJson(res, 403, { erro: "Só quem criou a turma pode apagá-la." });
+    delete bd.salas[sala.codigo];
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
   }
 
   // GET /api/config  (público — o que o front precisa saber pra montar a UI)

@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21e",
+      data: "21 jun 2026",
+      titulo: "👥 Turmas e competições",
+      itens: [
+        "Crie uma <b>turma</b>, compartilhe o código e a galera entra — cada turma tem seu <b>ranking próprio</b>.",
+        "É competição <b>assíncrona</b>: todo mundo joga no seu tempo e o placar da turma compara o XP. Botão <b>👥 Turmas</b> no topo.",
+      ],
+    },
+    {
       versao: "2026-06-21d",
       data: "21 jun 2026",
       titulo: "📧 Confirmação de e-mail",
@@ -186,9 +195,14 @@
   // mais serviços no Console e multiplayer assíncrono).
   const EM_BREVE = [
     {
-      icone: "👥",
-      titulo: "Modo multiplayer",
-      desc: "Salas e turmas pra estudar junto, e competições assíncronas com a galera — no seu tempo, sem pressão de tempo real.",
+      icone: "🏁",
+      titulo: "Eventos com prazo",
+      desc: "Competições cronometradas dentro das turmas (com início e fim), além do ranking contínuo.",
+    },
+    {
+      icone: "💬",
+      titulo: "Sua ideia aqui",
+      desc: "Manda sua sugestão! O CLImb cresce com o que a galera que estuda junto pede.",
     },
   ];
 
