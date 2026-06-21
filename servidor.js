@@ -35,8 +35,11 @@ function carregarBd() {
     if (!bd.alertas) bd.alertas = [];
     if (!bd.verificacoes) bd.verificacoes = {};
     if (!bd.salas) bd.salas = {};
+    if (!bd.eventos) bd.eventos = [];
+    if (!bd.adminLog) bd.adminLog = [];
+    if (!bd.metricas) bd.metricas = { porDia: {} };
   } catch (e) {
-    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [], verificacoes: {}, salas: {} };
+    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [], verificacoes: {}, salas: {}, eventos: [], adminLog: [], metricas: { porDia: {} } };
   }
 }
 
@@ -162,7 +165,8 @@ function usuarioDoToken(token) {
   const s = token && bd.sessoes[token];
   if (!s) return null;
   if (Date.now() - s.criadoEm > SESSAO_TTL_MS) { delete bd.sessoes[token]; return null; }
-  return bd.usuarios[s.usuario] ? s.usuario : null;
+  if (!bd.usuarios[s.usuario] || bd.usuarios[s.usuario].banido) return null; // conta inexistente/banida
+  return s.usuario;
 }
 
 function limparExpirados() {
@@ -504,6 +508,8 @@ async function tratarApi(req, res, rota) {
       if (u && u.hash) registrarFalhaLogin(nome); // só conta falha de usuário real (não revela quais existem)
       return responderJson(res, 401, { erro: "Usuário ou senha incorretos." });
     }
+    if (u.banido) return responderJson(res, 403, { erro: "Esta conta está suspensa." + (u.banidoMotivo ? " Motivo: " + u.banidoMotivo : "") });
+    u.ultimoAcesso = Date.now();
     // 2º fator, se o usuário tiver 2FA ativo
     if (u.twofa) {
       if (!corpo.codigo) return responderJson(res, 200, { precisa2fa: true });
@@ -544,6 +550,7 @@ async function tratarApi(req, res, rota) {
     // guardamos o objeto cru do cliente (corta mass-assignment, lixo e a licença).
     const limpo = sanearProgresso(corpo.progresso);
     if (limpo) u.progresso = limpo;
+    u.ultimoAcesso = Date.now();
     salvarBd();
     return responderJson(res, 200, { ok: true });
   }
@@ -991,6 +998,216 @@ function servirEstatico(req, res, rota) {
   });
 }
 
+// ---------- Métricas de uso (leve, em memória + histórico no bd) ----------
+const _metricas = { bootEm: Date.now(), reqTotal: 0, ultimoReq: 0, ativoSeg: 0, mes: new Date().toISOString().slice(0, 7) };
+function registrarMetrica() {
+  const agora = Date.now();
+  const mesAtual = new Date().toISOString().slice(0, 7);
+  if (_metricas.mes !== mesAtual) { _metricas.mes = mesAtual; _metricas.ativoSeg = 0; }
+  // soma "tempo de máquina ativa" só quando as requisições estão próximas (a VM dorme quando ociosa)
+  if (_metricas.ultimoReq && agora - _metricas.ultimoReq < 300000) _metricas.ativoSeg += (agora - _metricas.ultimoReq) / 1000;
+  _metricas.ultimoReq = agora;
+  _metricas.reqTotal++;
+  const hoje = diaHoje();
+  bd.metricas = bd.metricas || { porDia: {} };
+  const d = bd.metricas.porDia[hoje] || { req: 0, ativos: 0 };
+  d.req++;
+  bd.metricas.porDia[hoje] = d;
+  // mantém só os últimos ~90 dias
+  const dias = Object.keys(bd.metricas.porDia).sort();
+  if (dias.length > 95) for (const k of dias.slice(0, dias.length - 90)) delete bd.metricas.porDia[k];
+}
+
+// ---------- Painel de admin (API protegida por ADMIN_TOKEN) ----------
+const CUSTO_MAQUINA_HORA = Number(process.env.CUSTO_MAQUINA_HORA) || 0.00266; // ~$1.94/mês 24/7 (shared-cpu-1x 256MB)
+const CUSTO_VOLUME_MES = Number(process.env.CUSTO_VOLUME_MES) || 0.15; // volume ~1GB
+function adminAtivo() { return typeof process.env.ADMIN_TOKEN === "string" && process.env.ADMIN_TOKEN.length >= 16; }
+function adminAutorizado(req) {
+  if (!adminAtivo()) return false;
+  const a = Buffer.from(String(req.headers["x-admin-token"] || ""));
+  const b = Buffer.from(process.env.ADMIN_TOKEN);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function registrarLogAdmin(acao, detalhe, ip) {
+  bd.adminLog = bd.adminLog || [];
+  bd.adminLog.push({ quando: new Date().toISOString(), acao, detalhe: detalhe || "", ip: ip || "" });
+  if (bd.adminLog.length > 500) bd.adminLog = bd.adminLog.slice(-500);
+}
+function eventosAtivos() {
+  const agora = Date.now();
+  return (bd.eventos || []).filter((e) => (!e.inicio || e.inicio <= agora) && (!e.fim || e.fim >= agora));
+}
+
+async function tratarAdmin(req, res, rota) {
+  if (!adminAtivo()) return responderJson(res, 503, { erro: "Painel admin desativado: defina o segredo ADMIN_TOKEN no servidor." });
+  if (!dentroDoLimite("admin:" + ipDe(req), 120, 60000)) return responderJson(res, 429, { erro: "Muitas requisições admin. Calma." });
+  if (!adminAutorizado(req)) return responderJson(res, 403, { erro: "Token de admin inválido." });
+  const sub = rota.slice("/api/admin/".length);
+  const corpo = (req.method === "POST" || req.method === "DELETE") ? await lerCorpo(req).catch(() => ({})) : {};
+  const ip = ipDe(req);
+  const achaUsuario = (n) => bd.usuarios[String(n || "").trim()];
+
+  // ----- Dashboard / resumo -----
+  if (sub === "resumo" && req.method === "GET") {
+    const agora = Date.now();
+    const dia = 86400000;
+    const usuarios = Object.values(bd.usuarios);
+    const ativo = (ms) => usuarios.filter((u) => u.ultimoAcesso && agora - u.ultimoAcesso < ms).length;
+    const porDia = bd.metricas && bd.metricas.porDia ? bd.metricas.porDia : {};
+    const dias = Object.keys(porDia).sort().slice(-30);
+    const reqMedia = dias.length ? Math.round(dias.reduce((s, d) => s + (porDia[d].req || 0), 0) / dias.length) : 0;
+    const horasAtivas = _metricas.ativoSeg / 3600;
+    const custoMaquina = horasAtivas * CUSTO_MAQUINA_HORA;
+    const custoEstimado = Math.round((custoMaquina + CUSTO_VOLUME_MES) * 100) / 100;
+    const proPagantes = usuarios.filter((u) => { const l = licencaPublica(u); return l.pro; }).length;
+    return responderJson(res, 200, {
+      usuarios: usuarios.length,
+      ativos24h: ativo(dia), ativos7d: ativo(7 * dia), ativos30d: ativo(30 * dia),
+      pro: proPagantes, turmas: Object.keys(bd.salas || {}).length,
+      alertas: (bd.alertas || []).length, eventosAtivos: eventosAtivos().length,
+      uptimeMin: Math.round((agora - _metricas.bootEm) / 60000),
+      reqDesdeBoot: _metricas.reqTotal, reqMediaDia: reqMedia,
+      reqPorDia: dias.map((d) => ({ dia: d, req: porDia[d].req || 0 })),
+      custo: { mes: _metricas.mes, horasAtivasEstim: Math.round(horasAtivas * 10) / 10, estimativaUSD: custoEstimado, nota: "Estimativa — a fatura real do Fly é a que vale." },
+    });
+  }
+
+  // ----- Usuários -----
+  if (sub === "usuarios" && req.method === "GET") {
+    const busca = (new URL(req.url, "http://x").searchParams.get("busca") || "").toLowerCase();
+    const lista = Object.entries(bd.usuarios)
+      .filter(([n, u]) => !busca || n.toLowerCase().includes(busca) || (u.email || "").toLowerCase().includes(busca))
+      .map(([n, u]) => ({
+        usuario: n, xp: u.xp || 0, melhorStreak: u.melhorStreak || 0,
+        email: u.email || null, emailVerificado: !!u.emailVerificado, google: !!u.google,
+        twofa: !!u.twofa, banido: !!u.banido, licenca: licencaPublica(u),
+        criadoEm: u.criadoEm || null, ultimoAcesso: u.ultimoAcesso || null,
+      }))
+      .sort((a, b) => b.xp - a.xp)
+      .slice(0, 500);
+    return responderJson(res, 200, { usuarios: lista, total: Object.keys(bd.usuarios).length });
+  }
+  if (sub === "usuario/xp" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    if (corpo.xp !== undefined) u.xp = intLimitado(corpo.xp, TETO_XP);
+    if (corpo.melhorStreak !== undefined) u.melhorStreak = intLimitado(corpo.melhorStreak, TETO_STREAK);
+    registrarLogAdmin("xp", `${corpo.usuario} → xp=${u.xp}, streak=${u.melhorStreak}`, ip); salvarBd();
+    return responderJson(res, 200, { ok: true, xp: u.xp, melhorStreak: u.melhorStreak });
+  }
+  if (sub === "usuario/resetxp" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    u.xp = 0; u.melhorStreak = 0;
+    if (u.progresso) { u.progresso.streak = 0; u.progresso.concluidos = {}; u.progresso.revelados = {}; u.progresso.missoesConsole = {}; }
+    delete u.xpDia;
+    registrarLogAdmin("resetxp", String(corpo.usuario), ip); salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+  if (sub === "usuario/licenca" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    const tier = String(corpo.tier || "");
+    if (!["mensal", "semestral", "anual", "vitalicio", "escola", "free"].includes(tier)) return responderJson(res, 400, { erro: "Tier inválido." });
+    if (tier === "free") { delete u.licenca; }
+    else concederLicenca(u, tier, { dias: corpo.dias ? parseInt(corpo.dias, 10) : null, escola: tier === "escola" || !!corpo.escola, por: "admin" });
+    registrarLogAdmin("licenca", `${corpo.usuario} → ${tier}`, ip); salvarBd();
+    return responderJson(res, 200, { ok: true, licenca: licencaPublica(u) });
+  }
+  if (sub === "usuario/senha" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    const token = crypto.randomBytes(24).toString("hex");
+    bd.resets = bd.resets || {};
+    bd.resets[token] = { usuario: corpo.usuario, expira: Date.now() + 3600000 };
+    registrarLogAdmin("reset-senha", String(corpo.usuario), ip); salvarBd();
+    const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+    const link = `${base}/?reset=${token}`;
+    if (u.email) enviarEmail(u.email, "Redefinir sua senha — CLImb", `<p>Um administrador gerou um link pra redefinir sua senha (vale 1h):</p><p><a href="${link}">${link}</a></p>`);
+    return responderJson(res, 200, { ok: true, link, enviadoPara: u.email || null });
+  }
+  if (sub === "usuario/verificar-email" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    if (!u.email) return responderJson(res, 400, { erro: "Esse usuário não tem e-mail." });
+    u.emailVerificado = true; registrarLogAdmin("verificar-email", String(corpo.usuario), ip); salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+  if (sub === "usuario/banir" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    u.banido = !!corpo.banir; u.banidoMotivo = corpo.banir ? String(corpo.motivo || "") : "";
+    registrarLogAdmin(corpo.banir ? "banir" : "desbanir", String(corpo.usuario), ip); salvarBd();
+    return responderJson(res, 200, { ok: true, banido: u.banido });
+  }
+  if (sub === "usuario/apagar" && req.method === "POST") {
+    const nomeU = String(corpo.usuario || "").trim();
+    if (!bd.usuarios[nomeU]) return responderJson(res, 404, { erro: "Usuário não encontrado." });
+    delete bd.usuarios[nomeU];
+    for (const t of Object.keys(bd.sessoes)) if (bd.sessoes[t].usuario === nomeU) delete bd.sessoes[t];
+    for (const s of Object.values(bd.salas || {})) s.membros = s.membros.filter((m) => m !== nomeU);
+    registrarLogAdmin("apagar-usuario", nomeU, ip); salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // ----- Códigos de ativação -----
+  if (sub === "codigos" && req.method === "GET") {
+    const lista = Object.entries(bd.codigos || {}).map(([c, x]) => ({ codigo: c, tier: x.tier, dias: x.dias || null, escola: !!x.escola, usadoPor: x.usadoPor || null, criadoEm: x.criadoEm || null }));
+    return responderJson(res, 200, { codigos: lista });
+  }
+  if (sub === "codigo" && req.method === "POST") {
+    const tier = String(corpo.tier || "");
+    if (!["mensal", "semestral", "anual", "vitalicio", "escola"].includes(tier)) return responderJson(res, 400, { erro: "Tier inválido." });
+    const n = Math.max(1, Math.min(100, parseInt(corpo.qtd, 10) || 1));
+    const gerados = [];
+    bd.codigos = bd.codigos || {};
+    for (let i = 0; i < n; i++) {
+      const cod = "CLIMB-" + crypto.randomBytes(4).toString("hex").toUpperCase();
+      bd.codigos[cod] = { tier, dias: corpo.dias ? parseInt(corpo.dias, 10) : (DIAS[tier] || null), escola: tier === "escola" || !!corpo.escola, criadoEm: Date.now(), usadoPor: null };
+      gerados.push(cod);
+    }
+    registrarLogAdmin("gerar-codigo", `${n}× ${tier}`, ip); salvarBd();
+    return responderJson(res, 201, { gerados });
+  }
+
+  // ----- Eventos / avisos -----
+  if (sub === "eventos" && req.method === "GET") return responderJson(res, 200, { eventos: bd.eventos || [] });
+  if (sub === "evento" && req.method === "POST") {
+    const titulo = String(corpo.titulo || "").trim().slice(0, 80);
+    if (!titulo) return responderJson(res, 400, { erro: "Dê um título ao evento." });
+    const ev = {
+      id: "ev-" + crypto.randomBytes(4).toString("hex"),
+      titulo, mensagem: String(corpo.mensagem || "").slice(0, 500),
+      tipo: corpo.tipo === "competicao" ? "competicao" : "aviso",
+      inicio: corpo.inicio ? Number(corpo.inicio) : null, fim: corpo.fim ? Number(corpo.fim) : null,
+      criadoEm: Date.now(),
+    };
+    bd.eventos = bd.eventos || []; bd.eventos.push(ev);
+    registrarLogAdmin("criar-evento", titulo, ip); salvarBd();
+    return responderJson(res, 201, { evento: ev });
+  }
+  if (sub === "evento/apagar" && req.method === "POST") {
+    bd.eventos = (bd.eventos || []).filter((e) => e.id !== corpo.id);
+    registrarLogAdmin("apagar-evento", String(corpo.id), ip); salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // ----- Alertas antifraude -----
+  if (sub === "alertas" && req.method === "GET") return responderJson(res, 200, { alertas: (bd.alertas || []).slice(-200).reverse() });
+  if (sub === "alertas/limpar" && req.method === "POST") { bd.alertas = []; registrarLogAdmin("limpar-alertas", "", ip); salvarBd(); return responderJson(res, 200, { ok: true }); }
+
+  // ----- Turmas (moderação) -----
+  if (sub === "salas" && req.method === "GET") {
+    const lista = Object.values(bd.salas || {}).map((s) => ({ codigo: s.codigo, nome: s.nome, dono: s.dono, membros: s.membros.length, criadoEm: s.criadoEm }));
+    return responderJson(res, 200, { salas: lista });
+  }
+  if (sub === "sala/apagar" && req.method === "POST") {
+    if (bd.salas) delete bd.salas[String(corpo.codigo || "").toUpperCase()];
+    registrarLogAdmin("apagar-sala", String(corpo.codigo), ip); salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // ----- Log de auditoria + backup -----
+  if (sub === "log" && req.method === "GET") return responderJson(res, 200, { log: (bd.adminLog || []).slice(-200).reverse() });
+  if (sub === "backup" && req.method === "GET") { registrarLogAdmin("backup", "", ip); return responderJson(res, 200, bd); }
+
+  return responderJson(res, 404, { erro: "Rota de admin não encontrada: " + sub });
+}
+
 // ---------- Servidor ----------
 carregarBd();
 limparExpirados();
@@ -999,7 +1216,10 @@ http
   .createServer(async (req, res) => {
     const rota = decodeURIComponent(req.url.split("?")[0]);
     try {
+      registrarMetrica();
       if (rota === "/api/saude") return responderJson(res, 200, { ok: true });
+      if (rota === "/api/eventos" && req.method === "GET") return responderJson(res, 200, { eventos: eventosAtivos().map((e) => ({ id: e.id, titulo: e.titulo, mensagem: e.mensagem, tipo: e.tipo, fim: e.fim })) });
+      if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
       if (rota.startsWith("/api/")) return await tratarApi(req, res, rota);
       servirEstatico(req, res, rota);
     } catch (e) {

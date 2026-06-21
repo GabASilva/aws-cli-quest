@@ -5,3 +5,6 @@ quest-dados.json.bak*
 *.bak.*
 *.log
 .DS_Store
+
+# painel de admin local — segredo nunca vai pro git
+painel/config.json
