@@ -33,8 +33,9 @@ function carregarBd() {
     if (!bd.codigos) bd.codigos = {};
     if (!bd.resets) bd.resets = {};
     if (!bd.alertas) bd.alertas = [];
+    if (!bd.verificacoes) bd.verificacoes = {};
   } catch (e) {
-    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [] };
+    bd = { usuarios: {}, sessoes: {}, codigos: {}, resets: {}, alertas: [], verificacoes: {} };
   }
 }
 
@@ -59,6 +60,21 @@ async function enviarEmail(para, assunto, html) {
   } catch (e) {
     console.error("falha ao enviar e-mail:", e.message);
   }
+}
+
+// Gera um token de confirmação de e-mail e manda o link (vale 24h).
+function enviarVerificacao(usuario, email) {
+  const token = crypto.randomBytes(24).toString("hex");
+  bd.verificacoes = bd.verificacoes || {};
+  bd.verificacoes[token] = { usuario, email, expira: Date.now() + 24 * 3600000 };
+  salvarBd();
+  const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+  const link = `${base}/?verificar=${token}`;
+  enviarEmail(
+    email,
+    "Confirme seu e-mail — CLImb",
+    `<p>Olá, <strong>${usuario}</strong>!</p><p>Confirme seu e-mail no CLImb clicando no link abaixo (vale 24 horas):</p><p><a href="${link}">${link}</a></p><p>Se não foi você, pode ignorar este e-mail.</p>`
+  );
 }
 
 let gravacaoPendente = false;
@@ -418,11 +434,12 @@ async function tratarApi(req, res, rota) {
     if (email && !EMAIL_VALIDO.test(email)) return responderJson(res, 400, { erro: "E-mail inválido." });
     if (email && Object.values(bd.usuarios).some((u) => u.email === email)) return responderJson(res, 409, { erro: "Esse e-mail já está em uso." });
     const { salt, hash } = criarSenha(String(corpo.senha));
-    bd.usuarios[nome] = { salt, hash, email: email || null, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
+    bd.usuarios[nome] = { salt, hash, email: email || null, emailVerificado: false, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
     salvarBd();
     checarCadastroMassa(ipDe(req)); // antifraude: avisa o dono se um IP criar muitas contas
+    if (email) enviarVerificacao(nome, email); // manda o link de confirmação
     const token = novaSessao(nome);
-    return responderJson(res, 201, { token, perfil: perfilPublico(nome), licenca: licencaPublica(bd.usuarios[nome]), email: email || null });
+    return responderJson(res, 201, { token, perfil: perfilPublico(nome), licenca: licencaPublica(bd.usuarios[nome]), email: email || null, emailVerificado: false });
   }
 
   // POST /api/login { usuario, senha }
@@ -461,7 +478,7 @@ async function tratarApi(req, res, rota) {
     }
     limparFalhasLogin(nome);
     const token = novaSessao(nome);
-    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null });
+    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null, emailVerificado: !!u.emailVerificado });
   }
 
   // GET /api/eu  (Authorization: Bearer <token>)
@@ -469,7 +486,7 @@ async function tratarApi(req, res, rota) {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
     const u = bd.usuarios[nome];
-    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null });
+    return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null, emailVerificado: !!u.emailVerificado });
   }
 
   // POST /api/progresso { xp, melhorStreak, progresso }  (autenticado)
@@ -532,12 +549,13 @@ async function tratarApi(req, res, rota) {
     let nome = Object.keys(bd.usuarios).find((n) => bd.usuarios[n].email === email);
     if (!nome) {
       nome = gerarUsername(info.given_name || info.name || email.split("@")[0]);
-      bd.usuarios[nome] = { email, google: true, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
+      bd.usuarios[nome] = { email, google: true, emailVerificado: true, xp: 0, melhorStreak: 0, progresso: null, criadoEm: Date.now() };
     }
     const u = bd.usuarios[nome];
+    if (!u.emailVerificado) u.emailVerificado = true; // o Google já confirmou o e-mail
     salvarBd();
     const token = novaSessao(nome);
-    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null });
+    return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null, emailVerificado: !!u.emailVerificado });
   }
 
   // GET /api/planos  (público — preços e o que está disponível)
@@ -620,8 +638,39 @@ async function tratarApi(req, res, rota) {
       return responderJson(res, 409, { erro: "Esse e-mail já está em uso por outra conta." });
     }
     bd.usuarios[nome].email = email;
+    bd.usuarios[nome].emailVerificado = false; // e-mail novo precisa ser confirmado
     salvarBd();
-    return responderJson(res, 200, { ok: true, email });
+    enviarVerificacao(nome, email);
+    return responderJson(res, 200, { ok: true, email, emailVerificado: false });
+  }
+
+  // POST /api/email/verificar { token }  — confirma o e-mail pelo link
+  if (rota === "/api/email/verificar" && req.method === "POST") {
+    const corpo = await lerCorpo(req);
+    const token = String(corpo.token || "");
+    const v = bd.verificacoes && bd.verificacoes[token];
+    if (!v || v.expira < Date.now()) {
+      if (v) delete bd.verificacoes[token];
+      return responderJson(res, 400, { erro: "Link inválido ou expirado. Peça um novo." });
+    }
+    const u = bd.usuarios[v.usuario];
+    delete bd.verificacoes[token];
+    if (!u || u.email !== v.email) { salvarBd(); return responderJson(res, 400, { erro: "Esse link não vale mais (o e-mail da conta mudou)." }); }
+    u.emailVerificado = true;
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // POST /api/email/reenviar  (autenticado) — reenvia o link de confirmação
+  if (rota === "/api/email/reenviar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    if (!dentroDoLimite("verif:" + nome, 5, 3600000)) return responderJson(res, 429, { erro: "Muitos pedidos. Tente daqui a pouco." });
+    const u = bd.usuarios[nome];
+    if (!u.email) return responderJson(res, 400, { erro: "Sua conta não tem e-mail cadastrado." });
+    if (u.emailVerificado) return responderJson(res, 200, { ok: true, jaVerificado: true });
+    enviarVerificacao(nome, u.email);
+    return responderJson(res, 200, { ok: true });
   }
 
   // POST /api/senha/esqueci  { email } — envia link de redefinição (não revela se existe)

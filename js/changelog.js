@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21d",
+      data: "21 jun 2026",
+      titulo: "📧 Confirmação de e-mail",
+      itens: [
+        "Cadastrou com e-mail? Agora a gente manda um link de confirmação. E-mail confirmado deixa a conta mais segura e habilita a entrada em competições.",
+        "Entrou com o <b>Google</b>? Seu e-mail já vem confirmado automaticamente.",
+      ],
+    },
+    {
       versao: "2026-06-21c",
       data: "21 jun 2026",
       titulo: "🤖 Arquiteto IA (gera infra a partir de texto)",

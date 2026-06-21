@@ -13,6 +13,7 @@ const api = {
   licenca: { tier: "free", pro: false }, // licença efetiva do usuário
   twofa: false, // 2FA ativado nesta conta?
   email: null, // e-mail cadastrado (pra recuperação de senha)
+  emailVerificado: false, // o e-mail já foi confirmado pelo link?
 };
 
 function temPro() {
@@ -53,6 +54,7 @@ async function apiIniciar() {
     api.licenca = r.licenca || { tier: "free", pro: false };
     api.twofa = !!r.twofa;
     api.email = r.email || null;
+    api.emailVerificado = !!r.emailVerificado;
     return r; // { perfil, progresso, licenca, twofa, email }
   } catch (e) {
     api.token = null;
@@ -67,6 +69,7 @@ async function apiCadastrar(usuario, senha, email) {
   api.usuario = r.perfil.usuario;
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.email = r.email || null;
+    api.emailVerificado = !!r.emailVerificado;
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -81,6 +84,7 @@ async function apiLogin(usuario, senha, codigo) {
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.twofa = !!r.twofa;
   api.email = r.email || null;
+    api.emailVerificado = !!r.emailVerificado;
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }
@@ -90,6 +94,8 @@ function apiSair() {
   api.usuario = null;
   api.licenca = { tier: "free", pro: false };
   api.twofa = false;
+  api.email = null;
+  api.emailVerificado = false;
   try { localStorage.removeItem(CHAVE_TOKEN); } catch (e) { /* ok */ }
 }
 
@@ -112,7 +118,18 @@ async function api2faDesativar(senha) {
 async function apiDefinirEmail(email) {
   const r = await apiFetch("/api/email", { method: "POST", body: JSON.stringify({ email }) });
   api.email = r.email || email;
+  api.emailVerificado = false; // e-mail novo precisa confirmar de novo
   return r;
+}
+// Confirma o e-mail pelo token do link (?verificar=...). Não precisa estar logado.
+async function apiVerificarEmail(token) {
+  const r = await apiFetch("/api/email/verificar", { method: "POST", body: JSON.stringify({ token }) });
+  api.emailVerificado = true;
+  return r;
+}
+// Reenvia o link de confirmação pra conta logada.
+async function apiReenviarVerificacao() {
+  return apiFetch("/api/email/reenviar", { method: "POST", body: "{}" });
 }
 async function apiEsqueciSenha(email) {
   return apiFetch("/api/senha/esqueci", { method: "POST", body: JSON.stringify({ email }) });
@@ -133,6 +150,7 @@ async function apiGoogle(credential) {
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.twofa = !!r.twofa;
   api.email = r.email || null;
+    api.emailVerificado = !!r.emailVerificado;
   try { localStorage.setItem(CHAVE_TOKEN, api.token); } catch (e) { /* ok */ }
   return r;
 }

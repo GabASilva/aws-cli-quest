@@ -26,11 +26,17 @@ Enquanto `MP_TOKEN` não existir: o painel mostra os preços mas cai no
 
 ---
 
-## 2. Recuperação de senha — Resend (e-mail)
+## 2. E-mail — Resend (recuperação de senha E confirmação de e-mail)
+
+> O mesmo `RESEND_KEY` cobre os dois: o link de "esqueci a senha" E o link de
+> **confirmação de e-mail** (enviado ao cadastrar com e-mail / ao trocar o e-mail).
 
 1. Crie conta em **resend.com** (grátis: 3.000 e-mails/mês).
-2. Pra testar rápido, dá pra enviar com o remetente `onboarding@resend.dev`.
-   Pra produção, **verifique um domínio seu** no painel da Resend.
+2. Pra testar rápido, dá pra enviar com o remetente `onboarding@resend.dev` —
+   **MAS** ele só entrega pro e-mail da SUA conta Resend. Pra confirmar o e-mail
+   de qualquer aluno (e pra competições), **verifique um domínio seu** no painel
+   da Resend (uns registros DNS) e use-o no `RESEND_FROM`. Esse é o passo que
+   falta pra confirmação de e-mail funcionar pra todo mundo.
 3. Pegue a **API Key** (`re_...`) e setar:
    ```
    flyctl secrets set RESEND_KEY="re_xxxxx" -a aws-cli-quest
