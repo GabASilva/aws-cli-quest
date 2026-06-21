@@ -742,6 +742,12 @@ body.console-aberto { overflow: hidden; }
 .caws-link { background: none; border: none; color: #0073bb; cursor: pointer; font-size: 0.82rem; text-decoration: underline; margin-right: 8px; }
 .caws-link:hover { color: #005a94; }
 
+/* IAM: subtítulo e formulários inline */
+.caws-sub { font-size: 0.82rem; color: #5f6b7a; margin: -6px 0 16px; }
+.caws-sub code { background: #eef0f1; padding: 1px 5px; border-radius: 4px; }
+.caws-inline-form { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.caws-inline-form select { padding: 7px 10px; border: 1px solid #aab7b8; border-radius: 6px; font-size: 0.88rem; min-width: 240px; }
+
 /* Badge de estado de instância EC2 */
 .caws-estado { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
 .caws-estado.ok { color: #1d8102; }

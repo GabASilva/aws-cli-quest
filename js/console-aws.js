@@ -127,6 +127,8 @@
     else if (view.tela === "s3-objetos") corpo.innerHTML = telaObjetos();
     else if (view.tela === "ec2-instancias") corpo.innerHTML = telaInstancias();
     else if (view.tela === "ec2-launch") corpo.innerHTML = formLaunch();
+    else if (view.tela === "iam-usuarios") corpo.innerHTML = telaIamUsuarios();
+    else if (view.tela === "iam-user") corpo.innerHTML = telaIamUserDetail();
     else corpo.innerHTML = telaHome();
     corpo.scrollTop = 0;
   }
@@ -136,10 +138,11 @@
     const c = conta();
     const nBuckets = Object.keys(c.s3.buckets).length;
     const nInst = Object.values(c.ec2.instancias).filter((i) => i.estado !== "terminated").length;
+    const nUsers = Object.keys(c.iam.usuarios).length;
     const servicos = [
       { id: "s3", icone: "🪣", nome: "S3", desc: "Armazenamento de objetos", ativo: true, extra: `${nBuckets} bucket(s)` },
       { id: "ec2", icone: "🖥️", nome: "EC2", desc: "Máquinas virtuais", ativo: true, extra: `${nInst} instância(s)` },
-      { id: "iam", icone: "🔑", nome: "IAM", desc: "Usuários e permissões", ativo: false },
+      { id: "iam", icone: "🔑", nome: "IAM", desc: "Usuários e permissões", ativo: true, extra: `${nUsers} usuário(s)` },
       { id: "lambda", icone: "λ", nome: "Lambda", desc: "Funções serverless", ativo: false },
       { id: "dynamodb", icone: "🗄️", nome: "DynamoDB", desc: "Banco NoSQL", ativo: false },
     ];
@@ -435,6 +438,114 @@
     `;
   }
 
+  // ---------- IAM: lista de usuários ----------
+  function telaIamUsuarios() {
+    const c = conta();
+    const nomes = Object.keys(c.iam.usuarios);
+    const linhas = nomes.length
+      ? nomes.map((n) => {
+          const u = c.iam.usuarios[n];
+          const grupos = Object.values(c.iam.grupos).filter((g) => g.membros.includes(n)).length;
+          return `
+            <tr>
+              <td><a href="#" data-acao="iam-abrir-user" data-user="${esc(n)}">👤 ${esc(n)}</a></td>
+              <td>${esc(u.criadoEm || "—")}</td>
+              <td>${(u.politicas || []).length} política(s)</td>
+              <td>${grupos} grupo(s)</td>
+              <td><button class="caws-link-perigo" data-acao="iam-delete-user" data-user="${esc(n)}">Excluir</button></td>
+            </tr>`;
+        }).join("")
+      : `<tr><td colspan="5" class="caws-vazio">Nenhum usuário. Clique em <strong>Criar usuário</strong> para começar.</td></tr>`;
+
+    return `
+      ${migalha([["Console", "home"], ["IAM", "iam-usuarios"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico">
+          <h1>🔑 IAM — Usuários</h1>
+          <button class="caws-btn-primario" data-acao="iam-form-criar-user">Criar usuário</button>
+        </div>
+        <table class="caws-tabela">
+          <thead><tr><th>Nome</th><th>Criado em</th><th>Políticas</th><th>Grupos</th><th></th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        ${dicaCli("Listar usuários no CLI:", "aws iam list-users")}
+      </div>
+    `;
+  }
+
+  // ---------- IAM: criar usuário ----------
+  function formIamUser() {
+    return `
+      ${migalha([["Console", "home"], ["IAM", "iam-usuarios"], ["Criar usuário", null]])}
+      <div class="caws-pagina caws-form">
+        <h1>Criar usuário</h1>
+        <form data-form="iam-criar-user">
+          <label class="caws-campo">
+            <span>Nome do usuário</span>
+            <input name="nome" autocomplete="off" spellcheck="false" placeholder="ex.: ana">
+            <small>Letras, números e os símbolos <code>+=,.@_-</code>.</small>
+          </label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes">
+            <button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="iam-usuarios">Cancelar</button>
+            <button type="submit" class="caws-btn-primario">Criar usuário</button>
+          </div>
+        </form>
+        ${dicaCli("Mesma coisa no CLI:", "aws iam create-user --user-name NOME")}
+      </div>
+    `;
+  }
+
+  // ---------- IAM: detalhe do usuário (políticas + grupos) ----------
+  function telaIamUserDetail() {
+    const c = conta();
+    const n = view.usuario;
+    const u = c.iam.usuarios[n];
+    if (!u) { view = { tela: "iam-usuarios" }; return telaIamUsuarios(); }
+    const pols = u.politicas || [];
+    const polRows = pols.length
+      ? pols.map((arn) => `<tr><td>📜 ${esc(arn.split("/").pop())}</td><td><code>${esc(arn)}</code></td><td><button class="caws-link-perigo" data-acao="iam-detach-policy" data-user="${esc(n)}" data-arn="${esc(arn)}">Desanexar</button></td></tr>`).join("")
+      : `<tr><td colspan="3" class="caws-vazio">Nenhuma política anexada.</td></tr>`;
+    const grupos = Object.keys(c.iam.grupos).filter((g) => c.iam.grupos[g].membros.includes(n));
+    const grpRows = grupos.length
+      ? grupos.map((g) => `<tr><td>👥 ${esc(g)}</td><td><button class="caws-link-perigo" data-acao="iam-remove-group" data-user="${esc(n)}" data-group="${esc(g)}">Remover</button></td></tr>`).join("")
+      : `<tr><td colspan="2" class="caws-vazio">Não está em nenhum grupo.</td></tr>`;
+    const polOpts = (typeof POLITICAS_AWS !== "undefined" ? POLITICAS_AWS : []).map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join("");
+    const grpOpts = Object.keys(c.iam.grupos).map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+
+    return `
+      ${migalha([["Console", "home"], ["IAM", "iam-usuarios"], [n, null]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico">
+          <h1>👤 ${esc(n)}</h1>
+          <button class="caws-btn-perigo" data-acao="iam-delete-user" data-user="${esc(n)}">Excluir usuário</button>
+        </div>
+        <p class="caws-sub">ARN: <code>arn:aws:iam::${esc(c.contaId)}:user/${esc(n)}</code> · UserId: <code>${esc(u.userId || "—")}</code></p>
+
+        <h2 class="caws-secao">Políticas anexadas</h2>
+        <form data-form="iam-attach" class="caws-inline-form">
+          <select name="politica">${polOpts}</select>
+          <button type="submit" class="caws-btn-secundario">Anexar política</button>
+        </form>
+        <table class="caws-tabela">
+          <thead><tr><th>Política</th><th>ARN</th><th></th></tr></thead>
+          <tbody>${polRows}</tbody>
+        </table>
+
+        <h2 class="caws-secao">Grupos</h2>
+        ${grpOpts
+          ? `<form data-form="iam-addgroup" class="caws-inline-form"><select name="grupo">${grpOpts}</select><button type="submit" class="caws-btn-secundario">Adicionar a grupo</button></form>`
+          : `<p class="caws-sub">Nenhum grupo existe ainda. Crie um no CLI: <code>aws iam create-group --group-name NOME</code>.</p>`}
+        <table class="caws-tabela">
+          <thead><tr><th>Grupo</th><th></th></tr></thead>
+          <tbody>${grpRows}</tbody>
+        </table>
+
+        ${dicaCli("Anexar política no CLI:", `aws iam attach-user-policy --user-name ${n} --policy-arn arn:aws:iam::aws:policy/NOME`)}
+      </div>
+    `;
+  }
+
   // ---------- Componentes reutilizáveis ----------
   function migalha(itens) {
     return `<div class="caws-migalha">` + itens.map(([nome, tela], i) => {
@@ -465,6 +576,7 @@
     if (acao === "abrir-servico") {
       if (alvo.dataset.servico === "s3") { view = { tela: "s3-buckets", bucket: null, prefixo: "" }; render(); }
       else if (alvo.dataset.servico === "ec2") { view = { tela: "ec2-instancias", bucket: null, prefixo: "" }; render(); }
+      else if (alvo.dataset.servico === "iam") { view = { tela: "iam-usuarios" }; render(); }
       return;
     }
     if (acao === "ver-roadmap") {
@@ -548,6 +660,40 @@
       persistir(); render(); avisar(`🗑️ Instância ${esc(i.id)} encerrada`);
       return;
     }
+
+    // ----- IAM -----
+    if (acao === "iam-form-criar-user") {
+      overlay.querySelector("#cawsCorpo").innerHTML = formIamUser(); return;
+    }
+    if (acao === "iam-abrir-user") {
+      view = { tela: "iam-user", usuario: alvo.dataset.user }; render(); return;
+    }
+    if (acao === "iam-delete-user") {
+      const n = alvo.dataset.user;
+      if (!c.iam.usuarios[n]) return;
+      if (!confirm(`Excluir o usuário "${n}"?`)) return;
+      delete c.iam.usuarios[n];
+      for (const g of Object.values(c.iam.grupos)) g.membros = g.membros.filter((m) => m !== n);
+      ecoTerminal(`(delete-user) usuário ${n} removido`, "ok");
+      persistir(); view = { tela: "iam-usuarios" }; render(); avisar(`🗑️ Usuário ${esc(n)} excluído`);
+      return;
+    }
+    if (acao === "iam-detach-policy") {
+      const u = c.iam.usuarios[alvo.dataset.user];
+      if (!u) return;
+      u.politicas = (u.politicas || []).filter((a) => a !== alvo.dataset.arn);
+      ecoTerminal(`(detach-user-policy) ${alvo.dataset.arn.split("/").pop()} desanexada de ${alvo.dataset.user}`, "ok");
+      persistir(); render(); avisar("Política desanexada");
+      return;
+    }
+    if (acao === "iam-remove-group") {
+      const g = c.iam.grupos[alvo.dataset.group];
+      if (!g) return;
+      g.membros = g.membros.filter((m) => m !== alvo.dataset.user);
+      ecoTerminal(`(remove-user-from-group) ${alvo.dataset.user} saiu de ${alvo.dataset.group}`, "ok");
+      persistir(); render(); avisar("Removido do grupo");
+      return;
+    }
   }
 
   // ---------- Tratamento de formulários ----------
@@ -616,6 +762,41 @@
       persistir();
       view = { tela: "ec2-instancias", bucket: null, prefixo: "" }; render();
       avisar(`✅ ${count} instância(s) <strong>${esc(tipoInst)}</strong> executada(s)`);
+      return;
+    }
+
+    if (tipo === "iam-criar-user") {
+      const nome = (form.nome.value || "").trim();
+      if (!/^[\w+=,.@-]{1,64}$/.test(nome)) { erro("Nome inválido. Use letras, números e os símbolos +=,.@_- (até 64 caracteres)."); return; }
+      if (c.iam.usuarios[nome]) { erro("Já existe um usuário com esse nome."); return; }
+      const userId = "AIDA" + (typeof hexAleatorio === "function" ? hexAleatorio(17).toUpperCase() : Date.now().toString(16).toUpperCase());
+      c.iam.usuarios[nome] = { criadoEm: dataConsole(), politicas: [], userId };
+      ecoTerminal(`(create-user) usuário ${nome} criado`, "ok");
+      persistir();
+      view = { tela: "iam-user", usuario: nome }; render();
+      avisar(`✅ Usuário <strong>${esc(nome)}</strong> criado`);
+      return;
+    }
+
+    if (tipo === "iam-attach") {
+      const u = c.iam.usuarios[view.usuario];
+      if (!u) return;
+      const nomePol = form.politica.value;
+      const arn = `arn:aws:iam::aws:policy/${nomePol}`;
+      u.politicas = u.politicas || [];
+      if (u.politicas.includes(arn)) { avisar("Essa política já está anexada."); return; }
+      u.politicas.push(arn);
+      ecoTerminal(`(attach-user-policy) ${nomePol} anexada a ${view.usuario}`, "ok");
+      persistir(); render(); avisar(`📜 Política ${esc(nomePol)} anexada`);
+      return;
+    }
+
+    if (tipo === "iam-addgroup") {
+      const grupo = c.iam.grupos[form.grupo.value];
+      if (!grupo) return;
+      if (!grupo.membros.includes(view.usuario)) grupo.membros.push(view.usuario);
+      ecoTerminal(`(add-user-to-group) ${view.usuario} entrou em ${form.grupo.value}`, "ok");
+      persistir(); render(); avisar(`👥 Adicionado ao grupo ${esc(form.grupo.value)}`);
       return;
     }
   }

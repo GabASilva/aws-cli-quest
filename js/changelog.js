@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-20f",
+      data: "20 jun 2026",
+      titulo: "🔑 IAM no Console",
+      itens: [
+        "O Console agora tem <b>IAM</b>: crie e exclua usuários, anexe políticas e adicione a grupos — pelo clique.",
+        "Espelha o CLI: aparece no <code>aws iam list-users</code> e companhia, e vice-versa.",
+      ],
+    },
+    {
       versao: "2026-06-20e",
       data: "20 jun 2026",
       titulo: "🖥️ EC2 no Console",
@@ -116,7 +125,7 @@
     {
       icone: "🧩",
       titulo: "Mais serviços no Console",
-      desc: "EC2, IAM, Lambda e DynamoDB também na interface visual — hoje só o S3 está disponível por lá.",
+      desc: "Lambda e DynamoDB também na interface visual — S3, EC2 e IAM já estão lá.",
     },
     {
       icone: "📄",
