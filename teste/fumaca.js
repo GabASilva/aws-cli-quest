@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
-const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js"]
+const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -28,11 +28,19 @@ const teste = `
     return r;
   }
 
-  // ids reais são aleatórios — resolve placeholders <id-da-instância>
+  // ids reais são aleatórios — resolve placeholders <id-da-instância>, <vpc-id>, <igw-id>
   function resolver(linha) {
     if (linha.includes("<id-da-inst")) {
       const ids = Object.keys(conta.ec2.instancias);
-      return linha.replace(/<id-da-inst[^>]*>/, ids[ids.length - 1]);
+      linha = linha.replace(/<id-da-inst[^>]*>/, ids[ids.length - 1]);
+    }
+    if (linha.includes("<vpc-id>") && conta.vpc) {
+      const ids = Object.keys(conta.vpc.vpcs);
+      linha = linha.replace(/<vpc-id>/g, ids[ids.length - 1]);
+    }
+    if (linha.includes("<igw-id>") && conta.vpc) {
+      const ids = Object.keys(conta.vpc.igws);
+      linha = linha.replace(/<igw-id>/g, ids[ids.length - 1]);
     }
     return linha;
   }

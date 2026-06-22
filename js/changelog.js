@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21f",
+      data: "21 jun 2026",
+      titulo: "🛜🛢️📈 VPC, RDS e CloudWatch",
+      itens: [
+        "Três trilhas novas, do que mais cai nas certificações: <b>VPC</b> (rede — <code>aws ec2 create-vpc</code>, subnets, internet gateway), <b>RDS</b> (banco relacional) e <b>CloudWatch</b> (alarmes + Logs).",
+        "São <b>11 desafios novos</b> — agora dá pra praticar quase todo o núcleo do Cloud Practitioner e do Solutions Architect.",
+      ],
+    },
+    {
       versao: "2026-06-21e",
       data: "21 jun 2026",
       titulo: "👥 Turmas e competições",
@@ -200,9 +209,14 @@
       desc: "Competições cronometradas dentro das turmas (com início e fim), além do ranking contínuo.",
     },
     {
-      icone: "💬",
-      titulo: "Sua ideia aqui",
-      desc: "Manda sua sugestão! O CLImb cresce com o que a galera que estuda junto pede.",
+      icone: "🎓",
+      titulo: "Simulado de certificação",
+      desc: "Quiz de teoria + provas no estilo do Cloud Practitioner pra você chegar pronto no exame.",
+    },
+    {
+      icone: "🧩",
+      titulo: "Mais serviços",
+      desc: "SQS, SNS, API Gateway e companhia — e o Console visual de VPC/RDS/CloudWatch.",
     },
   ];
 

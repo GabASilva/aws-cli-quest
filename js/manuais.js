@@ -748,6 +748,36 @@ USO
 
 Apaga a stack e TODOS os recursos que ela criou. Não responde nada
 quando dá certo (igual ao AWS de verdade).`,
+
+  // ===== VPC (subcomandos do aws ec2) =====
+  "ec2.create-vpc": `aws ec2 create-vpc\n\nUSO\n    aws ec2 create-vpc --cidr-block 10.0.0.0/16\n\nCria sua rede privada (VPC). O CIDR define a faixa de IPs.`,
+  "ec2.describe-vpcs": `aws ec2 describe-vpcs\n\nUSO\n    aws ec2 describe-vpcs\n\nLista as VPCs da conta (com VpcId e CidrBlock).`,
+  "ec2.delete-vpc": `aws ec2 delete-vpc\n\nUSO\n    aws ec2 delete-vpc --vpc-id <vpc-id>\n\nApaga uma VPC (e as sub-redes dela neste simulador).`,
+  "ec2.create-subnet": `aws ec2 create-subnet\n\nUSO\n    aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.1.0/24\n\nCria uma sub-rede dentro de uma VPC.`,
+  "ec2.describe-subnets": `aws ec2 describe-subnets\n\nUSO\n    aws ec2 describe-subnets\n\nLista as sub-redes (SubnetId, VpcId, AZ).`,
+  "ec2.create-internet-gateway": `aws ec2 create-internet-gateway\n\nUSO\n    aws ec2 create-internet-gateway\n\nCria um internet gateway (a saída da VPC pra internet).`,
+  "ec2.attach-internet-gateway": `aws ec2 attach-internet-gateway\n\nUSO\n    aws ec2 attach-internet-gateway --internet-gateway-id <igw-id> --vpc-id <vpc-id>\n\nConecta o internet gateway a uma VPC.`,
+
+  // ===== RDS =====
+  rds: `aws rds — banco de dados relacional gerenciado\n\nCOMANDOS\n    create-db-instance     cria um banco (MySQL, Postgres...)\n    describe-db-instances  lista os bancos\n    start-db-instance      liga um banco parado\n    stop-db-instance       para (não cobra computação)\n    delete-db-instance     apaga o banco\n\nEngines: mysql, postgres, mariadb, aurora-mysql, aurora-postgresql, sqlserver-ex, oracle-se2.`,
+  "rds.create-db-instance": `aws rds create-db-instance\n\nUSO\n    aws rds create-db-instance --db-instance-identifier <nome> --db-instance-class db.t3.micro --engine mysql --master-username admin --allocated-storage 20\n\nSobe um banco relacional gerenciado.`,
+  "rds.describe-db-instances": `aws rds describe-db-instances\n\nUSO\n    aws rds describe-db-instances\n\nLista as instâncias de banco e seus endpoints.`,
+  "rds.start-db-instance": `aws rds start-db-instance\n\nUSO\n    aws rds start-db-instance --db-instance-identifier <nome>\n\nLiga um banco que estava parado.`,
+  "rds.stop-db-instance": `aws rds stop-db-instance\n\nUSO\n    aws rds stop-db-instance --db-instance-identifier <nome>\n\nPara o banco (economiza — não cobra computação).`,
+  "rds.delete-db-instance": `aws rds delete-db-instance\n\nUSO\n    aws rds delete-db-instance --db-instance-identifier <nome> --skip-final-snapshot\n\nApaga o banco. Em produção, guarde um snapshot final antes!`,
+
+  // ===== CloudWatch =====
+  cloudwatch: `aws cloudwatch — métricas e alarmes\n\nCOMANDOS\n    put-metric-alarm   cria/atualiza um alarme\n    describe-alarms    lista os alarmes\n    delete-alarms      apaga alarmes\n    list-metrics       lista métricas disponíveis\n\nPra logs use 'aws logs'.`,
+  "cloudwatch.put-metric-alarm": `aws cloudwatch put-metric-alarm\n\nUSO\n    aws cloudwatch put-metric-alarm --alarm-name <nome> --metric-name CPUUtilization --namespace AWS/EC2 --threshold 80 --comparison-operator GreaterThanThreshold\n\nDispara quando a métrica cruza o limite.`,
+  "cloudwatch.describe-alarms": `aws cloudwatch describe-alarms\n\nUSO\n    aws cloudwatch describe-alarms\n\nLista os alarmes e o estado de cada um.`,
+  "cloudwatch.delete-alarms": `aws cloudwatch delete-alarms\n\nUSO\n    aws cloudwatch delete-alarms --alarm-names <nome> [<nome2> ...]\n\nApaga um ou mais alarmes.`,
+  "cloudwatch.list-metrics": `aws cloudwatch list-metrics\n\nUSO\n    aws cloudwatch list-metrics\n\nLista métricas disponíveis (por namespace).`,
+
+  // ===== CloudWatch Logs =====
+  logs: `aws logs — CloudWatch Logs\n\nCOMANDOS\n    create-log-group     cria um grupo de logs\n    describe-log-groups  lista os grupos\n    delete-log-group     apaga um grupo`,
+  "logs.create-log-group": `aws logs create-log-group\n\nUSO\n    aws logs create-log-group --log-group-name /climb/app\n\nCria um grupo onde os logs ficam guardados.`,
+  "logs.describe-log-groups": `aws logs describe-log-groups\n\nUSO\n    aws logs describe-log-groups\n\nLista os grupos de logs.`,
+  "logs.delete-log-group": `aws logs delete-log-group\n\nUSO\n    aws logs delete-log-group --log-group-name /climb/app\n\nApaga um grupo de logs.`,
 };
 
 function obterManual(caminho) {
