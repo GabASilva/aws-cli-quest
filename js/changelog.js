@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21h",
+      data: "21 jun 2026",
+      titulo: "🎯 250 atividades!",
+      itens: [
+        "Chegamos a <b>250 atividades</b> pra praticar — reforçamos todas as trilhas, com bastante coisa nova de <b>VPC, RDS, CloudWatch</b> e mais cenários do <b>Mundo real</b>.",
+        "Mais prática de ponta a ponta, do básico ao avançado, em todos os serviços.",
+      ],
+    },
+    {
       versao: "2026-06-21g",
       data: "21 jun 2026",
       titulo: "🖥️ VPC, RDS e CloudWatch no Console",
