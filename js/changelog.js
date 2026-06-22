@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21g",
+      data: "21 jun 2026",
+      titulo: "🖥️ VPC, RDS e CloudWatch no Console",
+      itens: [
+        "Os três serviços novos agora também na <b>interface visual</b>: crie VPCs/sub-redes/gateway, suba bancos RDS (parar/iniciar/excluir) e configure alarmes + grupos de logs — tudo no clique.",
+        "Como sempre, <b>espelha o CLI</b>: o que você faz aqui aparece no <code>aws ec2 describe-vpcs</code>, <code>aws rds describe-db-instances</code> e companhia.",
+      ],
+    },
+    {
       versao: "2026-06-21f",
       data: "21 jun 2026",
       titulo: "🛜🛢️📈 VPC, RDS e CloudWatch",
@@ -204,19 +213,29 @@
   // mais serviços no Console e multiplayer assíncrono).
   const EM_BREVE = [
     {
+      icone: "🎓",
+      titulo: "Simulado de certificação",
+      desc: "Quiz de teoria + provas no estilo do Cloud Practitioner (CLF-C02), trilha por certificação e certificado de conclusão.",
+    },
+    {
+      icone: "🧩",
+      titulo: "Mais serviços AWS",
+      desc: "SQS (filas), SNS (notificações), EBS (discos), API Gateway, Route 53 (DNS) e CloudFront — ampliando além de VPC/RDS/CloudWatch.",
+    },
+    {
+      icone: "🗺️",
+      titulo: "Diagrama da sua arquitetura",
+      desc: "Veja os recursos da sua conta desenhados como um diagrama — combina com o Arquiteto IA e o CloudFormation.",
+    },
+    {
       icone: "🏁",
       titulo: "Eventos com prazo",
       desc: "Competições cronometradas dentro das turmas (com início e fim), além do ranking contínuo.",
     },
     {
-      icone: "🎓",
-      titulo: "Simulado de certificação",
-      desc: "Quiz de teoria + provas no estilo do Cloud Practitioner pra você chegar pronto no exame.",
-    },
-    {
-      icone: "🧩",
-      titulo: "Mais serviços",
-      desc: "SQS, SNS, API Gateway e companhia — e o Console visual de VPC/RDS/CloudWatch.",
+      icone: "👩‍🏫",
+      titulo: "Modo professor",
+      desc: "Relatório de progresso de cada aluno da turma — pra quem ensina turma de AWS.",
     },
   ];
 

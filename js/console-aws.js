@@ -34,6 +34,17 @@
     // Mostra a saída no terminal do CLI, como se o comando tivesse sido digitado.
     if (typeof imprimir === "function") imprimir(texto, classe || "");
   }
+  // Roda um comando CLI a partir do Console (garante o MESMO estado e fidelidade).
+  // Ecoa no terminal o comando + saída e re-renderiza. Retorna true se deu certo.
+  function rodarCli(cmd, msgOk) {
+    const r = executarComandoAws(conta(), cmd);
+    if (typeof imprimirComando === "function") imprimirComando(cmd);
+    if (r.saida) ecoTerminal(r.saida, r.ok ? "ok" : "erro");
+    if (r.aviso) ecoTerminal(r.aviso, "aviso-climb");
+    if (r.ok) { persistir(); render(); if (msgOk) avisar(msgOk); }
+    else { avisar(String(r.saida || "Erro").split("\n")[0], "erro"); }
+    return r.ok;
+  }
   function avisar(html, classe) {
     if (typeof toast === "function") toast(html, classe);
   }
@@ -134,6 +145,10 @@
     else if (view.tela === "lambda-funcoes") corpo.innerHTML = telaLambda();
     else if (view.tela === "dynamo-tabelas") corpo.innerHTML = telaDynamo();
     else if (view.tela === "dynamo-tabela") corpo.innerHTML = telaDynamoDetail();
+    else if (view.tela === "vpc-rede") corpo.innerHTML = telaVpc();
+    else if (view.tela === "rds-bancos") corpo.innerHTML = telaRds();
+    else if (view.tela === "rds-criar") corpo.innerHTML = formRds();
+    else if (view.tela === "cw-painel") corpo.innerHTML = telaCw();
     else corpo.innerHTML = telaHome();
     corpo.scrollTop = 0;
   }
@@ -146,12 +161,18 @@
     const nUsers = Object.keys(c.iam.usuarios).length;
     const nFn = Object.keys(c.lambda.funcoes).length;
     const nTab = Object.keys(c.dynamodb.tabelas).length;
+    const nVpc = c.vpc ? Object.keys(c.vpc.vpcs).length : 0;
+    const nDb = c.rds ? Object.keys(c.rds.instancias).length : 0;
+    const nAlarme = c.cloudwatch ? Object.keys(c.cloudwatch.alarmes).length : 0;
     const servicos = [
       { id: "s3", icone: "🪣", nome: "S3", desc: "Armazenamento de objetos", ativo: true, extra: `${nBuckets} bucket(s)` },
       { id: "ec2", icone: "🖥️", nome: "EC2", desc: "Máquinas virtuais", ativo: true, extra: `${nInst} instância(s)` },
+      { id: "vpc", icone: "🛜", nome: "VPC", desc: "Rede na nuvem", ativo: true, extra: `${nVpc} VPC(s)` },
       { id: "iam", icone: "🔑", nome: "IAM", desc: "Usuários e permissões", ativo: true, extra: `${nUsers} usuário(s)` },
       { id: "lambda", icone: "λ", nome: "Lambda", desc: "Funções serverless", ativo: true, extra: `${nFn} função(ões)` },
       { id: "dynamodb", icone: "🗄️", nome: "DynamoDB", desc: "Banco NoSQL", ativo: true, extra: `${nTab} tabela(s)` },
+      { id: "rds", icone: "🛢️", nome: "RDS", desc: "Banco relacional", ativo: true, extra: `${nDb} banco(s)` },
+      { id: "cloudwatch", icone: "📈", nome: "CloudWatch", desc: "Monitoramento e logs", ativo: true, extra: `${nAlarme} alarme(s)` },
     ];
     return `
       <div class="caws-pagina">
@@ -722,6 +743,126 @@
     `;
   }
 
+  // ---------- VPC ----------
+  function telaVpc() {
+    const c = conta(); c.vpc = c.vpc || { vpcs: {}, subnets: {}, igws: {} };
+    const vpcs = Object.values(c.vpc.vpcs);
+    const linhas = vpcs.length
+      ? vpcs.map((v) => {
+          const nSub = Object.values(c.vpc.subnets).filter((s) => s.vpc === v.id).length;
+          return `<tr>
+            <td>${esc(v.id)}</td><td>${esc(v.cidr)}</td>
+            <td>${v.igw ? '<span class="caws-estado ok">● conectado</span>' : '<span class="caws-estado off">● sem gateway</span>'}</td>
+            <td>${nSub}</td>
+            <td>
+              <button class="caws-link" data-acao="vpc-subnet" data-vpc="${esc(v.id)}">+ sub-rede</button>
+              ${v.igw ? "" : `<button class="caws-link" data-acao="vpc-gateway" data-vpc="${esc(v.id)}">+ gateway</button>`}
+              <button class="caws-link-perigo" data-acao="vpc-excluir" data-vpc="${esc(v.id)}">Excluir</button>
+            </td></tr>`;
+        }).join("")
+      : `<tr><td colspan="5" class="caws-vazio">Nenhuma VPC. Clique em <strong>Criar VPC</strong>.</td></tr>`;
+    const subs = Object.values(c.vpc.subnets);
+    const subRows = subs.map((s) => `<tr><td>${esc(s.id)}</td><td>${esc(s.vpc)}</td><td>${esc(s.cidr)}</td><td>${esc(s.az)}</td></tr>`).join("");
+    return `
+      ${migalha([["Console", "home"], ["VPC", "vpc-rede"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>🛜 VPC — Rede</h1><button class="caws-btn-primario" data-acao="vpc-form-criar">Criar VPC</button></div>
+        <div id="cawsPainelAcao"></div>
+        <table class="caws-tabela"><thead><tr><th>VPC</th><th>CIDR</th><th>Internet gateway</th><th>Sub-redes</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        ${subs.length ? `<h2 class="caws-secao">Sub-redes</h2><table class="caws-tabela"><thead><tr><th>Subnet</th><th>VPC</th><th>CIDR</th><th>AZ</th></tr></thead><tbody>${subRows}</tbody></table>` : ""}
+        ${dicaCli("Criar rede no CLI:", "aws ec2 create-vpc --cidr-block 10.0.0.0/16")}
+      </div>`;
+  }
+  function painelVpcCriar() {
+    return `<div class="caws-painel"><h3>Criar VPC</h3>
+      <form data-form="vpc-criar">
+        <label class="caws-campo"><span>Bloco CIDR</span><input name="cidr" value="10.0.0.0/16" autocomplete="off"><small>A faixa de IPs da rede.</small></label>
+        <p class="caws-erro" data-erro></p>
+        <div class="caws-form-acoes"><button type="button" class="caws-btn-secundario" data-acao="fechar-painel">Cancelar</button><button type="submit" class="caws-btn-primario">Criar VPC</button></div>
+      </form></div>`;
+  }
+
+  // ---------- RDS ----------
+  function badgeRds(st) {
+    const cls = { available: "ok", stopped: "off", creating: "pend", deleting: "pend" }[st] || "off";
+    return `<span class="caws-estado ${cls}">● ${esc(st)}</span>`;
+  }
+  function telaRds() {
+    const c = conta(); c.rds = c.rds || { instancias: {} };
+    const dbs = Object.values(c.rds.instancias);
+    const linhas = dbs.length
+      ? dbs.map((d) => `<tr>
+          <td>${esc(d.id)}</td><td>${esc(d.engine)}</td><td>${esc(d.classe)}</td><td>${badgeRds(d.status)}</td>
+          <td style="font-size:.76rem">porta ${d.porta}</td>
+          <td>
+            ${d.status === "available" ? `<button class="caws-link" data-acao="rds-stop" data-db="${esc(d.id)}">Parar</button>` : ""}
+            ${d.status === "stopped" ? `<button class="caws-link" data-acao="rds-start" data-db="${esc(d.id)}">Iniciar</button>` : ""}
+            <button class="caws-link-perigo" data-acao="rds-excluir" data-db="${esc(d.id)}">Excluir</button>
+          </td></tr>`).join("")
+      : `<tr><td colspan="6" class="caws-vazio">Nenhum banco. Clique em <strong>Criar banco</strong>.</td></tr>`;
+    return `
+      ${migalha([["Console", "home"], ["RDS", "rds-bancos"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>🛢️ RDS — Bancos</h1><button class="caws-btn-primario" data-acao="ir" data-tela="rds-criar">Criar banco</button></div>
+        <table class="caws-tabela"><thead><tr><th>Identificador</th><th>Engine</th><th>Classe</th><th>Estado</th><th>Endpoint</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        ${dicaCli("Listar bancos no CLI:", "aws rds describe-db-instances")}
+      </div>`;
+  }
+  function formRds() {
+    const engines = ["mysql", "postgres", "mariadb", "aurora-mysql", "aurora-postgresql", "sqlserver-ex", "oracle-se2"];
+    return `
+      ${migalha([["Console", "home"], ["RDS", "rds-bancos"], ["Criar banco", null]])}
+      <div class="caws-pagina caws-form">
+        <h1>Criar banco (RDS)</h1>
+        <form data-form="rds-criar">
+          <label class="caws-campo"><span>Identificador</span><input name="id" placeholder="ex.: meu-banco" autocomplete="off" spellcheck="false"></label>
+          <label class="caws-campo"><span>Engine</span><select name="engine">${engines.map((e) => `<option>${e}</option>`).join("")}</select></label>
+          <label class="caws-campo"><span>Classe da instância</span><input name="classe" value="db.t3.micro"></label>
+          <label class="caws-campo"><span>Usuário mestre</span><input name="usuario" value="admin"></label>
+          <label class="caws-campo"><span>Armazenamento (GB)</span><input name="storage" type="number" value="20" min="20"></label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes"><button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="rds-bancos">Cancelar</button><button type="submit" class="caws-btn-primario">Criar banco</button></div>
+        </form>
+        ${dicaCli("Mesma coisa no CLI:", "aws rds create-db-instance --db-instance-identifier NOME --db-instance-class db.t3.micro --engine mysql --master-username admin --allocated-storage 20")}
+      </div>`;
+  }
+
+  // ---------- CloudWatch ----------
+  function telaCw() {
+    const c = conta(); c.cloudwatch = c.cloudwatch || { alarmes: {} }; c.logs = c.logs || { grupos: {} };
+    const al = Object.values(c.cloudwatch.alarmes);
+    const alRows = al.length
+      ? al.map((a) => `<tr><td>${esc(a.nome)}</td><td>${esc(a.metrica)}</td><td>${esc(a.threshold == null ? "—" : a.threshold)}</td><td><span class="caws-estado ok">● ${esc(a.estado)}</span></td><td><button class="caws-link-perigo" data-acao="cw-del-alarme" data-nome="${esc(a.nome)}">Excluir</button></td></tr>`).join("")
+      : `<tr><td colspan="5" class="caws-vazio">Nenhum alarme.</td></tr>`;
+    const gr = Object.values(c.logs.grupos);
+    const grRows = gr.length
+      ? gr.map((g) => `<tr><td>${esc(g.nome)}</td><td><button class="caws-link-perigo" data-acao="cw-del-grupo" data-nome="${esc(g.nome)}">Excluir</button></td></tr>`).join("")
+      : `<tr><td colspan="2" class="caws-vazio">Nenhum grupo de logs.</td></tr>`;
+    return `
+      ${migalha([["Console", "home"], ["CloudWatch", "cw-painel"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>📈 CloudWatch</h1>
+          <div class="caws-acoes-grupo"><button class="caws-btn-secundario" data-acao="cw-form-alarme">Criar alarme</button><button class="caws-btn-secundario" data-acao="cw-criar-grupo">Criar grupo de logs</button></div></div>
+        <div id="cawsPainelAcao"></div>
+        <h2 class="caws-secao">Alarmes</h2>
+        <table class="caws-tabela"><thead><tr><th>Nome</th><th>Métrica</th><th>Limite</th><th>Estado</th><th></th></tr></thead><tbody>${alRows}</tbody></table>
+        <h2 class="caws-secao">Grupos de logs</h2>
+        <table class="caws-tabela"><thead><tr><th>Grupo</th><th></th></tr></thead><tbody>${grRows}</tbody></table>
+        ${dicaCli("Criar alarme no CLI:", "aws cloudwatch put-metric-alarm --alarm-name NOME --metric-name CPUUtilization --namespace AWS/EC2 --threshold 80 --comparison-operator GreaterThanThreshold")}
+      </div>`;
+  }
+  function painelAlarme() {
+    return `<div class="caws-painel"><h3>Criar alarme</h3>
+      <form data-form="cw-alarme">
+        <label class="caws-campo"><span>Nome</span><input name="nome" placeholder="ex.: cpu-alta" autocomplete="off"></label>
+        <label class="caws-campo"><span>Métrica</span><input name="metrica" value="CPUUtilization"></label>
+        <label class="caws-campo"><span>Namespace</span><input name="namespace" value="AWS/EC2"></label>
+        <label class="caws-campo"><span>Limite (threshold)</span><input name="threshold" type="number" value="80"></label>
+        <p class="caws-erro" data-erro></p>
+        <div class="caws-form-acoes"><button type="button" class="caws-btn-secundario" data-acao="fechar-painel">Cancelar</button><button type="submit" class="caws-btn-primario">Criar alarme</button></div>
+      </form></div>`;
+  }
+
   // ---------- Componentes reutilizáveis ----------
   function migalha(itens) {
     return `<div class="caws-migalha">` + itens.map(([nome, tela], i) => {
@@ -755,6 +896,9 @@
       else if (alvo.dataset.servico === "iam") { view = { tela: "iam-usuarios" }; render(); }
       else if (alvo.dataset.servico === "lambda") { view = { tela: "lambda-funcoes" }; render(); }
       else if (alvo.dataset.servico === "dynamodb") { view = { tela: "dynamo-tabelas" }; render(); }
+      else if (alvo.dataset.servico === "vpc") { view = { tela: "vpc-rede" }; render(); }
+      else if (alvo.dataset.servico === "rds") { view = { tela: "rds-bancos" }; render(); }
+      else if (alvo.dataset.servico === "cloudwatch") { view = { tela: "cw-painel" }; render(); }
       return;
     }
     if (acao === "ver-roadmap") {
@@ -919,6 +1063,49 @@
       persistir(); render(); avisar("🗑️ Item excluído");
       return;
     }
+
+    // ----- VPC -----
+    if (acao === "vpc-form-criar") { const p = overlay.querySelector("#cawsPainelAcao"); if (p) p.innerHTML = painelVpcCriar(); return; }
+    if (acao === "vpc-subnet") {
+      const cidr = prompt("CIDR da sub-rede:", "10.0.1.0/24"); if (!cidr) return;
+      rodarCli(`aws ec2 create-subnet --vpc-id ${alvo.dataset.vpc} --cidr-block ${cidr}`, "Sub-rede criada"); return;
+    }
+    if (acao === "vpc-gateway") {
+      const r1 = executarComandoAws(conta(), "aws ec2 create-internet-gateway");
+      if (typeof imprimirComando === "function") imprimirComando("aws ec2 create-internet-gateway");
+      if (r1.saida) ecoTerminal(r1.saida, r1.ok ? "ok" : "erro");
+      if (!r1.ok) { avisar("Não consegui criar o gateway.", "erro"); return; }
+      let igw; try { igw = JSON.parse(r1.saida).InternetGateway.InternetGatewayId; } catch (e) { return; }
+      rodarCli(`aws ec2 attach-internet-gateway --internet-gateway-id ${igw} --vpc-id ${alvo.dataset.vpc}`, "🛜 Gateway criado e conectado");
+      return;
+    }
+    if (acao === "vpc-excluir") {
+      if (!confirm(`Excluir a VPC ${alvo.dataset.vpc} (e as sub-redes dela)?`)) return;
+      rodarCli(`aws ec2 delete-vpc --vpc-id ${alvo.dataset.vpc}`, "🗑️ VPC excluída"); return;
+    }
+
+    // ----- RDS -----
+    if (acao === "rds-start") { rodarCli(`aws rds start-db-instance --db-instance-identifier ${alvo.dataset.db}`, "▶️ Banco iniciando"); return; }
+    if (acao === "rds-stop") { rodarCli(`aws rds stop-db-instance --db-instance-identifier ${alvo.dataset.db}`, "⏸️ Banco parado"); return; }
+    if (acao === "rds-excluir") {
+      if (!confirm(`Excluir o banco "${alvo.dataset.db}"?`)) return;
+      rodarCli(`aws rds delete-db-instance --db-instance-identifier ${alvo.dataset.db} --skip-final-snapshot`, "🗑️ Banco excluído"); return;
+    }
+
+    // ----- CloudWatch -----
+    if (acao === "cw-form-alarme") { const p = overlay.querySelector("#cawsPainelAcao"); if (p) p.innerHTML = painelAlarme(); return; }
+    if (acao === "cw-criar-grupo") {
+      const nome = prompt("Nome do grupo de logs:", "/climb/app"); if (!nome) return;
+      rodarCli(`aws logs create-log-group --log-group-name ${nome}`, "Grupo de logs criado"); return;
+    }
+    if (acao === "cw-del-alarme") {
+      if (!confirm(`Excluir o alarme "${alvo.dataset.nome}"?`)) return;
+      rodarCli(`aws cloudwatch delete-alarms --alarm-names ${alvo.dataset.nome}`, "Alarme excluído"); return;
+    }
+    if (acao === "cw-del-grupo") {
+      if (!confirm(`Excluir o grupo "${alvo.dataset.nome}"?`)) return;
+      rodarCli(`aws logs delete-log-group --log-group-name ${alvo.dataset.nome}`, "Grupo excluído"); return;
+    }
   }
 
   // ---------- Tratamento de formulários ----------
@@ -1074,6 +1261,30 @@
       t.itens.push(item);
       ecoTerminal(`(put-item) item gravado em ${view.tabela}`, "ok");
       persistir(); render(); avisar("✅ Item adicionado");
+      return;
+    }
+
+    if (tipo === "vpc-criar") {
+      const cidr = (form.cidr.value || "").trim();
+      if (!cidr) { erro("Informe o bloco CIDR."); return; }
+      rodarCli(`aws ec2 create-vpc --cidr-block ${cidr}`, "✅ VPC criada");
+      return;
+    }
+
+    if (tipo === "rds-criar") {
+      const id = (form.id.value || "").trim();
+      if (!id) { erro("Dê um identificador ao banco."); return; }
+      const cmd = `aws rds create-db-instance --db-instance-identifier ${id} --db-instance-class ${(form.classe.value || "db.t3.micro").trim()} --engine ${form.engine.value} --master-username ${(form.usuario.value || "admin").trim()} --allocated-storage ${parseInt(form.storage.value, 10) || 20}`;
+      const ok = rodarCli(cmd, `✅ Banco ${esc(id)} criado`, "rds-bancos");
+      if (!ok) erro("Não consegui criar — confira os campos.");
+      return;
+    }
+
+    if (tipo === "cw-alarme") {
+      const nome = (form.nome.value || "").trim();
+      if (!nome) { erro("Dê um nome ao alarme."); return; }
+      const cmd = `aws cloudwatch put-metric-alarm --alarm-name ${nome} --metric-name ${(form.metrica.value || "CPUUtilization").trim()} --namespace ${(form.namespace.value || "AWS/EC2").trim()} --threshold ${parseInt(form.threshold.value, 10) || 80} --comparison-operator GreaterThanThreshold`;
+      rodarCli(cmd, `🔔 Alarme ${esc(nome)} criado`);
       return;
     }
   }
