@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21i",
+      data: "21 jun 2026",
+      titulo: "🔁 Prática de verdade — quase 300 atividades",
+      itens: [
+        "Cada comando agora aparece em <b>várias atividades</b>, com cenários reais do dia a dia (site da pizzaria, backups, servidor de jogo, banco do e-commerce...). Repetir em contextos diferentes é o que faz fixar.",
+        "Os reforços vêm <b>logo depois</b> de cada comando ser ensinado, na própria trilha. São <b>294 atividades</b> no total.",
+      ],
+    },
+    {
       versao: "2026-06-21h",
       data: "21 jun 2026",
       titulo: "🎯 250 atividades!",
