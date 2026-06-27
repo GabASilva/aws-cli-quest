@@ -100,8 +100,13 @@ flyctl secrets set ALERTA_EMAIL="voce@exemplo.com" -a aws-cli-quest
 
 Gatilhos (todos ajustáveis por env; valores padrão):
 
-- `ALERTA_XP_DIA` (5000) — XP ganho por um usuário num dia acima disso → alerta.
-- `ALERTA_XP_SALTO` (3000) — pulo de XP num único save → alerta.
+- O alerta de XP olha o **XP ganho no dia × atividades concluídas no dia** — só
+  dispara se o ganho passar do plausível pra quantas atividades a pessoa fez:
+  - `ALERTA_XP_POR_ATIV` (400) — teto de XP por atividade concluída no dia.
+  - `ALERTA_FOLGA_TREINO` (4000) — folga diária pro treino/missões, que rendem
+    XP sem criar atividade nova.
+  - Limite do dia = `ALERTA_FOLGA_TREINO + atividades_do_dia × ALERTA_XP_POR_ATIV`.
+    Ex.: 0 atividades e +9000 XP → alerta; 30 atividades e +9000 XP → normal.
 - `ALERTA_CADASTRO_IP_DIA` (10) — contas criadas do mesmo IP num dia → alerta
   (pode ser uma turma estudando junto atrás do mesmo Wi-Fi — você confere).
 

@@ -408,11 +408,26 @@ function sanearProgresso(p) {
 // ---------- Monitoramento / alertas (antifraude) ----------
 // Não dá pra PROVAR honestidade do XP no servidor, mas dá pra DETECTAR anomalias
 // e avisar o dono pra revisão manual (importante quando entrar competição).
-const ALERTA_XP_DIA = Number(process.env.ALERTA_XP_DIA) || 5000; // XP ganho num dia acima disso -> alerta
-const ALERTA_XP_SALTO = Number(process.env.ALERTA_XP_SALTO) || 3000; // pulo de XP num save só -> alerta
+// O sinal de fraude não é o XP bruto do dia (um grinder honesto faz muito XP),
+// e sim XP DESPROPORCIONAL às atividades concluídas no dia. Cada atividade rende
+// no máx. dezenas de XP (com bônus de sequência); o "treino aleatório" rende XP
+// sem criar atividade nova — por isso há uma folga diária pro treino/missões.
+const ALERTA_XP_POR_ATIV = Number(process.env.ALERTA_XP_POR_ATIV) || 400; // teto plausível de XP por atividade/dia
+const ALERTA_FOLGA_TREINO = Number(process.env.ALERTA_FOLGA_TREINO) || 4000; // XP/dia que treino+missões rendem sem atividade
 const ALERTA_CADASTRO_IP_DIA = Number(process.env.ALERTA_CADASTRO_IP_DIA) || 10; // contas/IP/dia -> alerta
 
 function diaHoje() { return new Date().toISOString().slice(0, 10); }
+
+// Marca presença do usuário ("último acesso"). Quem volta com a sessão salva NÃO
+// passa por /api/login — entra direto pelo /api/eu — então sem isso o painel só
+// via o dia de quem digitava senha. Persiste no máx. 1x/dia por usuário pra não
+// escrever no banco a cada heartbeat de quem fica com a aba aberta.
+function tocarAcesso(u) {
+  if (!u) return;
+  const diaAntes = u.ultimoAcesso ? new Date(u.ultimoAcesso).toISOString().slice(0, 10) : null;
+  u.ultimoAcesso = Date.now();
+  if (diaAntes !== diaHoje()) salvarBd();
+}
 
 // Registra um alerta no banco (últimos 500) e, se houver ALERTA_EMAIL, avisa por e-mail.
 function registrarAlerta(tipo, dados) {
@@ -430,18 +445,27 @@ function registrarAlerta(tipo, dados) {
   }
 }
 
-// XP suspeito: acumula o ganho do dia por usuário e dispara 1 alerta/dia.
-function checarXpSuspeito(nome, u, delta) {
+// XP suspeito: compara o XP ganho no dia com as ATIVIDADES concluídas no dia.
+// Guarda a base de atividades no início do dia pra medir quantas a pessoa fez
+// hoje; o limite plausível = folga do treino + (atividades do dia × teto/ativ).
+// Dispara no máx. 1 alerta/dia por usuário.
+function checarXpSuspeito(nome, u, delta, totalAtividades) {
   const hoje = diaHoje();
-  if (!u.xpDia || u.xpDia.dia !== hoje) u.xpDia = { dia: hoje, ganho: 0, alertado: false };
+  if (!u.xpDia || u.xpDia.dia !== hoje) {
+    u.xpDia = { dia: hoje, ganho: 0, alertado: false, baseAtiv: totalAtividades };
+  }
+  if (typeof u.xpDia.baseAtiv !== "number") u.xpDia.baseAtiv = totalAtividades;
   if (delta > 0) u.xpDia.ganho += delta;
   if (u.xpDia.alertado) return;
-  let motivo = null;
-  if (u.xpDia.ganho >= ALERTA_XP_DIA) motivo = `ganhou ${u.xpDia.ganho} XP hoje`;
-  else if (delta >= ALERTA_XP_SALTO) motivo = `salto de +${delta} XP num save só`;
-  if (motivo) {
+  const ativDia = Math.max(0, totalAtividades - u.xpDia.baseAtiv);
+  const limitePlausivel = ALERTA_FOLGA_TREINO + ativDia * ALERTA_XP_POR_ATIV;
+  if (u.xpDia.ganho > limitePlausivel) {
     u.xpDia.alertado = true;
-    registrarAlerta("xp_suspeito", { usuario: nome, detalhe: `${nome} ${motivo} (total ${u.xp} XP). Verifique se é jogo limpo.`, ganhoDia: u.xpDia.ganho, xp: u.xp });
+    registrarAlerta("xp_suspeito", {
+      usuario: nome,
+      detalhe: `${nome} ganhou ${u.xpDia.ganho} XP hoje fazendo só ${ativDia} atividade(s) — acima do plausível (~${limitePlausivel} XP). Verifique se é jogo limpo.`,
+      ganhoDia: u.xpDia.ganho, atividadesDia: ativDia, xp: u.xp,
+    });
   }
 }
 
@@ -528,6 +552,7 @@ async function tratarApi(req, res, rota) {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
     const u = bd.usuarios[nome];
+    tocarAcesso(u); // registra o dia mesmo de quem volta com a sessão salva (não passa por /api/login)
     return responderJson(res, 200, { perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null, emailVerificado: !!u.emailVerificado });
   }
 
@@ -545,11 +570,13 @@ async function tratarApi(req, res, rota) {
     const xpAnterior = u.xp || 0;
     if (typeof corpo.xp === "number") u.xp = intLimitado(corpo.xp, TETO_XP);
     if (typeof corpo.melhorStreak === "number") u.melhorStreak = intLimitado(corpo.melhorStreak, TETO_STREAK);
-    checarXpSuspeito(nome, u, u.xp - xpAnterior); // antifraude: avisa o dono se subir demais
     // progresso é RECONSTRUÍDO só com os campos conhecidos e saneados — nunca
     // guardamos o objeto cru do cliente (corta mass-assignment, lixo e a licença).
     const limpo = sanearProgresso(corpo.progresso);
     if (limpo) u.progresso = limpo;
+    // antifraude: compara o XP ganho com as atividades concluídas (depois de sanear)
+    const totalAtiv = u.progresso && u.progresso.concluidos ? Object.keys(u.progresso.concluidos).length : 0;
+    checarXpSuspeito(nome, u, u.xp - xpAnterior, totalAtiv);
     u.ultimoAcesso = Date.now();
     salvarBd();
     return responderJson(res, 200, { ok: true });
@@ -666,6 +693,7 @@ async function tratarApi(req, res, rota) {
     }
     const u = bd.usuarios[nome];
     if (!u.emailVerificado) u.emailVerificado = true; // o Google já confirmou o e-mail
+    u.ultimoAcesso = Date.now();
     salvarBd();
     const token = novaSessao(nome);
     return responderJson(res, 200, { token, perfil: perfilPublico(nome), progresso: u.progresso, licenca: licencaPublica(u), twofa: !!u.twofa, email: u.email || null, emailVerificado: !!u.emailVerificado });
