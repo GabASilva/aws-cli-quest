@@ -6,27 +6,34 @@
 
 const CHAVE_STORAGE = "awsCliQuest.v1";
 
-// Títulos por XP acumulado
+// Títulos por XP acumulado. A curva acompanha o catálogo atual (~20 mil XP de
+// conteúdo fixo): níveis rápidos no começo pra motivar, e "Lenda do CLI" no
+// topo ≈ ter feito praticamente tudo. Recalculado em 2026-06-21.
 const NIVEIS = [
   { xp: 0, titulo: "Estagiário de Cloud", icone: "☁️" },
-  { xp: 300, titulo: "DevOps Júnior", icone: "🔧" },
-  { xp: 800, titulo: "Cloud Pleno", icone: "🚀" },
-  { xp: 1500, titulo: "Cloud Sênior", icone: "🏗️" },
-  { xp: 2500, titulo: "Arquiteto de Soluções", icone: "🏛️" },
-  { xp: 4000, titulo: "Lenda do CLI", icone: "🦸" },
+  { xp: 250, titulo: "Aprendiz de CLI", icone: "🐣" },
+  { xp: 700, titulo: "DevOps Júnior", icone: "🔧" },
+  { xp: 1500, titulo: "Cloud Pleno", icone: "🚀" },
+  { xp: 3000, titulo: "Cloud Sênior", icone: "🏗️" },
+  { xp: 5000, titulo: "Especialista em AWS", icone: "🧠" },
+  { xp: 8000, titulo: "Arquiteto de Soluções", icone: "🏛️" },
+  { xp: 12000, titulo: "Mestre da Nuvem", icone: "🥷" },
+  { xp: 16000, titulo: "Guru do CLI", icone: "🧙" },
+  { xp: 20000, titulo: "Lenda do CLI", icone: "🦸" },
 ];
 
-// Concorrentes do ranking (a comunidade fictícia do Quest)
+// Concorrentes do ranking (a comunidade fictícia do Quest) — espalhados pela
+// escala nova de XP pra continuarem sendo uma régua de progresso.
 const RANKING_BOTS = [
-  { nome: "ana.cloud", xp: 5230 },
-  { nome: "devops_caio", xp: 4180 },
-  { nome: "mari_sre", xp: 3310 },
-  { nome: "pedrao_infra", xp: 2640 },
-  { nome: "lu.terraform", xp: 1925 },
-  { nome: "rafa_dev", xp: 1340 },
-  { nome: "bia.backend", xp: 810 },
-  { nome: "jp_estagiario", xp: 355 },
-  { nome: "tonho_da_cloud", xp: 120 },
+  { nome: "ana.cloud", xp: 18900 },
+  { nome: "devops_caio", xp: 14200 },
+  { nome: "mari_sre", xp: 10500 },
+  { nome: "pedrao_infra", xp: 7300 },
+  { nome: "lu.terraform", xp: 4800 },
+  { nome: "rafa_dev", xp: 2950 },
+  { nome: "bia.backend", xp: 1450 },
+  { nome: "jp_estagiario", xp: 620 },
+  { nome: "tonho_da_cloud", xp: 180 },
 ];
 
 const BONUS_MAXIMO = 0.5; // +50% no teto

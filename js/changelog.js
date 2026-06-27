@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-21j",
+      data: "21 jun 2026",
+      titulo: "🏅 Níveis recalibrados (e mais títulos)",
+      itens: [
+        "Com tanto conteúdo novo, o XP do jogo cresceu muito — então refizemos a <b>curva de níveis</b>: agora são <b>10 títulos</b>, do Estagiário de Cloud até a <b>Lenda do CLI</b> (que vale por completar quase tudo).",
+        "Novos postos no caminho: Aprendiz de CLI 🐣, Especialista em AWS 🧠, Mestre da Nuvem 🥷 e Guru do CLI 🧙.",
+      ],
+    },
+    {
       versao: "2026-06-21i",
       data: "21 jun 2026",
       titulo: "🔁 Prática de verdade — quase 300 atividades",
