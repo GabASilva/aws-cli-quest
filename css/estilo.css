@@ -738,79 +738,91 @@ body.console-aberto { overflow: hidden; }
 /* Reaproveita as variáveis dark do app pra ficar coeso. Tudo escopado    */
 /* em #consoleOverlay pra não vazar pro resto.                            */
 /* ===================================================================== */
-#consoleOverlay { background: #0c1420; color: var(--texto); }
-#consoleOverlay .caws-corpo { background: #0c1420; }
-#consoleOverlay .caws-topo { background: #0f1b2d; border-bottom: 1px solid #2a3650; }
-#consoleOverlay .caws-busca input { background: #0c1420; border-color: #2a3650; color: var(--texto); }
+/* Tokens reais do Cloudscape dark (extraídos do console ao vivo):
+   fundo #161d26 · container #1b232d · borda #424650 · texto #c6c6cd ·
+   título #ebebf0 · link #42b4ff · verde #2bb534 · topo #0f141a ·
+   botão pílula 20px · container 16px · input 8px · Amazon Ember. */
+#consoleOverlay {
+  background: #161d26; color: #c6c6cd;
+  font-family: "Amazon Ember", "Helvetica Neue", Roboto, Arial, sans-serif;
+}
+#consoleOverlay .caws-corpo { background: #161d26; }
+#consoleOverlay .caws-topo { background: #0f141a; border-bottom: 1px solid #424650; }
+#consoleOverlay .caws-busca input { background: #161d26; border-color: #424650; color: #d1d5db; border-radius: 8px; }
 
-#consoleOverlay .caws-nav { background: #0c1420; border-right-color: #2a3650; }
-#consoleOverlay .caws-nav-tit { color: var(--texto); border-bottom-color: #2a3650; }
-#consoleOverlay .caws-nav-item { color: #c5d0de; }
-#consoleOverlay .caws-nav-item:hover { background: #16243a; }
-#consoleOverlay .caws-nav-item.ativo { background: transparent; color: #4da3ff; border-left-color: #4da3ff; }
-#consoleOverlay .caws-nav-grupo { color: #9aa7b8; }
-#consoleOverlay .caws-nav-sep { background: #2a3650; }
+#consoleOverlay .caws-nav { background: #161d26; border-right-color: #424650; }
+#consoleOverlay .caws-nav-tit { color: #ebebf0; border-bottom-color: #424650; }
+#consoleOverlay .caws-nav-item { color: #d1d5db; }
+#consoleOverlay .caws-nav-item:hover { background: #232b36; }
+#consoleOverlay .caws-nav-item.ativo { background: #1b232d; color: #42b4ff; border-left-color: #42b4ff; }
+#consoleOverlay .caws-nav-grupo { color: #b4b4bb; }
+#consoleOverlay .caws-nav-sep { background: #424650; }
 
-#consoleOverlay .caws-migalha { color: var(--texto-fraco); }
-#consoleOverlay .caws-migalha a { color: #4da3ff; }
-#consoleOverlay .caws-migalha em { color: #5b6b80; }
+#consoleOverlay .caws-migalha { color: #9ba2ab; }
+#consoleOverlay .caws-migalha a { color: #42b4ff; }
+#consoleOverlay .caws-migalha em { color: #6b7480; }
 
 #consoleOverlay .caws-secao,
 #consoleOverlay .caws-cab-servico h1,
 #consoleOverlay .caws-painel h3,
 #consoleOverlay .caws-form h1,
-#consoleOverlay .caws-estado-vazio h2 { color: var(--texto); }
-#consoleOverlay .caws-sub { color: var(--texto-fraco); }
+#consoleOverlay .caws-estado-vazio h2 { color: #ebebf0; }
+#consoleOverlay .caws-sub { color: #9ba2ab; }
 #consoleOverlay .caws-sub code,
-#consoleOverlay .caws-tag.cinza { background: #1b2738; color: #c5d0de; }
+#consoleOverlay .caws-tag.cinza { background: #232b36; color: #d1d5db; }
 
 #consoleOverlay .caws-painel,
-#consoleOverlay .caws-estado-vazio { background: #141d2b; border-color: #2a3650; }
-#consoleOverlay .caws-estado-vazio p { color: var(--texto-fraco); }
+#consoleOverlay .caws-estado-vazio { background: #1b232d; border-color: #424650; border-radius: 16px; }
+#consoleOverlay .caws-estado-vazio p { color: #9ba2ab; }
 
-#consoleOverlay .caws-servico { background: #141d2b; border-color: #2a3650; }
-#consoleOverlay .caws-servico:not(.desativado):hover { border-color: #4da3ff; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
-#consoleOverlay .caws-servico-info strong { color: var(--texto); }
-#consoleOverlay .caws-servico-info small { color: var(--texto-fraco); }
+#consoleOverlay .caws-servico { background: #1b232d; border-color: #424650; border-radius: 16px; }
+#consoleOverlay .caws-servico:not(.desativado):hover { border-color: #42b4ff; box-shadow: 0 1px 8px 1px rgba(0,7,22,0.6); }
+#consoleOverlay .caws-servico-info strong { color: #ebebf0; }
+#consoleOverlay .caws-servico-info small { color: #9ba2ab; }
 
-#consoleOverlay .caws-tabela { background: #141d2b; border-color: #2a3650; }
-#consoleOverlay .caws-tabela th { background: #101a28; color: #9aa7b8; border-bottom-color: #2a3650; }
-#consoleOverlay .caws-tabela td { border-bottom-color: #22304a; color: var(--texto); }
-#consoleOverlay .caws-tabela a { color: #4da3ff; }
-#consoleOverlay .caws-vazio { color: var(--texto-fraco); }
+#consoleOverlay .caws-tabela { background: #1b232d; border-color: #424650; border-radius: 16px; }
+#consoleOverlay .caws-tabela th { background: #161d26; color: #b4b4bb; border-bottom-color: #424650; }
+#consoleOverlay .caws-tabela td { border-bottom-color: #2f3742; color: #c6c6cd; }
+#consoleOverlay .caws-tabela a { color: #42b4ff; }
+#consoleOverlay .caws-vazio { color: #9ba2ab; }
 
-#consoleOverlay .caws-rec-row { border-bottom-color: #22304a; }
-#consoleOverlay .caws-rec-row:hover { background: #16243a; }
-#consoleOverlay .caws-rec-row-l { color: #4da3ff; }
-#consoleOverlay .caws-rec-row-n { color: var(--texto); }
-#consoleOverlay .caws-saude-ok { color: var(--verde); }
+#consoleOverlay .caws-rec-row { border-bottom-color: #2f3742; }
+#consoleOverlay .caws-rec-row:hover { background: #232b36; }
+#consoleOverlay .caws-rec-row-l { color: #42b4ff; }
+#consoleOverlay .caws-rec-row-n { color: #c6c6cd; }
+#consoleOverlay .caws-saude-ok { color: #2bb534; }
 
-#consoleOverlay .caws-btn-secundario { background: transparent; color: #4da3ff; border-color: #3a6ea5; }
-#consoleOverlay .caws-btn-secundario:hover { background: #16243a; }
-#consoleOverlay .caws-btn-perigo { background: transparent; color: #ff7b72; border-color: #7a3b3b; }
+/* Botões: pílula (raio 20px), igual ao Cloudscape */
+#consoleOverlay .caws-btn-primario,
+#consoleOverlay .caws-btn-secundario,
+#consoleOverlay .caws-btn-perigo { border-radius: 20px; }
+#consoleOverlay .caws-btn-primario { background: #ff9900; color: #0f141a; }
+#consoleOverlay .caws-btn-primario:hover { background: #ec8b00; }
+#consoleOverlay .caws-btn-secundario { background: transparent; color: #42b4ff; border-color: #42b4ff; }
+#consoleOverlay .caws-btn-secundario:hover { background: #232b36; }
+#consoleOverlay .caws-btn-perigo { background: transparent; color: #ff7b72; border-color: #ff7b72; }
 #consoleOverlay .caws-btn-perigo:hover { background: #2a1818; }
-#consoleOverlay .caws-link { color: #4da3ff; }
+#consoleOverlay .caws-link { color: #42b4ff; }
 #consoleOverlay .caws-link-perigo { color: #ff7b72; }
 
-#consoleOverlay .caws-estado.ok { color: var(--verde); }
+#consoleOverlay .caws-estado.ok { color: #2bb534; }
 #consoleOverlay .caws-estado.pend { color: #ffb454; }
-#consoleOverlay .caws-estado.off { color: #8b99b0; }
-#consoleOverlay .caws-estado.fim { color: #ff6b6b; }
+#consoleOverlay .caws-estado.off { color: #9ba2ab; }
+#consoleOverlay .caws-estado.fim { color: #ff7b72; }
 
-#consoleOverlay .caws-campo > span { color: var(--texto); }
+#consoleOverlay .caws-campo > span { color: #ebebf0; }
 #consoleOverlay .caws-campo input,
 #consoleOverlay .caws-campo select,
-#consoleOverlay .caws-inline-form select { background: #0c1420; border-color: #2a3650; color: var(--texto); }
-#consoleOverlay .caws-campo input:disabled { background: #18212f; color: #6b7889; }
+#consoleOverlay .caws-inline-form select { background: #161d26; border-color: #424650; color: #c6c6cd; border-radius: 8px; }
+#consoleOverlay .caws-campo input:disabled { background: #232b36; color: #6b7480; }
 #consoleOverlay .caws-campo small,
 #consoleOverlay .caws-check,
-#consoleOverlay .caws-check small { color: var(--texto-fraco); }
-#consoleOverlay .caws-prefixo-nav { color: var(--texto-fraco); }
-#consoleOverlay .caws-prefixo-nav a { color: #4da3ff; }
-#consoleOverlay .caws-dica-rodape { color: var(--texto-fraco); }
-#consoleOverlay .caws-cli { background: #101a28; border-color: #2a3650; }
-#consoleOverlay .caws-cli code { color: #c5d0de; }
-#consoleOverlay .caws-sub code { background: #1b2738; }
+#consoleOverlay .caws-check small { color: #9ba2ab; }
+#consoleOverlay .caws-prefixo-nav { color: #9ba2ab; }
+#consoleOverlay .caws-prefixo-nav a { color: #42b4ff; }
+#consoleOverlay .caws-dica-rodape { color: #9ba2ab; }
+#consoleOverlay .caws-cli { background: #161d26; border-color: #424650; }
+#consoleOverlay .caws-cli code { color: #d1d5db; }
 
 .caws-migalha {
   max-width: 1060px; margin: 0 auto; padding: 12px 28px 0;
