@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28a",
+      data: "28 jun 2026",
+      titulo: "🎓 Simulados de certificação (Cloud Practitioner)",
+      itens: [
+        "Nova aba <b>🎓 Simulados</b> no topo: provas no estilo da certificação <b>AWS Cloud Practitioner (CLF-C02)</b>, com banco de <b>+300 questões</b> — cada simulado sorteia <b>60 aleatórias</b>, então toda tentativa é diferente.",
+        "No fim você vê o <b>gabarito comentado</b> (o que você marcou × a resposta certa, com explicação) e uma <b>análise dos erros por domínio</b> dizendo o que reforçar.",
+        "Mais certificações (Solutions Architect, SysOps, Developer) vêm na sequência.",
+      ],
+    },
+    {
       versao: "2026-06-21j",
       data: "21 jun 2026",
       titulo: "🏅 Níveis recalibrados (e mais títulos)",
@@ -241,8 +251,8 @@
   const EM_BREVE = [
     {
       icone: "🎓",
-      titulo: "Simulado de certificação",
-      desc: "Quiz de teoria + provas no estilo do Cloud Practitioner (CLF-C02), trilha por certificação e certificado de conclusão.",
+      titulo: "Mais certificações nos simulados",
+      desc: "Depois do Cloud Practitioner (já no ar), vêm os simulados de Solutions Architect Associate (SAA), SysOps e Developer — com certificado de conclusão.",
     },
     {
       icone: "🧩",
