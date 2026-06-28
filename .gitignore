@@ -8,3 +8,6 @@ quest-dados.json.bak*
 
 # painel de admin local — segredo nunca vai pro git
 painel/config.json
+
+# Páginas de referência salvas localmente (HTML do console AWS) — não versionar
+paginas AWS/

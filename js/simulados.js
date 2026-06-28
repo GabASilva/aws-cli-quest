@@ -95,6 +95,14 @@
       q: q.q, o: opcoes, c: corretas, e: q.e || "",
     };
   }
+  // Fonte oficial da explicação de uma questão (link no gabarito).
+  function fonteDe(q) {
+    const F = window.SIMULADOS_FONTES || {};
+    const P = window.SIMULADOS_FONTE_POR_ID || {};
+    const FB = window.SIMULADOS_FONTE_FALLBACK || {};
+    const chave = P[q.id] || FB[q.d];
+    return chave && F[chave] ? F[chave] : null;
+  }
   function lerHist() {
     try { return JSON.parse(localStorage.getItem(CHAVE_HIST) || "{}"); } catch (e) { return {}; }
   }
@@ -420,12 +428,16 @@
       return `<li class="${cls}"><span class="sim-letra">${String.fromCharCode(65 + j)}</span> ${esc(op)} ${tags}</li>`;
     }).join("");
     const status = dt.ok ? '<span class="sim-st ok">✔ acertou</span>' : '<span class="sim-st no">✘ errou</span>';
+    const fonte = fonteDe(q);
+    const fonteHtml = fonte
+      ? `<div class="sim-rev-fonte">📚 Fonte: <a href="${esc(fonte.url)}" target="_blank" rel="noopener noreferrer">${esc(fonte.texto)}</a></div>`
+      : "";
     return `
       <div class="sim-rev ${dt.ok ? "ok" : "no"}">
         <div class="sim-rev-cab"><span>Questão ${i + 1}</span> ${status}</div>
         <p class="sim-rev-q">${esc(q.q)}</p>
         <ul class="sim-rev-ops">${opcoes}</ul>
-        ${q.e ? `<div class="sim-rev-exp"><strong>Por quê:</strong> ${esc(q.e)}</div>` : ""}
+        ${q.e ? `<div class="sim-rev-exp"><strong>Por quê:</strong> ${esc(q.e)}${fonteHtml}</div>` : fonteHtml}
       </div>`;
   }
 
@@ -555,6 +567,9 @@
       .sim-mini-voce{background:rgba(88,166,255,.2);color:var(--azul)}
       .sim-mini-certo{background:rgba(62,207,111,.2);color:var(--verde)}
       .sim-rev-exp{margin-top:.6rem;font-size:.86rem;color:var(--texto-fraco);line-height:1.5;border-top:1px dashed var(--borda);padding-top:.5rem}
+      .sim-rev-fonte{margin-top:.5rem;font-size:.82rem}
+      .sim-rev-fonte a{color:var(--azul);text-decoration:none}
+      .sim-rev-fonte a:hover{text-decoration:underline}
       .sim-acoes-fim{display:flex;gap:.8rem;margin:1.4rem 0 2rem;flex-wrap:wrap}
       @media(max-width:760px){.sim-prova{grid-template-columns:1fr}.sim-lado{position:static}.sim-paleta{grid-template-columns:repeat(8,1fr)}}
     `;

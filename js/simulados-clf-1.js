@@ -27,7 +27,7 @@
       e: "O Pricing Calculator estima custos ANTES de provisionar. As outras opções tratam de custos que JÁ aconteceram (faturamento e relatórios)." },
     { id: "clf-p06", d: "conceitos", q: "Qual opção é um benefício das economias de escala baseadas nas vantagens da computação em nuvem?",
       o: ["Redução dos custos variáveis em relação aos custos fixos", "A capacidade de trocar despesas variáveis por despesas fixas", "Maior velocidade e agilidade", "Aumento dos custos operacionais em data centers"], c: [0],
-      e: "Com milhões de clientes, a AWS dilui custos e repassa preços menores ('benefit from massive economies of scale'). Agilidade é outro benefício, mas não é o de economia de escala." },
+      e: "Com o uso agregado de centenas de milhares de clientes, a AWS atinge um custo variável menor do que você teria sozinho ('achieve a lower variable cost than you can get on your own') e repassa isso em preços pay-as-you-go menores. Agilidade é outro benefício, mas não é o de economia de escala." },
     { id: "clf-p07", d: "seguranca", q: "Qual recomendação está em conformidade com as práticas recomendadas de segurança do IAM?",
       o: ["Conceder permissões amplas para que todos os funcionários acessem os recursos de que necessitam.", "Ativar a autenticação multifator (MFA) para aumentar a segurança no login.", "Usar as chaves de acesso do usuário root para tarefas administrativas.", "Evitar alternar credenciais para evitar problemas em produção."], c: [1],
       e: "Ativar MFA é prática recomendada. O contrário das outras é o certo: privilégio mínimo (não amplo), não usar o root no dia a dia e rotacionar credenciais." },
