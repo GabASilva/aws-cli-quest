@@ -72,6 +72,158 @@
   let view = { tela: "home", bucket: null, prefixo: "" };
   let overlay = null;
 
+  // ---------- Navegação lateral por serviço (fiel ao console da AWS) ----------
+  // Itens com `tela` navegam pra uma tela funcional; com `secao:true` mostram o
+  // estado-vazio do AWS (a seção existe no console real, mas ainda não tem
+  // função no CLImb). `grupo` é um cabeçalho de seção; `sep` é um divisor.
+  // Os rótulos e a ordem seguem os snapshots reais do console (us-west-2).
+  const NAV = {
+    s3: { titulo: "Amazon S3", itens: [
+      { l: "Buckets", tela: "s3-buckets" },
+      { l: "Access Points", secao: true },
+      { l: "Object Lambda Access Points", secao: true },
+      { l: "Multi-Region Access Points", secao: true },
+      { l: "Batch Operations", secao: true },
+      { l: "IAM Access Analyzer for S3", secao: true },
+      { sep: true },
+      { l: "Block Public Access settings for this account", secao: true },
+      { l: "Storage Lens", secao: true },
+    ] },
+    ec2: { titulo: "Amazon EC2", itens: [
+      { l: "EC2 Dashboard", tela: "ec2-dashboard" },
+      { l: "EC2 Global View", secao: true },
+      { l: "Events", secao: true },
+      { grupo: "Instances" },
+      { l: "Instances", tela: "ec2-instancias" },
+      { l: "Instance Types", secao: true },
+      { l: "Launch Templates", secao: true },
+      { l: "Spot Requests", secao: true },
+      { l: "Reserved Instances", secao: true },
+      { l: "Dedicated Hosts", secao: true },
+      { grupo: "Images" },
+      { l: "AMIs", secao: true },
+      { grupo: "Elastic Block Store" },
+      { l: "Volumes", secao: true },
+      { l: "Snapshots", secao: true },
+      { grupo: "Network & Security" },
+      { l: "Security Groups", secao: true },
+      { l: "Elastic IPs", secao: true },
+      { l: "Key Pairs", secao: true },
+      { grupo: "Load Balancing" },
+      { l: "Load Balancers", secao: true },
+      { l: "Target Groups", secao: true },
+      { grupo: "Auto Scaling" },
+      { l: "Auto Scaling Groups", secao: true },
+    ] },
+    iam: { titulo: "Identity and Access Management (IAM)", itens: [
+      { l: "Dashboard", tela: "iam-dashboard" },
+      { grupo: "Access management" },
+      { l: "User groups", secao: true },
+      { l: "Users", tela: "iam-usuarios" },
+      { l: "Roles", secao: true },
+      { l: "Policies", secao: true },
+      { l: "Identity providers", secao: true },
+      { l: "Account settings", secao: true },
+      { grupo: "Access reports" },
+      { l: "Access Analyzer", secao: true },
+      { l: "Credential report", secao: true },
+    ] },
+    lambda: { titulo: "AWS Lambda", itens: [
+      { l: "Dashboard", tela: "lambda-dashboard" },
+      { l: "Applications", secao: true },
+      { l: "Functions", tela: "lambda-funcoes" },
+      { grupo: "Additional resources" },
+      { l: "Layers", secao: true },
+    ] },
+    dynamodb: { titulo: "DynamoDB", itens: [
+      { l: "Dashboard", tela: "dynamo-dashboard" },
+      { l: "Tables", tela: "dynamo-tabelas" },
+      { l: "Explore items", secao: true },
+      { l: "PartiQL editor", secao: true },
+      { grupo: "Backups" },
+      { l: "Backups", secao: true },
+      { l: "Exports to S3", secao: true },
+      { l: "Reserved capacity", secao: true },
+    ] },
+    vpc: { titulo: "Virtual Private Cloud", itens: [
+      { l: "VPC Dashboard", tela: "vpc-dashboard" },
+      { grupo: "Virtual private cloud" },
+      { l: "Your VPCs", tela: "vpc-rede" },
+      { l: "Subnets", secao: true },
+      { l: "Route tables", secao: true },
+      { l: "Internet gateways", secao: true },
+      { l: "NAT gateways", secao: true },
+      { grupo: "Security" },
+      { l: "Security groups", secao: true },
+      { l: "Network ACLs", secao: true },
+      { grupo: "Virtual private network (VPN)" },
+      { l: "Elastic IPs", secao: true },
+    ] },
+    rds: { titulo: "Amazon RDS", itens: [
+      { l: "Dashboard", tela: "rds-dashboard" },
+      { l: "Databases", tela: "rds-bancos" },
+      { l: "Snapshots", secao: true },
+      { l: "Performance insights", secao: true },
+      { l: "Parameter groups", secao: true },
+      { l: "Subnet groups", secao: true },
+      { l: "Events", secao: true },
+      { l: "Reserved instances", secao: true },
+    ] },
+    cloudwatch: { titulo: "CloudWatch", itens: [
+      { l: "Dashboards", secao: true },
+      { l: "Alarms", tela: "cw-painel" },
+      { grupo: "Logs" },
+      { l: "Log groups", secao: true },
+      { grupo: "Metrics" },
+      { l: "All metrics", secao: true },
+      { l: "Events", secao: true },
+    ] },
+  };
+  // tela funcional -> serviço (define qual nav mostrar e o item ativo)
+  const TELA_SERVICO = {
+    "s3-buckets": "s3", "s3-objetos": "s3",
+    "ec2-instancias": "ec2", "ec2-launch": "ec2", "ec2-dashboard": "ec2",
+    "iam-usuarios": "iam", "iam-user": "iam", "iam-dashboard": "iam",
+    "lambda-funcoes": "lambda", "lambda-dashboard": "lambda",
+    "dynamo-tabelas": "dynamodb", "dynamo-tabela": "dynamodb", "dynamo-dashboard": "dynamodb",
+    "vpc-rede": "vpc", "vpc-dashboard": "vpc",
+    "rds-bancos": "rds", "rds-criar": "rds", "rds-dashboard": "rds",
+    "cw-painel": "cloudwatch",
+  };
+  // serviço -> tela "principal" (lista) e dashboard (pra abrir/breadcrumb)
+  const SERVICO_LISTA = { s3: "s3-buckets", ec2: "ec2-instancias", iam: "iam-usuarios", lambda: "lambda-funcoes", dynamodb: "dynamo-tabelas", vpc: "vpc-rede", rds: "rds-bancos", cloudwatch: "cw-painel" };
+  const SERVICO_ABRIR = { s3: "s3-buckets", ec2: "ec2-dashboard", iam: "iam-dashboard", lambda: "lambda-dashboard", dynamodb: "dynamo-dashboard", vpc: "vpc-dashboard", rds: "rds-dashboard", cloudwatch: "cw-painel" };
+  const SERVICO_NOME = { ec2: "EC2", iam: "IAM", vpc: "VPC", rds: "RDS", dynamodb: "DynamoDB", cloudwatch: "CloudWatch", lambda: "Lambda", s3: "Amazon S3" };
+
+  function servicoAtual() {
+    if (view.tela === "secao") return view.servico || null;
+    return TELA_SERVICO[view.tela] || null;
+  }
+  // Monta a barra lateral do serviço atual (vazia na home).
+  function renderNav() {
+    const nav = overlay && overlay.querySelector("#cawsNav");
+    if (!nav) return;
+    const sid = servicoAtual();
+    if (!sid || !NAV[sid]) { nav.innerHTML = ""; nav.classList.remove("ativa"); return; }
+    nav.classList.add("ativa");
+    const cfg = NAV[sid];
+    const ativoLabel = view.tela === "secao" ? view.secaoLabel : null;
+    let jaAtivou = false;
+    const itens = cfg.itens.map((it) => {
+      if (it.sep) return `<div class="caws-nav-sep"></div>`;
+      if (it.grupo) return `<div class="caws-nav-grupo">${esc(it.grupo)}</div>`;
+      let ativo = false;
+      if (!jaAtivou && it.tela && it.tela === view.tela) ativo = true;
+      if (ativoLabel && it.l === ativoLabel) ativo = true;
+      if (ativo) jaAtivou = true;
+      const attrs = it.tela
+        ? `data-acao="ir" data-tela="${it.tela}"`
+        : `data-acao="secao" data-servico="${sid}" data-label="${esc(it.l)}"`;
+      return `<a href="#" class="caws-nav-item${ativo ? " ativo" : ""}" ${attrs}>${esc(it.l)}</a>`;
+    }).join("");
+    nav.innerHTML = `<div class="caws-nav-tit">${esc(cfg.titulo)}</div><nav>${itens}</nav>`;
+  }
+
   // ---------- Montagem do overlay e do botão no cabeçalho ----------
   function montar() {
     // Botão no cabeçalho, antes do Ranking
@@ -97,7 +249,10 @@
           <button class="caws-sair" id="cawsSair">✕ Sair do console</button>
         </div>
       </div>
-      <div class="caws-corpo" id="cawsCorpo"></div>
+      <div class="caws-shell">
+        <aside class="caws-nav" id="cawsNav"></aside>
+        <div class="caws-corpo" id="cawsCorpo"></div>
+      </div>
     `;
     document.body.appendChild(overlay);
 
@@ -113,6 +268,7 @@
     // Delegação de eventos do corpo
     overlay.querySelector("#cawsCorpo").addEventListener("click", aoClicar);
     overlay.querySelector("#cawsCorpo").addEventListener("submit", aoSubmeter);
+    overlay.querySelector("#cawsNav").addEventListener("click", aoClicar);
   }
 
   function abrir() {
@@ -149,8 +305,85 @@
     else if (view.tela === "rds-bancos") corpo.innerHTML = telaRds();
     else if (view.tela === "rds-criar") corpo.innerHTML = formRds();
     else if (view.tela === "cw-painel") corpo.innerHTML = telaCw();
+    else if (view.tela === "ec2-dashboard") corpo.innerHTML = telaDashboard("ec2");
+    else if (view.tela === "iam-dashboard") corpo.innerHTML = telaDashboard("iam");
+    else if (view.tela === "vpc-dashboard") corpo.innerHTML = telaDashboard("vpc");
+    else if (view.tela === "rds-dashboard") corpo.innerHTML = telaDashboard("rds");
+    else if (view.tela === "dynamo-dashboard") corpo.innerHTML = telaDashboard("dynamodb");
+    else if (view.tela === "lambda-dashboard") corpo.innerHTML = telaDashboard("lambda");
+    else if (view.tela === "secao") corpo.innerHTML = telaSecao();
     else corpo.innerHTML = telaHome();
     corpo.scrollTop = 0;
+    renderNav();
+  }
+
+  // ---------- Painel (dashboard) de um serviço, no estilo do console AWS ----------
+  function telaDashboard(sid) {
+    const c = conta();
+    const nome = SERVICO_NOME[sid] || sid;
+    const lista = SERVICO_LISTA[sid];
+    const regiao = (c && c.regiao) || "us-east-1";
+    let recursos = [];
+    if (sid === "ec2") {
+      const ins = Object.values(c.ec2.instancias);
+      recursos = [
+        { n: ins.filter((i) => i.estado === "running").length, l: "Instâncias em execução", tela: "ec2-instancias" },
+        { n: ins.filter((i) => i.estado === "stopped").length, l: "Instâncias paradas", tela: "ec2-instancias" },
+        { n: ins.filter((i) => i.estado !== "terminated").length, l: "Instâncias (total)", tela: "ec2-instancias" },
+      ];
+    } else if (sid === "iam") {
+      recursos = [{ n: Object.keys(c.iam.usuarios).length, l: "Usuários", tela: "iam-usuarios" }];
+    } else if (sid === "vpc") {
+      recursos = [
+        { n: c.vpc ? Object.keys(c.vpc.vpcs).length : 0, l: "VPCs", tela: "vpc-rede" },
+        { n: c.vpc ? Object.keys(c.vpc.subnets || {}).length : 0, l: "Sub-redes", tela: "vpc-rede" },
+      ];
+    } else if (sid === "rds") {
+      recursos = [{ n: c.rds ? Object.keys(c.rds.instancias).length : 0, l: "Bancos de dados", tela: "rds-bancos" }];
+    } else if (sid === "dynamodb") {
+      recursos = [{ n: Object.keys(c.dynamodb.tabelas).length, l: "Tabelas", tela: "dynamo-tabelas" }];
+    } else if (sid === "cloudwatch") {
+      recursos = [{ n: c.cloudwatch ? Object.keys(c.cloudwatch.alarmes).length : 0, l: "Alarmes", tela: "cw-painel" }];
+    } else if (sid === "lambda") {
+      recursos = [{ n: Object.keys(c.lambda.funcoes).length, l: "Funções", tela: "lambda-funcoes" }];
+    }
+    const cards = recursos.map((r) => `
+      <button class="caws-rec-card" data-acao="ir" data-tela="${r.tela}">
+        <span class="caws-rec-n">${r.n}</span>
+        <span class="caws-rec-l">${esc(r.l)}</span>
+      </button>`).join("");
+    return `
+      ${migalha([["Console", "home"], [nome, lista]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>${esc(nome)} — Painel</h1></div>
+        <div class="caws-painel">
+          <h3>Recursos</h3>
+          <div class="caws-rec-grade">${cards || '<p class="caws-sub">Nenhum recurso ainda — crie o primeiro pelo menu à esquerda.</p>'}</div>
+        </div>
+        <div class="caws-painel">
+          <h3>Status do serviço</h3>
+          <p class="caws-saude"><span class="caws-saude-ok">●</span> O serviço está operando normalmente — Região ${esc(regiao)}.</p>
+        </div>
+      </div>`;
+  }
+
+  // ---------- Estado-vazio fiel ao AWS (seção real, ainda sem função no CLImb) ----------
+  function telaSecao() {
+    const sid = view.servico;
+    const label = view.secaoLabel || "Recursos";
+    const cfg = NAV[sid] || { titulo: sid };
+    const lista = SERVICO_LISTA[sid];
+    return `
+      ${migalha([["Console", "home"], [cfg.titulo, lista], [label, null]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>${esc(label)}</h1></div>
+        <div class="caws-estado-vazio">
+          <div class="caws-ev-ic">📭</div>
+          <h2>Nenhum recurso para exibir</h2>
+          <p>Esta seção existe no console da AWS, mas ainda não faz parte do CLImb.
+          Use o menu à esquerda para as seções já disponíveis (em <strong>laranja/azul</strong>).</p>
+        </div>
+      </div>`;
   }
 
   // ---------- Tela inicial (grade de serviços) ----------
@@ -891,14 +1124,13 @@
     const c = conta();
 
     if (acao === "abrir-servico") {
-      if (alvo.dataset.servico === "s3") { view = { tela: "s3-buckets", bucket: null, prefixo: "" }; render(); }
-      else if (alvo.dataset.servico === "ec2") { view = { tela: "ec2-instancias", bucket: null, prefixo: "" }; render(); }
-      else if (alvo.dataset.servico === "iam") { view = { tela: "iam-usuarios" }; render(); }
-      else if (alvo.dataset.servico === "lambda") { view = { tela: "lambda-funcoes" }; render(); }
-      else if (alvo.dataset.servico === "dynamodb") { view = { tela: "dynamo-tabelas" }; render(); }
-      else if (alvo.dataset.servico === "vpc") { view = { tela: "vpc-rede" }; render(); }
-      else if (alvo.dataset.servico === "rds") { view = { tela: "rds-bancos" }; render(); }
-      else if (alvo.dataset.servico === "cloudwatch") { view = { tela: "cw-painel" }; render(); }
+      const t = SERVICO_ABRIR[alvo.dataset.servico];
+      if (t) { view = { tela: t, bucket: null, prefixo: "" }; render(); }
+      return;
+    }
+    if (acao === "secao") {
+      view = { tela: "secao", servico: alvo.dataset.servico, secaoLabel: alvo.dataset.label };
+      render();
       return;
     }
     if (acao === "ver-roadmap") {

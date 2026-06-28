@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28b",
+      data: "28 jun 2026",
+      titulo: "🖥️ Console mais fiel à AWS",
+      itens: [
+        "Cada serviço agora tem a <b>barra de navegação lateral</b> igual à do console da AWS de verdade (ex.: no EC2 — Instances, Images, Elastic Block Store, Network & Security, Load Balancing, Auto Scaling).",
+        "Novo <b>painel (dashboard)</b> por serviço com o resumo de recursos e o status do serviço, no mesmo estilo do console real.",
+        "As seções que ainda não fazem parte do CLImb aparecem com o <b>estado-vazio</b> fiel à AWS — você reconhece o layout na hora.",
+      ],
+    },
+    {
       versao: "2026-06-28a",
       data: "28 jun 2026",
       titulo: "🎓 Simulados de certificação (Cloud Practitioner)",
