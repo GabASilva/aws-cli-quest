@@ -720,6 +720,98 @@ body.console-aberto { overflow: hidden; }
   .caws-nav-item { font-size: 0.78rem; padding: 7px 12px; }
 }
 
+/* Layout do painel (dashboard) */
+.caws-dash { display: flex; gap: 16px; align-items: flex-start; }
+.caws-dash-main { flex: 1; min-width: 0; }
+.caws-dash-side { width: 280px; flex: 0 0 280px; }
+.caws-rec-grade { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; margin-top: 10px; }
+.caws-rec-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 6px; background: transparent; border: none; border-bottom: 1px solid #eaeded; cursor: pointer; font: inherit; }
+.caws-rec-row:hover { background: rgba(0,115,187,0.06); }
+.caws-rec-row-l { color: #0073bb; font-size: 0.88rem; }
+.caws-rec-row-n { color: #16191f; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.caws-saude { font-size: 0.9rem; margin: 4px 0; }
+.caws-saude-ok { color: #1d8102; font-size: 0.8rem; }
+@media (max-width: 820px) { .caws-dash { flex-direction: column; } .caws-dash-side { width: 100%; flex-basis: auto; } }
+
+/* ===================================================================== */
+/* Console — MODO ESCURO, fiel ao AWS dark mode (o que o usuário usa).    */
+/* Reaproveita as variáveis dark do app pra ficar coeso. Tudo escopado    */
+/* em #consoleOverlay pra não vazar pro resto.                            */
+/* ===================================================================== */
+#consoleOverlay { background: #0c1420; color: var(--texto); }
+#consoleOverlay .caws-corpo { background: #0c1420; }
+#consoleOverlay .caws-topo { background: #0f1b2d; border-bottom: 1px solid #2a3650; }
+#consoleOverlay .caws-busca input { background: #0c1420; border-color: #2a3650; color: var(--texto); }
+
+#consoleOverlay .caws-nav { background: #0c1420; border-right-color: #2a3650; }
+#consoleOverlay .caws-nav-tit { color: var(--texto); border-bottom-color: #2a3650; }
+#consoleOverlay .caws-nav-item { color: #c5d0de; }
+#consoleOverlay .caws-nav-item:hover { background: #16243a; }
+#consoleOverlay .caws-nav-item.ativo { background: transparent; color: #4da3ff; border-left-color: #4da3ff; }
+#consoleOverlay .caws-nav-grupo { color: #9aa7b8; }
+#consoleOverlay .caws-nav-sep { background: #2a3650; }
+
+#consoleOverlay .caws-migalha { color: var(--texto-fraco); }
+#consoleOverlay .caws-migalha a { color: #4da3ff; }
+#consoleOverlay .caws-migalha em { color: #5b6b80; }
+
+#consoleOverlay .caws-secao,
+#consoleOverlay .caws-cab-servico h1,
+#consoleOverlay .caws-painel h3,
+#consoleOverlay .caws-form h1,
+#consoleOverlay .caws-estado-vazio h2 { color: var(--texto); }
+#consoleOverlay .caws-sub { color: var(--texto-fraco); }
+#consoleOverlay .caws-sub code,
+#consoleOverlay .caws-tag.cinza { background: #1b2738; color: #c5d0de; }
+
+#consoleOverlay .caws-painel,
+#consoleOverlay .caws-estado-vazio { background: #141d2b; border-color: #2a3650; }
+#consoleOverlay .caws-estado-vazio p { color: var(--texto-fraco); }
+
+#consoleOverlay .caws-servico { background: #141d2b; border-color: #2a3650; }
+#consoleOverlay .caws-servico:not(.desativado):hover { border-color: #4da3ff; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+#consoleOverlay .caws-servico-info strong { color: var(--texto); }
+#consoleOverlay .caws-servico-info small { color: var(--texto-fraco); }
+
+#consoleOverlay .caws-tabela { background: #141d2b; border-color: #2a3650; }
+#consoleOverlay .caws-tabela th { background: #101a28; color: #9aa7b8; border-bottom-color: #2a3650; }
+#consoleOverlay .caws-tabela td { border-bottom-color: #22304a; color: var(--texto); }
+#consoleOverlay .caws-tabela a { color: #4da3ff; }
+#consoleOverlay .caws-vazio { color: var(--texto-fraco); }
+
+#consoleOverlay .caws-rec-row { border-bottom-color: #22304a; }
+#consoleOverlay .caws-rec-row:hover { background: #16243a; }
+#consoleOverlay .caws-rec-row-l { color: #4da3ff; }
+#consoleOverlay .caws-rec-row-n { color: var(--texto); }
+#consoleOverlay .caws-saude-ok { color: var(--verde); }
+
+#consoleOverlay .caws-btn-secundario { background: transparent; color: #4da3ff; border-color: #3a6ea5; }
+#consoleOverlay .caws-btn-secundario:hover { background: #16243a; }
+#consoleOverlay .caws-btn-perigo { background: transparent; color: #ff7b72; border-color: #7a3b3b; }
+#consoleOverlay .caws-btn-perigo:hover { background: #2a1818; }
+#consoleOverlay .caws-link { color: #4da3ff; }
+#consoleOverlay .caws-link-perigo { color: #ff7b72; }
+
+#consoleOverlay .caws-estado.ok { color: var(--verde); }
+#consoleOverlay .caws-estado.pend { color: #ffb454; }
+#consoleOverlay .caws-estado.off { color: #8b99b0; }
+#consoleOverlay .caws-estado.fim { color: #ff6b6b; }
+
+#consoleOverlay .caws-campo > span { color: var(--texto); }
+#consoleOverlay .caws-campo input,
+#consoleOverlay .caws-campo select,
+#consoleOverlay .caws-inline-form select { background: #0c1420; border-color: #2a3650; color: var(--texto); }
+#consoleOverlay .caws-campo input:disabled { background: #18212f; color: #6b7889; }
+#consoleOverlay .caws-campo small,
+#consoleOverlay .caws-check,
+#consoleOverlay .caws-check small { color: var(--texto-fraco); }
+#consoleOverlay .caws-prefixo-nav { color: var(--texto-fraco); }
+#consoleOverlay .caws-prefixo-nav a { color: #4da3ff; }
+#consoleOverlay .caws-dica-rodape { color: var(--texto-fraco); }
+#consoleOverlay .caws-cli { background: #101a28; border-color: #2a3650; }
+#consoleOverlay .caws-cli code { color: #c5d0de; }
+#consoleOverlay .caws-sub code { background: #1b2738; }
+
 .caws-migalha {
   max-width: 1060px; margin: 0 auto; padding: 12px 28px 0;
   font-size: 0.82rem; color: #5f6b7a;

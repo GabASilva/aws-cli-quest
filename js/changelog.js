@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28c",
+      data: "28 jun 2026",
+      titulo: "🌙 Console em dark mode, igual ao AWS real",
+      itens: [
+        "O Console agora é <b>escuro, igual ao console da AWS de verdade</b> (dark mode), e combina com o resto do app.",
+        "A <b>navegação lateral</b> de cada serviço foi refeita item por item conforme o console real (EC2, S3, IAM, VPC, RDS) — mesma ordem, grupos e nomes.",
+        "Os <b>painéis</b> ganharam o bloco <b>Resources</b> em duas colunas e o <b>Service health</b>, no mesmo formato do AWS.",
+      ],
+    },
+    {
       versao: "2026-06-28b",
       data: "28 jun 2026",
       titulo: "🖥️ Console mais fiel à AWS",

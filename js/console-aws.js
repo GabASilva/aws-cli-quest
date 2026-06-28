@@ -79,36 +79,51 @@
   // Os rótulos e a ordem seguem os snapshots reais do console (us-west-2).
   const NAV = {
     s3: { titulo: "Amazon S3", itens: [
-      { l: "Buckets", tela: "s3-buckets" },
+      { grupo: "Buckets" },
+      { l: "General purpose buckets", tela: "s3-buckets" },
+      { l: "Directory buckets", secao: true },
+      { l: "Table buckets", secao: true },
+      { l: "Vector buckets", secao: true },
+      { grupo: "Files" },
+      { l: "File systems", secao: true },
+      { grupo: "Access management and security" },
       { l: "Access Points", secao: true },
-      { l: "Object Lambda Access Points", secao: true },
-      { l: "Multi-Region Access Points", secao: true },
-      { l: "Batch Operations", secao: true },
-      { l: "IAM Access Analyzer for S3", secao: true },
-      { sep: true },
-      { l: "Block Public Access settings for this account", secao: true },
+      { l: "Access Points for FSx", secao: true },
+      { l: "Access Grants", secao: true },
+      { l: "IAM Access Analyzer", secao: true },
+      { grupo: "Storage management and insights" },
       { l: "Storage Lens", secao: true },
+      { l: "Batch Operations", secao: true },
+      { sep: true },
+      { l: "Account and organization settings", secao: true },
+      { l: "AWS Marketplace for S3", secao: true },
     ] },
-    ec2: { titulo: "Amazon EC2", itens: [
-      { l: "EC2 Dashboard", tela: "ec2-dashboard" },
-      { l: "EC2 Global View", secao: true },
+    ec2: { titulo: "EC2", itens: [
+      { l: "Dashboard", tela: "ec2-dashboard" },
+      { l: "AWS Global View", secao: true },
       { l: "Events", secao: true },
       { grupo: "Instances" },
       { l: "Instances", tela: "ec2-instancias" },
       { l: "Instance Types", secao: true },
       { l: "Launch Templates", secao: true },
       { l: "Spot Requests", secao: true },
+      { l: "Savings Plans", secao: true },
       { l: "Reserved Instances", secao: true },
       { l: "Dedicated Hosts", secao: true },
+      { l: "Capacity Reservations", secao: true },
       { grupo: "Images" },
       { l: "AMIs", secao: true },
+      { l: "AMI Catalog", secao: true },
       { grupo: "Elastic Block Store" },
       { l: "Volumes", secao: true },
       { l: "Snapshots", secao: true },
+      { l: "Lifecycle Manager", secao: true },
       { grupo: "Network & Security" },
       { l: "Security Groups", secao: true },
       { l: "Elastic IPs", secao: true },
+      { l: "Placement Groups", secao: true },
       { l: "Key Pairs", secao: true },
+      { l: "Network Interfaces", secao: true },
       { grupo: "Load Balancing" },
       { l: "Load Balancers", secao: true },
       { l: "Target Groups", secao: true },
@@ -117,22 +132,77 @@
     ] },
     iam: { titulo: "Identity and Access Management (IAM)", itens: [
       { l: "Dashboard", tela: "iam-dashboard" },
-      { grupo: "Access management" },
-      { l: "User groups", secao: true },
-      { l: "Users", tela: "iam-usuarios" },
+      { grupo: "Access Management" },
       { l: "Roles", secao: true },
       { l: "Policies", secao: true },
+      { l: "IAM users", tela: "iam-usuarios" },
+      { l: "IAM user groups", secao: true },
       { l: "Identity providers", secao: true },
       { l: "Account settings", secao: true },
+      { l: "Root access management", secao: true },
       { grupo: "Access reports" },
       { l: "Access Analyzer", secao: true },
       { l: "Credential report", secao: true },
+      { l: "Organization activity", secao: true },
+      { l: "Service control policies", secao: true },
+    ] },
+    vpc: { titulo: "VPC dashboard", itens: [
+      { l: "VPC Dashboard", tela: "vpc-dashboard" },
+      { l: "AWS Global View", secao: true },
+      { grupo: "Virtual private cloud" },
+      { l: "Your VPCs", tela: "vpc-rede" },
+      { l: "Subnets", secao: true },
+      { l: "Route tables", secao: true },
+      { l: "Internet gateways", secao: true },
+      { l: "Egress-only internet gateways", secao: true },
+      { l: "Carrier gateways", secao: true },
+      { l: "DHCP option sets", secao: true },
+      { l: "Elastic IPs", secao: true },
+      { l: "Managed prefix lists", secao: true },
+      { l: "NAT gateways", secao: true },
+      { l: "Peering connections", secao: true },
+      { grupo: "Security" },
+      { l: "Network ACLs", secao: true },
+      { l: "Security groups", secao: true },
+      { grupo: "PrivateLink and Lattice" },
+      { l: "Endpoints", secao: true },
+      { l: "Endpoint services", secao: true },
+    ] },
+    rds: { titulo: "Aurora and RDS", itens: [
+      { l: "Dashboard", tela: "rds-dashboard" },
+      { l: "Databases", tela: "rds-bancos" },
+      { l: "Query editor", secao: true },
+      { l: "Performance insights", secao: true },
+      { l: "Snapshots", secao: true },
+      { l: "Exports in Amazon S3", secao: true },
+      { l: "Automated backups", secao: true },
+      { l: "Reserved instances", secao: true },
+      { l: "Proxies", secao: true },
+      { sep: true },
+      { l: "Subnet groups", secao: true },
+      { l: "Parameter groups", secao: true },
+      { l: "Option groups", secao: true },
+      { sep: true },
+      { l: "Events", secao: true },
+      { l: "Event subscriptions", secao: true },
+    ] },
+    cloudwatch: { titulo: "CloudWatch", itens: [
+      { l: "Dashboards", secao: true },
+      { grupo: "Alarms" },
+      { l: "All alarms", tela: "cw-painel" },
+      { grupo: "Logs" },
+      { l: "Log groups", secao: true },
+      { l: "Logs Insights", secao: true },
+      { grupo: "Metrics" },
+      { l: "All metrics", secao: true },
+      { l: "Explorer", secao: true },
     ] },
     lambda: { titulo: "AWS Lambda", itens: [
       { l: "Dashboard", tela: "lambda-dashboard" },
       { l: "Applications", secao: true },
       { l: "Functions", tela: "lambda-funcoes" },
-      { grupo: "Additional resources" },
+      { sep: true },
+      { l: "Additional resources", secao: true },
       { l: "Layers", secao: true },
     ] },
     dynamodb: { titulo: "DynamoDB", itens: [
@@ -144,39 +214,6 @@
       { l: "Backups", secao: true },
       { l: "Exports to S3", secao: true },
       { l: "Reserved capacity", secao: true },
-    ] },
-    vpc: { titulo: "Virtual Private Cloud", itens: [
-      { l: "VPC Dashboard", tela: "vpc-dashboard" },
-      { grupo: "Virtual private cloud" },
-      { l: "Your VPCs", tela: "vpc-rede" },
-      { l: "Subnets", secao: true },
-      { l: "Route tables", secao: true },
-      { l: "Internet gateways", secao: true },
-      { l: "NAT gateways", secao: true },
-      { grupo: "Security" },
-      { l: "Security groups", secao: true },
-      { l: "Network ACLs", secao: true },
-      { grupo: "Virtual private network (VPN)" },
-      { l: "Elastic IPs", secao: true },
-    ] },
-    rds: { titulo: "Amazon RDS", itens: [
-      { l: "Dashboard", tela: "rds-dashboard" },
-      { l: "Databases", tela: "rds-bancos" },
-      { l: "Snapshots", secao: true },
-      { l: "Performance insights", secao: true },
-      { l: "Parameter groups", secao: true },
-      { l: "Subnet groups", secao: true },
-      { l: "Events", secao: true },
-      { l: "Reserved instances", secao: true },
-    ] },
-    cloudwatch: { titulo: "CloudWatch", itens: [
-      { l: "Dashboards", secao: true },
-      { l: "Alarms", tela: "cw-painel" },
-      { grupo: "Logs" },
-      { l: "Log groups", secao: true },
-      { grupo: "Metrics" },
-      { l: "All metrics", secao: true },
-      { l: "Events", secao: true },
     ] },
   };
   // tela funcional -> serviço (define qual nav mostrar e o item ativo)
@@ -323,46 +360,67 @@
     const nome = SERVICO_NOME[sid] || sid;
     const lista = SERVICO_LISTA[sid];
     const regiao = (c && c.regiao) || "us-east-1";
-    let recursos = [];
-    if (sid === "ec2") {
-      const ins = Object.values(c.ec2.instancias);
-      recursos = [
-        { n: ins.filter((i) => i.estado === "running").length, l: "Instâncias em execução", tela: "ec2-instancias" },
-        { n: ins.filter((i) => i.estado === "stopped").length, l: "Instâncias paradas", tela: "ec2-instancias" },
-        { n: ins.filter((i) => i.estado !== "terminated").length, l: "Instâncias (total)", tela: "ec2-instancias" },
-      ];
-    } else if (sid === "iam") {
-      recursos = [{ n: Object.keys(c.iam.usuarios).length, l: "Usuários", tela: "iam-usuarios" }];
-    } else if (sid === "vpc") {
-      recursos = [
-        { n: c.vpc ? Object.keys(c.vpc.vpcs).length : 0, l: "VPCs", tela: "vpc-rede" },
-        { n: c.vpc ? Object.keys(c.vpc.subnets || {}).length : 0, l: "Sub-redes", tela: "vpc-rede" },
-      ];
-    } else if (sid === "rds") {
-      recursos = [{ n: c.rds ? Object.keys(c.rds.instancias).length : 0, l: "Bancos de dados", tela: "rds-bancos" }];
-    } else if (sid === "dynamodb") {
-      recursos = [{ n: Object.keys(c.dynamodb.tabelas).length, l: "Tabelas", tela: "dynamo-tabelas" }];
-    } else if (sid === "cloudwatch") {
-      recursos = [{ n: c.cloudwatch ? Object.keys(c.cloudwatch.alarmes).length : 0, l: "Alarmes", tela: "cw-painel" }];
-    } else if (sid === "lambda") {
-      recursos = [{ n: Object.keys(c.lambda.funcoes).length, l: "Funções", tela: "lambda-funcoes" }];
-    }
-    const cards = recursos.map((r) => `
-      <button class="caws-rec-card" data-acao="ir" data-tela="${r.tela}">
-        <span class="caws-rec-n">${r.n}</span>
-        <span class="caws-rec-l">${esc(r.l)}</span>
+    // Lista de recursos no estilo do painel real (rótulos em inglês, igual ao
+    // console; mostramos a contagem real do que o CLImb modela e 0 no resto —
+    // exatamente como o AWS exibe num ambiente novo).
+    const ins = c.ec2 ? Object.values(c.ec2.instancias) : [];
+    const nRun = ins.filter((i) => i.estado === "running").length;
+    const nInst = ins.filter((i) => i.estado !== "terminated").length;
+    const RES = {
+      ec2: [
+        { l: "Instances (running)", n: nRun }, { l: "Auto Scaling Groups", n: 0 },
+        { l: "Dedicated Hosts", n: 0 }, { l: "Elastic IPs", n: 0 },
+        { l: "Instances", n: nInst }, { l: "Key pairs", n: 0 },
+        { l: "Load balancers", n: 0 }, { l: "Placement groups", n: 0 },
+        { l: "Security groups", n: 0 }, { l: "Snapshots", n: 0 },
+        { l: "Volumes", n: 0 },
+      ],
+      iam: [
+        { l: "User groups", n: 0 }, { l: "Users", n: Object.keys(c.iam.usuarios).length },
+        { l: "Roles", n: 0 }, { l: "Policies", n: 0 }, { l: "Identity providers", n: 0 },
+      ],
+      vpc: [
+        { l: "VPCs", n: c.vpc ? Object.keys(c.vpc.vpcs).length : 0 },
+        { l: "Subnets", n: c.vpc ? Object.keys(c.vpc.subnets || {}).length : 0 },
+        { l: "Route Tables", n: 0 }, { l: "Internet Gateways", n: 0 },
+        { l: "NAT Gateways", n: 0 }, { l: "Network ACLs", n: 0 },
+        { l: "Security Groups", n: 0 }, { l: "Elastic IPs", n: 0 },
+        { l: "VPC Peering Connections", n: 0 }, { l: "Endpoint Services", n: 0 },
+      ],
+      rds: [
+        { l: "Databases", n: c.rds ? Object.keys(c.rds.instancias).length : 0 },
+        { l: "Snapshots", n: 0 }, { l: "Reserved instances", n: 0 },
+        { l: "Subnet groups", n: 0 }, { l: "Parameter groups", n: 0 },
+        { l: "Option groups", n: 0 },
+      ],
+      dynamodb: [{ l: "Tables", n: Object.keys(c.dynamodb.tabelas).length }],
+      lambda: [{ l: "Functions", n: Object.keys(c.lambda.funcoes).length }],
+      cloudwatch: [
+        { l: "Alarms", n: c.cloudwatch ? Object.keys(c.cloudwatch.alarmes).length : 0 },
+        { l: "In alarm", n: 0 },
+      ],
+    };
+    const recursos = RES[sid] || [];
+    const rows = recursos.map((r) => `
+      <button class="caws-rec-row" data-acao="ir" data-tela="${lista}">
+        <span class="caws-rec-row-l">${esc(r.l)}</span>
+        <span class="caws-rec-row-n">${r.n}</span>
       </button>`).join("");
     return `
       ${migalha([["Console", "home"], [nome, lista]])}
       <div class="caws-pagina">
-        <div class="caws-cab-servico"><h1>${esc(nome)} — Painel</h1></div>
-        <div class="caws-painel">
-          <h3>Recursos</h3>
-          <div class="caws-rec-grade">${cards || '<p class="caws-sub">Nenhum recurso ainda — crie o primeiro pelo menu à esquerda.</p>'}</div>
-        </div>
-        <div class="caws-painel">
-          <h3>Status do serviço</h3>
-          <p class="caws-saude"><span class="caws-saude-ok">●</span> O serviço está operando normalmente — Região ${esc(regiao)}.</p>
+        <div class="caws-cab-servico"><h1>Dashboard</h1></div>
+        <div class="caws-dash">
+          <div class="caws-painel caws-dash-main">
+            <h3>Resources</h3>
+            <p class="caws-sub">You are using the following Amazon ${esc(nome)} resources in the ${esc(regiao)} Region:</p>
+            <div class="caws-rec-grade">${rows}</div>
+          </div>
+          <div class="caws-painel caws-dash-side">
+            <h3>Service health</h3>
+            <p class="caws-saude"><span class="caws-saude-ok">●</span> Service is operating normally</p>
+            <p class="caws-sub">Region: ${esc(regiao)}</p>
+          </div>
         </div>
       </div>`;
   }
