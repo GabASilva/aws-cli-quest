@@ -16,6 +16,14 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28e",
+      data: "28 jun 2026",
+      titulo: "🖥️ Dashboard do EC2 igual ao real",
+      itens: [
+        "O painel do EC2 agora tem o <b>layout de 3 colunas</b> do console real, com os painéis <b>Launch instance</b>, <b>Service health</b> (com a tabela de <b>Zonas</b>), <b>Scheduled events</b>, <b>Account attributes</b>, <b>Explore AWS</b> e <b>Additional information</b> — além do Resources que já existia.",
+      ],
+    },
+    {
       versao: "2026-06-28d",
       data: "28 jun 2026",
       titulo: "📣📨 SNS e SQS no Console + telas mais fiéis",

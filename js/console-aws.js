@@ -367,7 +367,7 @@
     else if (view.tela === "rds-bancos") corpo.innerHTML = telaRds();
     else if (view.tela === "rds-criar") corpo.innerHTML = formRds();
     else if (view.tela === "cw-painel") corpo.innerHTML = telaCw();
-    else if (view.tela === "ec2-dashboard") corpo.innerHTML = telaDashboard("ec2");
+    else if (view.tela === "ec2-dashboard") corpo.innerHTML = telaEc2Dashboard();
     else if (view.tela === "iam-dashboard") corpo.innerHTML = telaDashboard("iam");
     else if (view.tela === "vpc-dashboard") corpo.innerHTML = telaDashboard("vpc");
     else if (view.tela === "rds-dashboard") corpo.innerHTML = telaDashboard("rds");
@@ -449,6 +449,85 @@
             <h3>Service health</h3>
             <p class="caws-saude"><span class="caws-saude-ok">●</span> Service is operating normally</p>
             <p class="caws-sub">Region: ${esc(regiao)}</p>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ---------- Dashboard do EC2 (fiel: 3 colunas + painéis do console real) ----------
+  function telaEc2Dashboard() {
+    const c = conta();
+    const regiao = (c && c.regiao) || "us-east-1";
+    const ins = c.ec2 ? Object.values(c.ec2.instancias) : [];
+    const nRun = ins.filter((i) => i.estado === "running").length;
+    const nInst = ins.filter((i) => i.estado !== "terminated").length;
+    const nKeys = Object.keys((c.ec2 && c.ec2.keyPairs) || {}).length;
+    const rec = [
+      ["Instances (running)", nRun], ["Auto Scaling Groups", 0],
+      ["Dedicated Hosts", 0], ["Elastic IPs", 0],
+      ["Instances", nInst], ["Key pairs", nKeys],
+      ["Load balancers", 0], ["Placement groups", 0],
+      ["Security groups", 0], ["Snapshots", 0], ["Volumes", 0],
+    ];
+    const recRows = rec.map(([l, n]) => `
+      <button class="caws-rec-row" data-acao="ir" data-tela="ec2-instancias">
+        <span class="caws-rec-row-l">${esc(l)}</span><span class="caws-rec-row-n">${n}</span>
+      </button>`).join("");
+    // Zonas de disponibilidade (mapeamento real do us-east-1; genérico nas demais)
+    const MAPA_AZ = { "us-east-1": [["us-east-1a", "use1-az6"], ["us-east-1b", "use1-az1"], ["us-east-1c", "use1-az2"], ["us-east-1d", "use1-az4"], ["us-east-1e", "use1-az3"], ["us-east-1f", "use1-az5"]] };
+    const zonas = MAPA_AZ[regiao] || ["a", "b", "c"].map((s, i) => [regiao + s, regiao.replace(/-\d+$/, "") + "-az" + (i + 1)]);
+    const zonasRows = zonas.map(([n, id]) => `<tr><td>${esc(n)}</td><td>${esc(id)}</td></tr>`).join("");
+    const vpcId = (c.vpc && Object.keys(c.vpc.vpcs)[0]) || "vpc-0d9e6fb7f2ec0acb";
+    return `
+      ${migalha([["Console", "home"], ["EC2", "ec2-instancias"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>EC2 Dashboard</h1></div>
+        <div class="caws-ec2dash">
+          <div class="caws-painel">
+            <div class="caws-painel-cab"><h3>Resources</h3><span class="caws-painel-ic">⚙&nbsp;⟳</span></div>
+            <p class="caws-sub">You are using the following Amazon EC2 resources in the ${esc(regiao)} Region:</p>
+            <div class="caws-rec-grade">${recRows}</div>
+          </div>
+          <div class="caws-painel">
+            <h3>Launch instance</h3>
+            <p class="caws-sub">To get started, launch an Amazon EC2 instance, which is a virtual server in the cloud.</p>
+            <div class="caws-form-acoes caws-acoes-inicio">
+              <button class="caws-btn-primario" data-acao="ec2-form-launch">Launch instance</button>
+              <button class="caws-btn-secundario" data-acao="secao" data-servico="ec2" data-label="Migrate a server">Migrate a server</button>
+            </div>
+            <p class="caws-sub">Note: Your instances will launch in the ${esc(regiao)} Region.</p>
+          </div>
+          <div class="caws-painel">
+            <h3>Service health</h3>
+            <p class="caws-saude"><span class="caws-saude-ok">●</span> Service is operating normally</p>
+            <p class="caws-sub">Region: ${esc(regiao)}</p>
+            <h4 class="caws-painel-sub">Zones</h4>
+            <table class="caws-tabela"><thead><tr><th>Zone name</th><th>Zone ID</th></tr></thead><tbody>${zonasRows}</tbody></table>
+          </div>
+          <div class="caws-painel">
+            <h3>Scheduled events</h3>
+            <p class="caws-sub">${esc(regiao)}</p>
+            <p class="caws-sub">No scheduled events</p>
+          </div>
+          <div class="caws-painel">
+            <h3>Account attributes</h3>
+            <p class="caws-painel-sub">Default VPC</p>
+            <a href="#" data-acao="abrir-servico" data-servico="vpc">${esc(vpcId)}</a>
+            <p class="caws-painel-sub">Settings</p>
+            <ul class="caws-lista-links">
+              <li>Data protection and security</li><li>Zones</li>
+              <li>EC2 Serial Console</li><li>Default credit specification</li>
+              <li>Console experiments</li>
+            </ul>
+          </div>
+          <div class="caws-painel">
+            <h3>Explore AWS</h3>
+            <p class="caws-sub"><strong>Desempenho até 40% melhor com Graviton</strong><br>Migre cargas para instâncias baseadas em Graviton para melhor custo-desempenho.</p>
+            <p class="caws-sub"><strong>Economize até 90% no EC2 com Spot Instances</strong><br>Combine opções de compra num único grupo de Auto Scaling.</p>
+          </div>
+          <div class="caws-painel">
+            <h3>Additional information</h3>
+            <ul class="caws-lista-links"><li>EC2 Documentation</li><li>Forums</li><li>Report an issue</li></ul>
           </div>
         </div>
       </div>`;

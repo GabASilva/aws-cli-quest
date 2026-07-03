@@ -733,6 +733,22 @@ body.console-aberto { overflow: hidden; }
 .caws-saude-ok { color: #1d8102; font-size: 0.8rem; }
 @media (max-width: 820px) { .caws-dash { flex-direction: column; } .caws-dash-side { width: 100%; flex-basis: auto; } }
 
+/* Dashboard rico do EC2 — 3 colunas (masonry via CSS columns) */
+.caws-ec2dash { column-count: 3; column-gap: 16px; margin-top: 6px; }
+.caws-ec2dash > .caws-painel { break-inside: avoid; width: 100%; display: inline-block; vertical-align: top; }
+.caws-painel-cab { display: flex; justify-content: space-between; align-items: center; }
+.caws-painel-cab h3 { margin: 0; }
+.caws-painel-ic { color: #9ba2ab; font-size: 0.95rem; letter-spacing: 3px; }
+.caws-painel-sub { margin: 0.7rem 0 0.3rem; font-size: 0.9rem; }
+.caws-acoes-inicio { justify-content: flex-start; margin: 4px 0 8px; }
+.caws-lista-links { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.caws-lista-links li { margin: 0.25rem 0; color: #0073bb; font-size: 0.85rem; }
+#consoleOverlay .caws-painel-ic { color: #9ba2ab; }
+#consoleOverlay .caws-lista-links li { color: #42b4ff; }
+#consoleOverlay .caws-painel-sub { color: #ebebf0; }
+@media (max-width: 1100px) { .caws-ec2dash { column-count: 2; } }
+@media (max-width: 720px) { .caws-ec2dash { column-count: 1; } }
+
 /* ===================================================================== */
 /* Console — MODO ESCURO, fiel ao AWS dark mode (o que o usuário usa).    */
 /* Reaproveita as variáveis dark do app pra ficar coeso. Tudo escopado    */
