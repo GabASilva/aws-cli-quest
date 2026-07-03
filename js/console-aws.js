@@ -67,6 +67,18 @@
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
     return (n / (1024 * 1024)).toFixed(1) + " MB";
   }
+  // Nome longo da região no estilo do console AWS (ex.: "EUA Leste (Norte da Virgínia) us-east-1").
+  const REGIOES_NOME = {
+    "us-east-1": "EUA Leste (Norte da Virgínia)", "us-east-2": "EUA Leste (Ohio)",
+    "us-west-1": "EUA Oeste (Norte da Califórnia)", "us-west-2": "EUA Oeste (Oregon)",
+    "sa-east-1": "América do Sul (São Paulo)", "eu-west-1": "Europa (Irlanda)",
+    "eu-central-1": "Europa (Frankfurt)", "ap-southeast-1": "Ásia-Pacífico (Singapura)",
+  };
+  function regiaoLonga(r) {
+    r = r || "us-east-1";
+    return (REGIOES_NOME[r] ? REGIOES_NOME[r] + " " : "") + r;
+  }
+  function azDaRegiao(r) { return (r || "us-east-1") + "a"; }
 
   // ---------- Estado de navegação do console ----------
   let view = { tela: "home", bucket: null, prefixo: "" };
@@ -215,6 +227,17 @@
       { l: "Exports to S3", secao: true },
       { l: "Reserved capacity", secao: true },
     ] },
+    sns: { titulo: "Amazon SNS", itens: [
+      { l: "Dashboard", secao: true },
+      { l: "Topics", tela: "sns-topicos" },
+      { l: "Subscriptions", secao: true },
+      { grupo: "Mobile" },
+      { l: "Push notifications", secao: true },
+      { l: "Text messaging (SMS)", secao: true },
+    ] },
+    sqs: { titulo: "Amazon SQS", itens: [
+      { l: "Queues", tela: "sqs-filas" },
+    ] },
   };
   // tela funcional -> serviço (define qual nav mostrar e o item ativo)
   const TELA_SERVICO = {
@@ -226,11 +249,13 @@
     "vpc-rede": "vpc", "vpc-dashboard": "vpc",
     "rds-bancos": "rds", "rds-criar": "rds", "rds-dashboard": "rds",
     "cw-painel": "cloudwatch",
+    "sns-topicos": "sns", "sns-criar": "sns",
+    "sqs-filas": "sqs", "sqs-criar": "sqs",
   };
   // serviço -> tela "principal" (lista) e dashboard (pra abrir/breadcrumb)
-  const SERVICO_LISTA = { s3: "s3-buckets", ec2: "ec2-instancias", iam: "iam-usuarios", lambda: "lambda-funcoes", dynamodb: "dynamo-tabelas", vpc: "vpc-rede", rds: "rds-bancos", cloudwatch: "cw-painel" };
-  const SERVICO_ABRIR = { s3: "s3-buckets", ec2: "ec2-dashboard", iam: "iam-dashboard", lambda: "lambda-dashboard", dynamodb: "dynamo-dashboard", vpc: "vpc-dashboard", rds: "rds-dashboard", cloudwatch: "cw-painel" };
-  const SERVICO_NOME = { ec2: "EC2", iam: "IAM", vpc: "VPC", rds: "RDS", dynamodb: "DynamoDB", cloudwatch: "CloudWatch", lambda: "Lambda", s3: "Amazon S3" };
+  const SERVICO_LISTA = { s3: "s3-buckets", ec2: "ec2-instancias", iam: "iam-usuarios", lambda: "lambda-funcoes", dynamodb: "dynamo-tabelas", vpc: "vpc-rede", rds: "rds-bancos", cloudwatch: "cw-painel", sns: "sns-topicos", sqs: "sqs-filas" };
+  const SERVICO_ABRIR = { s3: "s3-buckets", ec2: "ec2-dashboard", iam: "iam-dashboard", lambda: "lambda-dashboard", dynamodb: "dynamo-dashboard", vpc: "vpc-dashboard", rds: "rds-dashboard", cloudwatch: "cw-painel", sns: "sns-topicos", sqs: "sqs-filas" };
+  const SERVICO_NOME = { ec2: "EC2", iam: "IAM", vpc: "VPC", rds: "RDS", dynamodb: "DynamoDB", cloudwatch: "CloudWatch", lambda: "Lambda", s3: "Amazon S3", sns: "Amazon SNS", sqs: "Amazon SQS" };
 
   function servicoAtual() {
     if (view.tela === "secao") return view.servico || null;
@@ -348,6 +373,10 @@
     else if (view.tela === "rds-dashboard") corpo.innerHTML = telaDashboard("rds");
     else if (view.tela === "dynamo-dashboard") corpo.innerHTML = telaDashboard("dynamodb");
     else if (view.tela === "lambda-dashboard") corpo.innerHTML = telaDashboard("lambda");
+    else if (view.tela === "sns-topicos") corpo.innerHTML = telaSns();
+    else if (view.tela === "sns-criar") corpo.innerHTML = formSns();
+    else if (view.tela === "sqs-filas") corpo.innerHTML = telaSqs();
+    else if (view.tela === "sqs-criar") corpo.innerHTML = formSqs();
     else if (view.tela === "secao") corpo.innerHTML = telaSecao();
     else corpo.innerHTML = telaHome();
     corpo.scrollTop = 0;
@@ -444,6 +473,62 @@
       </div>`;
   }
 
+  // ---------- SNS / SQS (serviços novos — estado próprio, console-only por ora) ----------
+  function estadoSns(c) { if (!c.sns) c.sns = { topicos: {} }; if (!c.sns.topicos) c.sns.topicos = {}; return c.sns; }
+  function estadoSqs(c) { if (!c.sqs) c.sqs = { filas: {} }; if (!c.sqs.filas) c.sqs.filas = {}; return c.sqs; }
+  const NOME_SNS_SQS = /^[a-zA-Z0-9_-]{1,80}$/;
+
+  function telaSns() {
+    const c = conta(); const sns = estadoSns(c); const nomes = Object.keys(sns.topicos);
+    const linhas = nomes.length
+      ? nomes.map((n) => { const t = sns.topicos[n]; return `<tr><td>${esc(n)}</td><td>${esc(t.tipo || "Standard")}</td><td><code>${esc(t.arn)}</code></td><td><button class="caws-link-perigo" data-acao="sns-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`; }).join("")
+      : `<tr><td colspan="4" class="caws-vazio">Você não tem nenhum tópico. Clique em <strong>Create topic</strong>.</td></tr>`;
+    return `${migalha([["Console", "home"], ["Amazon SNS", "sns-topicos"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>Topics (${nomes.length})</h1><button class="caws-btn-primario" data-acao="ir" data-tela="sns-criar">Create topic</button></div>
+        <table class="caws-tabela"><thead><tr><th>Name</th><th>Type</th><th>ARN</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        ${dicaCli("Equivalente na AWS CLI:", "aws sns create-topic --name meu-topico")}
+      </div>`;
+  }
+  function formSns() {
+    return `${migalha([["Console", "home"], ["Amazon SNS", "sns-topicos"], ["Create topic", null]])}
+      <div class="caws-pagina caws-form"><h1>Create topic</h1>
+        <form data-form="sns-criar">
+          <label class="caws-campo"><span>Type</span>
+            <select name="tipo"><option value="Standard">Standard</option><option value="FIFO">FIFO (.fifo)</option></select></label>
+          <label class="caws-campo"><span>Name</span>
+            <input name="nome" autocomplete="off" spellcheck="false" placeholder="ex.: alertas-pedidos">
+            <small>Letras, números, hífen e sublinhado (até 80 caracteres).</small></label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes"><button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="sns-topicos">Cancelar</button><button type="submit" class="caws-btn-primario">Create topic</button></div>
+        </form></div>`;
+  }
+  function telaSqs() {
+    const c = conta(); const sqs = estadoSqs(c); const nomes = Object.keys(sqs.filas);
+    const linhas = nomes.length
+      ? nomes.map((n) => { const f = sqs.filas[n]; return `<tr><td>${esc(n)}</td><td>${esc(f.tipo || "Standard")}</td><td>${esc(f.criadoEm || "—")}</td><td>0</td><td><button class="caws-link-perigo" data-acao="sqs-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`; }).join("")
+      : `<tr><td colspan="5" class="caws-vazio">Você não tem nenhuma fila. Clique em <strong>Create queue</strong>.</td></tr>`;
+    return `${migalha([["Console", "home"], ["Amazon SQS", "sqs-filas"]])}
+      <div class="caws-pagina">
+        <div class="caws-cab-servico"><h1>Queues (${nomes.length})</h1><button class="caws-btn-primario" data-acao="ir" data-tela="sqs-criar">Create queue</button></div>
+        <table class="caws-tabela"><thead><tr><th>Name</th><th>Type</th><th>Created</th><th>Messages available</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        ${dicaCli("Equivalente na AWS CLI:", "aws sqs create-queue --queue-name minha-fila")}
+      </div>`;
+  }
+  function formSqs() {
+    return `${migalha([["Console", "home"], ["Amazon SQS", "sqs-filas"], ["Create queue", null]])}
+      <div class="caws-pagina caws-form"><h1>Create queue</h1>
+        <form data-form="sqs-criar">
+          <label class="caws-campo"><span>Type</span>
+            <select name="tipo"><option value="Standard">Standard</option><option value="FIFO">FIFO (.fifo)</option></select></label>
+          <label class="caws-campo"><span>Name</span>
+            <input name="nome" autocomplete="off" spellcheck="false" placeholder="ex.: fila-pedidos">
+            <small>Letras, números, hífen e sublinhado (até 80 caracteres).</small></label>
+          <p class="caws-erro" data-erro></p>
+          <div class="caws-form-acoes"><button type="button" class="caws-btn-secundario" data-acao="ir" data-tela="sqs-filas">Cancelar</button><button type="submit" class="caws-btn-primario">Create queue</button></div>
+        </form></div>`;
+  }
+
   // ---------- Tela inicial (grade de serviços) ----------
   function telaHome() {
     const c = conta();
@@ -455,6 +540,8 @@
     const nVpc = c.vpc ? Object.keys(c.vpc.vpcs).length : 0;
     const nDb = c.rds ? Object.keys(c.rds.instancias).length : 0;
     const nAlarme = c.cloudwatch ? Object.keys(c.cloudwatch.alarmes).length : 0;
+    const nTopicos = c.sns ? Object.keys(c.sns.topicos || {}).length : 0;
+    const nFilas = c.sqs ? Object.keys(c.sqs.filas || {}).length : 0;
     const servicos = [
       { id: "s3", icone: "🪣", nome: "S3", desc: "Armazenamento de objetos", ativo: true, extra: `${nBuckets} bucket(s)` },
       { id: "ec2", icone: "🖥️", nome: "EC2", desc: "Máquinas virtuais", ativo: true, extra: `${nInst} instância(s)` },
@@ -464,6 +551,8 @@
       { id: "dynamodb", icone: "🗄️", nome: "DynamoDB", desc: "Banco NoSQL", ativo: true, extra: `${nTab} tabela(s)` },
       { id: "rds", icone: "🛢️", nome: "RDS", desc: "Banco relacional", ativo: true, extra: `${nDb} banco(s)` },
       { id: "cloudwatch", icone: "📈", nome: "CloudWatch", desc: "Monitoramento e logs", ativo: true, extra: `${nAlarme} alarme(s)` },
+      { id: "sns", icone: "📣", nome: "SNS", desc: "Notificações (pub/sub)", ativo: true, extra: `${nTopicos} tópico(s)` },
+      { id: "sqs", icone: "📨", nome: "SQS", desc: "Filas de mensagens", ativo: true, extra: `${nFilas} fila(s)` },
     ];
     return `
       <div class="caws-pagina">
@@ -497,28 +586,24 @@
     const linhas = nomes.length
       ? nomes.map((n) => {
           const b = c.s3.buckets[n];
-          const nObj = Object.keys(b.objetos || {}).length;
-          const publico = b.website ? "Site estático ligado" : "Privado (bloqueado)";
           return `
             <tr>
               <td><a href="#" data-acao="abrir-bucket" data-bucket="${esc(n)}">🪣 ${esc(n)}</a></td>
-              <td>${esc(c.regiao || "us-east-1")}</td>
+              <td>${esc(regiaoLonga(c.regiao))}</td>
               <td>${esc(b.criadoEm || "—")}</td>
-              <td>${nObj} objeto(s)</td>
-              <td>${publico}</td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="5" class="caws-vazio">Você ainda não tem buckets. Clique em <strong>Criar bucket</strong> para começar.</td></tr>`;
+      : `<tr><td colspan="3" class="caws-vazio">Você não tem nenhum bucket.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["Amazon S3", "s3-buckets"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico">
-          <h1>🪣 Amazon S3 — Buckets</h1>
+          <h1>Buckets</h1>
           <button class="caws-btn-primario" data-acao="form-criar-bucket">Criar bucket</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>Região</th><th>Criado em</th><th>Objetos</th><th>Acesso</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Região da AWS</th><th>Data de criação</th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar buckets no CLI:", "aws s3 ls")}
@@ -689,25 +774,25 @@
           if (i.estado !== "terminated") acoes.push(`<button class="caws-link-perigo" data-acao="ec2-terminate" data-id="${esc(id)}">Encerrar</button>`);
           return `
             <tr>
+              <td>${esc(i.nome || "—")}</td>
               <td>${esc(id)}</td>
               <td>${badgeEstado(i.estado)}</td>
               <td>${esc(i.tipo)}</td>
-              <td>${esc(i.imagem)}</td>
-              <td>${esc(i.chave || "—")}</td>
+              <td>${esc(azDaRegiao(c.regiao))}</td>
               <td>${acoes.join(" ") || "—"}</td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="6" class="caws-vazio">Nenhuma instância. Clique em <strong>Executar instância</strong> para criar a primeira.</td></tr>`;
+      : `<tr><td colspan="6" class="caws-vazio">Você não tem nenhuma instância nesta região.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["EC2", "ec2-instancias"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico">
-          <h1>🖥️ EC2 — Instâncias</h1>
+          <h1>Instances</h1>
           <button class="caws-btn-primario" data-acao="ec2-form-launch">Executar instância</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>ID da instância</th><th>Estado</th><th>Tipo</th><th>AMI</th><th>Par de chaves</th><th></th></tr></thead>
+          <thead><tr><th>Nome</th><th>ID da instância</th><th>Estado</th><th>Tipo</th><th>Zona de disponibilidade</th><th></th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar instâncias no CLI:", "aws ec2 describe-instances")}
@@ -1191,6 +1276,22 @@
       render();
       return;
     }
+    if (acao === "sns-apagar") {
+      const n = alvo.dataset.nome;
+      if (!confirm(`Excluir o tópico "${n}"?`)) return;
+      delete estadoSns(c).topicos[n];
+      ecoTerminal(`(sns delete-topic) ${n} excluído`, "ok");
+      persistir(); render(); avisar(`🗑️ Tópico ${esc(n)} excluído`);
+      return;
+    }
+    if (acao === "sqs-apagar") {
+      const n = alvo.dataset.nome;
+      if (!confirm(`Excluir a fila "${n}"?`)) return;
+      delete estadoSqs(c).filas[n];
+      ecoTerminal(`(sqs delete-queue) ${n} excluída`, "ok");
+      persistir(); render(); avisar(`🗑️ Fila ${esc(n)} excluída`);
+      return;
+    }
     if (acao === "ver-roadmap") {
       // serviço ainda não disponível -> manda pro roadmap centralizado (changelog)
       if (typeof abrirChangelog === "function") abrirChangelog("breve");
@@ -1444,6 +1545,38 @@
       b.objetos[chave] = { tamanho: 0, enviadoEm: dataConsole() };
       ecoTerminal(`make_folder: s3://${view.bucket}/${chave}`, "ok");
       persistir(); render(); avisar(`📁 Pasta ${esc(nome)} criada`);
+      return;
+    }
+
+    if (tipo === "sns-criar") {
+      let nome = (form.nome.value || "").trim();
+      const fifo = form.tipo.value === "FIFO";
+      if (fifo && !/\.fifo$/.test(nome)) nome += ".fifo";
+      const base = nome.replace(/\.fifo$/, "");
+      if (!NOME_SNS_SQS.test(base)) { erro("Nome inválido. Use letras, números, hífen e sublinhado (até 80)."); return; }
+      const sns = estadoSns(c);
+      if (sns.topicos[nome]) { erro("Você já tem um tópico com esse nome."); return; }
+      const arn = `arn:aws:sns:${c.regiao || "us-east-1"}:123456789012:${nome}`;
+      sns.topicos[nome] = { arn, tipo: fifo ? "FIFO" : "Standard", criadoEm: dataConsole() };
+      ecoTerminal(`(sns create-topic) ${arn}`, "ok");
+      persistir(); view = { tela: "sns-topicos" }; render();
+      avisar(`✅ Tópico <strong>${esc(nome)}</strong> criado`);
+      return;
+    }
+
+    if (tipo === "sqs-criar") {
+      let nome = (form.nome.value || "").trim();
+      const fifo = form.tipo.value === "FIFO";
+      if (fifo && !/\.fifo$/.test(nome)) nome += ".fifo";
+      const base = nome.replace(/\.fifo$/, "");
+      if (!NOME_SNS_SQS.test(base)) { erro("Nome inválido. Use letras, números, hífen e sublinhado (até 80)."); return; }
+      const sqs = estadoSqs(c);
+      if (sqs.filas[nome]) { erro("Você já tem uma fila com esse nome."); return; }
+      const url = `https://sqs.${c.regiao || "us-east-1"}.amazonaws.com/123456789012/${nome}`;
+      sqs.filas[nome] = { url, tipo: fifo ? "FIFO" : "Standard", criadoEm: dataConsole() };
+      ecoTerminal(`(sqs create-queue) ${url}`, "ok");
+      persistir(); view = { tela: "sqs-filas" }; render();
+      avisar(`✅ Fila <strong>${esc(nome)}</strong> criada`);
       return;
     }
 

@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28d",
+      data: "28 jun 2026",
+      titulo: "📣📨 SNS e SQS no Console + telas mais fiéis",
+      itens: [
+        "Dois serviços novos no Console: <b>SNS</b> (tópicos/pub-sub) e <b>SQS</b> (filas) — crie, liste e exclua, com Standard e FIFO.",
+        "Telas de <b>EC2</b> e <b>S3</b> agora com as <b>colunas iguais às da AWS</b> (ex.: instâncias mostram Nome, ID, Estado, Tipo, Zona de disponibilidade) e as mesmas mensagens de lista vazia.",
+      ],
+    },
+    {
       versao: "2026-06-28c",
       data: "28 jun 2026",
       titulo: "🌙 Console em dark mode, igual ao AWS real",
