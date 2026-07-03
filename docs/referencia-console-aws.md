@@ -72,6 +72,43 @@ dropdown. Toolbar: "Saved filter sets", busca "Find Instance by attribute or tag
 not have any instances in this region / Launch instances". Painel inferior:
 "Select an instance".
 
+**Subpáginas do EC2 (colunas reais, extraídas ao vivo):**
+- **Volumes** (EBS): `Name` · `Volume ID` · `Type` · `Size` · `IOPS` ·
+  `Throughput` · `Snapshot ID` · `Created` · `Availability Zone` ·
+  `Volume state` · `Alarm status` · `Attached resources` · `Status check` ·
+  `Encryption` · `KMS key ID`. Botão **Create volume**.
+- **Snapshots**: `Name` · `Snapshot ID` · `Full snapshot size` · `Volume size`
+  · `Description` · `Storage tier` · `Snapshot status` · `Started` · `Progress`
+  · `Encryption` · `KMS key ID`. Botão **Create snapshot**.
+- **Security Groups**: `Name` · `Security group ID` · `Security group name` ·
+  `VPC ID` · `Description` · `Owner` · `Inbound rules count` ·
+  `Outbound rules count`. Botão **Create security group**.
+- **Key Pairs**: `Name` · `Type` · `Created` · `Fingerprint` · `ID`.
+  Botões **Create key pair** / `Import key pair`.
+- **Elastic IPs**: `Name` · `Allocated IPv4 address` · `Type` · `Allocation ID`
+  · `Reverse DNS record` · `Associated instance ID` · `Private IP address` ·
+  `Association ID` · `Network border group`. Botão **Allocate Elastic IP address**.
+- **AMIs**: `Name` · `AMI name` · `AMI ID` · `Source` · `Owner` · `Visibility` ·
+  `Status` · `Creation date` · `Platform` · `Root device type` · `Block devices`
+  · `Virtualization` · `Deprecation time` · `Last launched time`.
+- **Launch Templates**: `Name` · `Launch template ID` · `Default version` ·
+  `Latest version` · `Created by` · `Created time`. Botão **Create launch template**.
+- **Placement Groups**: `Group name` · `Group Id` · `Strategy` · `State` ·
+  `Partition` · `Group ARN` · `Parent group ID`. Botão **Create placement group**.
+- **Network Interfaces**: `Name` · `Network interface ID` · `Subnet ID` ·
+  `VPC ID` · `Availability Zone` · `Security group names/IDs` · `Interface Type`
+  · `Description` · `Instance ID` · `Status` · `Public IPv4 address` ·
+  `Primary private IPv4 address`.
+- **Load Balancers** (ELB): `Name` · `State` · `Type` · `Scheme` ·
+  `IP address type` · `VPC ID` · `Availability Zones` · `Security groups` ·
+  `DNS name` · `ARN` · `Date created`. Botão **Create load balancer**. Empty:
+  "No load balancers".
+- **Target Groups**: `Name` · `ARN` · `Port` · `Protocol` · `Target type` ·
+  `Load balancer` · `VPC ID`. Botão **Create target group**.
+- **Auto Scaling Groups**: botão **Create Auto Scaling group**. Colunas típicas:
+  `Name` · `Launch template/config` · `Instances` · `Status` ·
+  `Desired/Min/Max capacity` · `Availability Zones`.
+
 ---
 
 ## S3
@@ -95,10 +132,12 @@ Colunas: (checkbox) `Name` · `AWS Region` · `Creation date`. Empty state:
 containers: **Account snapshot** (Storage Lens, "Updated daily", botão "View
 dashboard") e **External access summary** ("Updated daily").
 
-**Objetos (dentro de um bucket)** **[OK]**: abas Objects / Properties /
-Permissions / Metrics / Management / Access Points. Toolbar Objects: `Upload`,
-`Create folder`, `Delete`, `Actions ▾`. Colunas: (checkbox) `Name` · `Type` ·
-`Last modified` · `Size` · `Storage class`.
+**Detalhe do bucket** **[OK]** (abas reais, confirmadas criando um bucket
+temporário): `Objects` · `Metadata` · `Properties` · `Permissions` · `Metrics`
+· `Management` · `File systems` · `Access Points`. Toolbar Objects: `Copy S3 URI`,
+`Copy URL`, `Download`, `Open`, `Delete`, `Actions ▾`, **Upload**, `Create folder`.
+Colunas Objects: (checkbox) `Name` · `Type` · `Last modified` · `Size` ·
+`Storage class`.
 
 ---
 
@@ -121,6 +160,15 @@ URL) · **Tools** (Policy simulator) · **Additional information**.
 `Last activity` · `MFA` · `Password age` · `Console last sign-in` ·
 `Access key ID` · `Active key age`. Botões: **Create user**, `Delete`.
 (No sandbox o IAM é **read-only** — criar usuário/grupo/policy é bloqueado.)
+
+**Subpáginas do IAM (colunas reais):**
+- **Roles** ("Roles (N)"): `Role name` · `Trusted entities` · `Last activity`.
+  Botão **Create role**.
+- **Policies** ("Policies (N)" — ~1500 gerenciadas pela AWS): `Policy name` ·
+  `Type` · `Used as` · `Description`. Botão **Create policy**.
+- **User groups**: `Group name` · `Users` · `Permissions` · `Creation time`.
+  Botão **Create group**.
+- **Identity providers**: `Name` · `Type` · `Creation time`. Botão **Add provider**.
 
 ---
 
@@ -147,6 +195,27 @@ Information**, **AWS Network Manager**.
 
 **Your VPCs**: colunas `Name` · `VPC ID` · `State` · `IPv4 CIDR` · `IPv6 CIDR` ·
 `DHCP option set` · `Main route table` · `Default VPC` · `Tenancy`.
+
+**Subpáginas do VPC (colunas reais):**
+- **Subnets**: `Name` · `Subnet ID` · `State` · `VPC` · `IPv4 CIDR` ·
+  `IPv6 CIDR` · `Available IPv4 addresses` · `Availability Zone` ·
+  `Route table` · `Network ACL` · `Default subnet`. Botão **Create subnet**.
+- **Route tables**: `Name` · `Route table ID` · `Explicit subnet associations`
+  · `Edge associations` · `Main` · `VPC` · `Owner ID`. Botão **Create route table**.
+- **Internet gateways**: `Name` · `Internet gateway ID` · `State` · `VPC ID` ·
+  `Owner`. Botão **Create internet gateway**.
+- **NAT gateways**: `Name` · `NAT gateway ID` · `Connectivity type` · `State` ·
+  `Primary public IPv4 address` · `Primary private IPv4 address` · `VPC` ·
+  `Subnet` · `Created`. Botão **Create NAT gateway**.
+- **Network ACLs**: `Name` · `Network ACL ID` · `Associated with` · `Default` ·
+  `VPC ID` · `Inbound rules count` · `Outbound rules count` · `Owner`.
+- **Endpoints**: `Name` · `VPC endpoint ID` · `Endpoint type` · `Status` ·
+  `Service name` · `VPC ID` · `Creation time`. Botão **Create endpoint**.
+- **Peering connections**: `Name` · `Peering connection ID` · `Status` ·
+  `Requester VPC` · `Accepter VPC`. **DHCP option sets**: `Name` ·
+  `DHCP option set ID` · `Owner`. **Managed prefix lists**: `Name` ·
+  `Prefix list ID` · `Max entries` · `Address family` · `State`.
+- **Security groups / Elastic IPs**: mesmas telas do EC2 (ver seção EC2).
 
 ---
 
@@ -214,9 +283,12 @@ Colunas: `Function name` · `Description` · `Package type` · `Runtime` · `Typ
 
 **Overview (CloudWatch › home)**: `<h1>` "Overview", seletor de janela de tempo
 (`1h`, `3h`, `12h`, `1d`, `1w`, `Custom`), painéis de métricas por recurso.
-**Alarms**: colunas `Name` · `State` · `Last state update` · `Conditions` ·
-`Actions`. **Log groups**: colunas `Log group` · `Retention` ·
-`Metric filters` · `Contributor Insights` · `Class`.
+**Alarms** (colunas reais): `Name` · `State` · `Actions` · `Actions muted` ·
+`Last state update (UTC)` · `Conditions`. Botão **Create alarm**.
+**Log groups** (colunas reais): `Log group` · `Log class` · `Anomaly detection`
+· `Deletion protection` · `Data protection` · `Retention` · `Metric filters` ·
+`Contributor Insights` · `Subscription filters`. Botão **Create log group**.
+**Metrics**: UI de gráfico (sem tabela de lista).
 
 ---
 
@@ -331,12 +403,66 @@ dois caminhos: "Add sign-in and sign-up experiences to your app" (User pools) e
 Streams** e **Data Firehose**. **Data Streams**: colunas `Name` · `Status` ·
 `Data retention period` · `Shard count / Capacity mode`.
 
+### EKS — Elastic Kubernetes Service
+`.../eks/home#/clusters` · Nav: Dashboard · **Clusters** · Settings ·
+Amazon EKS Anywhere. **Clusters**: botão **Create cluster**. Colunas:
+`Cluster name` · `Status` · `Kubernetes version` · `Support period` ·
+`Upgrade policy` · `Created` · `Provider`.
+
+### IoT Core
+`.../iot/home#/home` · Nav (grande): Monitor · **Connect** (Connect one/many
+devices, Domain configurations) · **Test** (Device Advisor, MQTT test client) ·
+Device Location · **Manage** (All devices → Things/Thing groups/Thing types,
+Greengrass devices, LPWAN devices, Software packages, Remote actions → Jobs,
+Message routing → Rules/Destinations, Retained messages) · **Security**
+(Certificates, Policies, CAs, Role aliases) · Logs · Billing groups · Settings.
+
+### Amazon Data Firehose (Kinesis Firehose)
+`.../firehose/home#/streams` · `<h1>` "Amazon Data Firehose"; botão
+**Create Firehose stream**. Colunas: `Firehose stream name` · `Source` ·
+`Destination` · `Creation time` · `Status`.
+
+### Serviços descontinuados / de nicho (sem console de lista pra replicar)
+- **S3 Glacier** (console próprio): "no longer accepting new customers" — hoje é
+  **classe de armazenamento do S3** (S3 Glacier Instant/Flexible/Deep Archive).
+- **Cloud9**: IDE no navegador (em descontinuação p/ novos clientes) — é um editor,
+  não uma lista de recursos.
+- **IoT Analytics**, **IoT Events**, **Kinesis Data Analytics**: consoles de
+  nicho/legados; baixa prioridade — replicar só se houver demanda.
+- **Resource Groups & Tag Editor**: utilitário transversal (agrupar/etiquetar
+  recursos); não é um "serviço" de recurso próprio.
+
 ### Glue e SageMaker (anotação rápida — telas ricas)
 - **Glue**: nav com Data Catalog (Databases, Tables, Crawlers, Connections),
   ETL jobs, Visual ETL, Notebooks, Data quality. Lista de **Jobs**: colunas
   `Name` · `Type` · `Last modified`.
 - **SageMaker**: nav com Studio, Domains, Notebooks, Training, Inference,
   Models. (Sandbox: instâncias ml.t/ml.m *.medium–xlarge, role LabRole.)
+
+---
+
+## Wizards de criação (seções dos formulários "Create …")
+Abri cada formulário e li as seções (sem criar recursos, exceto o bucket S3 temp
+que foi criado e **apagado** para documentar as abas de detalhe).
+- **S3 › Create bucket**: General configuration (AWS Region, Bucket type
+  general/directory, Bucket name) · Object Ownership (ACL disabled/enabled) ·
+  Block Public Access settings · Bucket Versioning (off/on) · Tags ·
+  Default encryption (SSE-S3 AES256 / SSE-KMS / DSSE-KMS, Bucket Key) ·
+  Advanced settings. Botões: `Cancel`, **Create bucket**.
+- **EC2 › Launch an instance**: Name and tags · Application and OS Images (AMI) ·
+  Instance type · Key pair (login) · Network settings · Configure storage ·
+  File systems · Advanced details · **Summary** (painel lateral + `Launch instance`).
+- **DynamoDB › Create table**: Table details (Table name, Partition key,
+  Sort key opcional) · Table settings (Default / Customize) · Tags.
+- **RDS › Create database**: Choose a database creation method (Standard/Easy) ·
+  Engine options · Templates (Production / Dev-Test / Free tier) · Settings
+  (DB identifier, Master username/senha) · Cluster storage · Availability &
+  durability · Connectivity · Monitoring · Additional configuration ·
+  Estimated monthly costs.
+- **SNS › Create topic** (Standard/FIFO, Name, Display name), **SQS › Create
+  queue** (Standard/FIFO, Name, Configuration), **Lambda › Create function**
+  (Author from scratch/Blueprint/Container, Function name, Runtime, Architecture,
+  Permissions→**LabRole** no sandbox).
 
 ---
 
