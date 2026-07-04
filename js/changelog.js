@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28f",
+      data: "28 jun 2026",
+      titulo: "📋 Telas do Console iguais às da AWS",
+      itens: [
+        "Padronizamos as telas de <b>IAM, Lambda, DynamoDB, VPC, RDS, CloudWatch</b> (e refinamos EC2/S3/SNS/SQS) com os <b>mesmos títulos e colunas do console real</b> — ex.: DynamoDB agora mostra Status, Partition key, Sort key e capacity mode; RDS mostra Status, Role, Region &amp; AZ.",
+        "As mensagens de lista vazia também ficaram iguais às da AWS.",
+      ],
+    },
+    {
       versao: "2026-06-28e",
       data: "28 jun 2026",
       titulo: "🖥️ Dashboard do EC2 igual ao real",

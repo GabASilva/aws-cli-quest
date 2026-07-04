@@ -561,7 +561,7 @@
     const c = conta(); const sns = estadoSns(c); const nomes = Object.keys(sns.topicos);
     const linhas = nomes.length
       ? nomes.map((n) => { const t = sns.topicos[n]; return `<tr><td>${esc(n)}</td><td>${esc(t.tipo || "Standard")}</td><td><code>${esc(t.arn)}</code></td><td><button class="caws-link-perigo" data-acao="sns-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`; }).join("")
-      : `<tr><td colspan="4" class="caws-vazio">Você não tem nenhum tópico. Clique em <strong>Create topic</strong>.</td></tr>`;
+      : `<tr><td colspan="4" class="caws-vazio">You don't have any topics. Click <strong>Create topic</strong>.</td></tr>`;
     return `${migalha([["Console", "home"], ["Amazon SNS", "sns-topicos"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico"><h1>Topics (${nomes.length})</h1><button class="caws-btn-primario" data-acao="ir" data-tela="sns-criar">Create topic</button></div>
@@ -585,12 +585,12 @@
   function telaSqs() {
     const c = conta(); const sqs = estadoSqs(c); const nomes = Object.keys(sqs.filas);
     const linhas = nomes.length
-      ? nomes.map((n) => { const f = sqs.filas[n]; return `<tr><td>${esc(n)}</td><td>${esc(f.tipo || "Standard")}</td><td>${esc(f.criadoEm || "—")}</td><td>0</td><td><button class="caws-link-perigo" data-acao="sqs-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`; }).join("")
-      : `<tr><td colspan="5" class="caws-vazio">Você não tem nenhuma fila. Clique em <strong>Create queue</strong>.</td></tr>`;
+      ? nomes.map((n) => { const f = sqs.filas[n]; const cbd = (f.tipo === "FIFO") ? "Disabled" : "-"; return `<tr><td>${esc(n)}</td><td>${esc(f.tipo || "Standard")}</td><td>${esc(f.criadoEm || "—")}</td><td>0</td><td>0</td><td>SSE-SQS</td><td>${cbd}</td><td><button class="caws-link-perigo" data-acao="sqs-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`; }).join("")
+      : `<tr><td colspan="8" class="caws-vazio">You don't have any queues. Click <strong>Create queue</strong>.</td></tr>`;
     return `${migalha([["Console", "home"], ["Amazon SQS", "sqs-filas"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico"><h1>Queues (${nomes.length})</h1><button class="caws-btn-primario" data-acao="ir" data-tela="sqs-criar">Create queue</button></div>
-        <table class="caws-tabela"><thead><tr><th>Name</th><th>Type</th><th>Created</th><th>Messages available</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        <table class="caws-tabela"><thead><tr><th>Name</th><th>Type</th><th>Created</th><th>Messages available</th><th>Messages in flight</th><th>Encryption</th><th>Content-based deduplication</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
         ${dicaCli("Equivalente na AWS CLI:", "aws sqs create-queue --queue-name minha-fila")}
       </div>`;
   }
@@ -672,7 +672,7 @@
               <td>${esc(b.criadoEm || "—")}</td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="3" class="caws-vazio">Você não tem nenhum bucket.</td></tr>`;
+      : `<tr><td colspan="3" class="caws-vazio">You don't have any buckets.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["Amazon S3", "s3-buckets"]])}
@@ -682,7 +682,7 @@
           <button class="caws-btn-primario" data-acao="form-criar-bucket">Criar bucket</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>Região da AWS</th><th>Data de criação</th></tr></thead>
+          <thead><tr><th>Name</th><th>AWS Region</th><th>Creation date</th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar buckets no CLI:", "aws s3 ls")}
@@ -743,17 +743,19 @@
     const linhasPastas = [...pastas].sort().map((p) => `
       <tr>
         <td><a href="#" data-acao="entrar-pasta" data-prefixo="${esc(prefixo + p)}">📁 ${esc(p)}</a></td>
-        <td>Pasta</td><td>—</td><td>—</td>
+        <td>Folder</td><td>—</td><td>—</td><td>—</td><td></td>
       </tr>`).join("");
     const linhasArq = arquivos.sort((a, b) => a.nome.localeCompare(b.nome)).map((a) => `
       <tr>
         <td>📄 ${esc(a.nome)}</td>
-        <td>Objeto</td>
+        <td>${esc((a.nome.split(".").pop() || "").toLowerCase())}</td>
+        <td>${esc(a.em || "—")}</td>
         <td>${bytesHumano(a.tam)}</td>
+        <td>Standard</td>
         <td><button class="caws-link-perigo" data-acao="apagar-objeto" data-chave="${esc(a.chave)}">Excluir</button></td>
       </tr>`).join("");
     const corpo = (linhasPastas + linhasArq) ||
-      `<tr><td colspan="4" class="caws-vazio">Bucket/pasta vazia. Use <strong>Carregar</strong> para enviar um arquivo.</td></tr>`;
+      `<tr><td colspan="6" class="caws-vazio">You don't have any objects. Use <strong>Upload</strong> to add one.</td></tr>`;
 
     // Migalha com navegação de prefixo
     const partes = prefixo ? prefixo.replace(/\/$/, "").split("/") : [];
@@ -768,12 +770,12 @@
       ${migalha([["Console", "home"], ["Amazon S3", "s3-buckets"], [view.bucket, null]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico">
-          <h1>🪣 ${esc(view.bucket)}</h1>
+          <h1>${esc(view.bucket)}</h1>
           <div class="caws-acoes-grupo">
-            <button class="caws-btn-secundario" data-acao="form-pasta">Criar pasta</button>
-            <button class="caws-btn-secundario" data-acao="form-upload">Carregar</button>
-            <button class="caws-btn-secundario" data-acao="esvaziar-bucket">Esvaziar</button>
-            <button class="caws-btn-perigo" data-acao="apagar-bucket">Excluir bucket</button>
+            <button class="caws-btn-secundario" data-acao="form-pasta">Create folder</button>
+            <button class="caws-btn-primario" data-acao="form-upload">Upload</button>
+            <button class="caws-btn-secundario" data-acao="esvaziar-bucket">Empty</button>
+            <button class="caws-btn-perigo" data-acao="apagar-bucket">Delete bucket</button>
           </div>
         </div>
         <div class="caws-prefixo-nav">
@@ -781,7 +783,7 @@
         </div>
         <div id="cawsPainelAcao"></div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>Tipo</th><th>Tamanho</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Type</th><th>Last modified</th><th>Size</th><th>Storage class</th><th></th></tr></thead>
           <tbody>${corpo}</tbody>
         </table>
         ${dicaCli("Listar o conteúdo no CLI:", `aws s3 ls s3://${view.bucket}${cliPrefixo}`)}
@@ -851,17 +853,19 @@
           if (i.estado === "running") acoes.push(`<button class="caws-link" data-acao="ec2-stop" data-id="${esc(id)}">Parar</button>`);
           if (i.estado === "stopped") acoes.push(`<button class="caws-link" data-acao="ec2-start" data-id="${esc(id)}">Iniciar</button>`);
           if (i.estado !== "terminated") acoes.push(`<button class="caws-link-perigo" data-acao="ec2-terminate" data-id="${esc(id)}">Encerrar</button>`);
+          const check = i.estado === "running" ? '<span class="caws-estado ok">✔ 2/2 checks passed</span>' : "—";
           return `
             <tr>
               <td>${esc(i.nome || "—")}</td>
               <td>${esc(id)}</td>
               <td>${badgeEstado(i.estado)}</td>
               <td>${esc(i.tipo)}</td>
+              <td>${check}</td>
               <td>${esc(azDaRegiao(c.regiao))}</td>
               <td>${acoes.join(" ") || "—"}</td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="6" class="caws-vazio">Você não tem nenhuma instância nesta região.</td></tr>`;
+      : `<tr><td colspan="7" class="caws-vazio">You do not have any instances in this region.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["EC2", "ec2-instancias"]])}
@@ -871,7 +875,7 @@
           <button class="caws-btn-primario" data-acao="ec2-form-launch">Executar instância</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>ID da instância</th><th>Estado</th><th>Tipo</th><th>Zona de disponibilidade</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Instance ID</th><th>Instance state</th><th>Instance type</th><th>Status check</th><th>Availability Zone</th><th></th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar instâncias no CLI:", "aws ec2 describe-instances")}
@@ -931,24 +935,25 @@
           const grupos = Object.values(c.iam.grupos).filter((g) => g.membros.includes(n)).length;
           return `
             <tr>
-              <td><a href="#" data-acao="iam-abrir-user" data-user="${esc(n)}">👤 ${esc(n)}</a></td>
-              <td>${esc(u.criadoEm || "—")}</td>
-              <td>${(u.politicas || []).length} política(s)</td>
-              <td>${grupos} grupo(s)</td>
+              <td><a href="#" data-acao="iam-abrir-user" data-user="${esc(n)}">${esc(n)}</a></td>
+              <td>/</td>
+              <td>${grupos}</td>
+              <td>None</td>
+              <td>None</td>
               <td><button class="caws-link-perigo" data-acao="iam-delete-user" data-user="${esc(n)}">Excluir</button></td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="5" class="caws-vazio">Nenhum usuário. Clique em <strong>Criar usuário</strong> para começar.</td></tr>`;
+      : `<tr><td colspan="6" class="caws-vazio">There are no IAM users. Create one to get started.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["IAM", "iam-usuarios"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico">
-          <h1>🔑 IAM — Usuários</h1>
-          <button class="caws-btn-primario" data-acao="iam-form-criar-user">Criar usuário</button>
+          <h1>Users</h1>
+          <button class="caws-btn-primario" data-acao="iam-form-criar-user">Create user</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>Criado em</th><th>Políticas</th><th>Grupos</th><th></th></tr></thead>
+          <thead><tr><th>User name</th><th>Path</th><th>Groups</th><th>Last activity</th><th>MFA</th><th></th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar usuários no CLI:", "aws iam list-users")}
@@ -1038,28 +1043,27 @@
           const f = c.lambda.funcoes[n];
           return `
             <tr>
-              <td>λ ${esc(n)}</td>
+              <td>${esc(n)}</td>
+              <td>Zip</td>
               <td>${esc(f.runtime)}</td>
-              <td>${esc(f.handler)}</td>
-              <td>${f.memoria} MB</td>
-              <td>${f.timeout}s</td>
+              <td>${esc(f.criadoEm || "—")}</td>
               <td>
                 <button class="caws-link" data-acao="lambda-invoke" data-fn="${esc(n)}">Testar</button>
                 <button class="caws-link-perigo" data-acao="lambda-delete" data-fn="${esc(n)}">Excluir</button>
               </td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="6" class="caws-vazio">Nenhuma função. Clique em <strong>Criar função</strong> para começar.</td></tr>`;
+      : `<tr><td colspan="5" class="caws-vazio">You have no functions in this region.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["Lambda", "lambda-funcoes"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico">
-          <h1>⚡ Lambda — Funções</h1>
-          <button class="caws-btn-primario" data-acao="lambda-form-criar">Criar função</button>
+          <h1>Functions</h1>
+          <button class="caws-btn-primario" data-acao="lambda-form-criar">Create function</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>Runtime</th><th>Handler</th><th>Memória</th><th>Timeout</th><th></th></tr></thead>
+          <thead><tr><th>Function name</th><th>Package type</th><th>Runtime</th><th>Last modified</th><th></th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar funções no CLI:", "aws lambda list-functions")}
@@ -1111,26 +1115,30 @@
     const linhas = nomes.length
       ? nomes.map((n) => {
           const t = c.dynamodb.tabelas[n];
+          const sk = (t.esquema.find((k) => k.KeyType === "RANGE") || {}).AttributeName || "-";
+          const cap = t.cobranca === "PAY_PER_REQUEST" ? "On-demand" : "Provisioned";
           return `
             <tr>
-              <td><a href="#" data-acao="dynamo-abrir-tabela" data-tabela="${esc(n)}">🗄️ ${esc(n)}</a></td>
+              <td><a href="#" data-acao="dynamo-abrir-tabela" data-tabela="${esc(n)}">${esc(n)}</a></td>
+              <td><span class="caws-estado ok">● Active</span></td>
               <td>${esc(pkDaTabela(t) || "—")}</td>
-              <td>${t.itens.length} item(ns)</td>
-              <td>${esc(t.cobranca)}</td>
+              <td>${esc(sk)}</td>
+              <td>${cap}</td>
+              <td>${cap}</td>
               <td><button class="caws-link-perigo" data-acao="dynamo-delete-table" data-tabela="${esc(n)}">Excluir</button></td>
             </tr>`;
         }).join("")
-      : `<tr><td colspan="5" class="caws-vazio">Nenhuma tabela. Clique em <strong>Criar tabela</strong> para começar.</td></tr>`;
+      : `<tr><td colspan="7" class="caws-vazio">You have no tables. Create one to get started.</td></tr>`;
 
     return `
       ${migalha([["Console", "home"], ["DynamoDB", "dynamo-tabelas"]])}
       <div class="caws-pagina">
         <div class="caws-cab-servico">
-          <h1>🗄️ DynamoDB — Tabelas</h1>
-          <button class="caws-btn-primario" data-acao="dynamo-form-criar">Criar tabela</button>
+          <h1>Tables</h1>
+          <button class="caws-btn-primario" data-acao="dynamo-form-criar">Create table</button>
         </div>
         <table class="caws-tabela">
-          <thead><tr><th>Nome</th><th>Chave de partição</th><th>Itens</th><th>Cobrança</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Status</th><th>Partition key</th><th>Sort key</th><th>Read capacity mode</th><th>Write capacity mode</th><th></th></tr></thead>
           <tbody>${linhas}</tbody>
         </table>
         ${dicaCli("Listar tabelas no CLI:", "aws dynamodb list-tables")}
@@ -1206,25 +1214,27 @@
       ? vpcs.map((v) => {
           const nSub = Object.values(c.vpc.subnets).filter((s) => s.vpc === v.id).length;
           return `<tr>
-            <td>${esc(v.id)}</td><td>${esc(v.cidr)}</td>
-            <td>${v.igw ? '<span class="caws-estado ok">● conectado</span>' : '<span class="caws-estado off">● sem gateway</span>'}</td>
-            <td>${nSub}</td>
+            <td>—</td>
+            <td>${esc(v.id)}</td>
+            <td><span class="caws-estado ok">● Available</span></td>
+            <td>${esc(v.cidr)}</td>
+            <td>default</td>
             <td>
               <button class="caws-link" data-acao="vpc-subnet" data-vpc="${esc(v.id)}">+ sub-rede</button>
               ${v.igw ? "" : `<button class="caws-link" data-acao="vpc-gateway" data-vpc="${esc(v.id)}">+ gateway</button>`}
               <button class="caws-link-perigo" data-acao="vpc-excluir" data-vpc="${esc(v.id)}">Excluir</button>
             </td></tr>`;
         }).join("")
-      : `<tr><td colspan="5" class="caws-vazio">Nenhuma VPC. Clique em <strong>Criar VPC</strong>.</td></tr>`;
+      : `<tr><td colspan="6" class="caws-vazio">You have no VPCs in this region.</td></tr>`;
     const subs = Object.values(c.vpc.subnets);
-    const subRows = subs.map((s) => `<tr><td>${esc(s.id)}</td><td>${esc(s.vpc)}</td><td>${esc(s.cidr)}</td><td>${esc(s.az)}</td></tr>`).join("");
+    const subRows = subs.map((s) => `<tr><td>${esc(s.id)}</td><td><span class="caws-estado ok">● Available</span></td><td>${esc(s.vpc)}</td><td>${esc(s.cidr)}</td><td>${esc(s.az)}</td></tr>`).join("");
     return `
       ${migalha([["Console", "home"], ["VPC", "vpc-rede"]])}
       <div class="caws-pagina">
-        <div class="caws-cab-servico"><h1>🛜 VPC — Rede</h1><button class="caws-btn-primario" data-acao="vpc-form-criar">Criar VPC</button></div>
+        <div class="caws-cab-servico"><h1>Your VPCs</h1><button class="caws-btn-primario" data-acao="vpc-form-criar">Create VPC</button></div>
         <div id="cawsPainelAcao"></div>
-        <table class="caws-tabela"><thead><tr><th>VPC</th><th>CIDR</th><th>Internet gateway</th><th>Sub-redes</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
-        ${subs.length ? `<h2 class="caws-secao">Sub-redes</h2><table class="caws-tabela"><thead><tr><th>Subnet</th><th>VPC</th><th>CIDR</th><th>AZ</th></tr></thead><tbody>${subRows}</tbody></table>` : ""}
+        <table class="caws-tabela"><thead><tr><th>Name</th><th>VPC ID</th><th>State</th><th>IPv4 CIDR</th><th>Tenancy</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        ${subs.length ? `<h2 class="caws-secao">Subnets</h2><table class="caws-tabela"><thead><tr><th>Subnet ID</th><th>State</th><th>VPC</th><th>IPv4 CIDR</th><th>Availability Zone</th></tr></thead><tbody>${subRows}</tbody></table>` : ""}
         ${dicaCli("Criar rede no CLI:", "aws ec2 create-vpc --cidr-block 10.0.0.0/16")}
       </div>`;
   }
@@ -1247,19 +1257,23 @@
     const dbs = Object.values(c.rds.instancias);
     const linhas = dbs.length
       ? dbs.map((d) => `<tr>
-          <td>${esc(d.id)}</td><td>${esc(d.engine)}</td><td>${esc(d.classe)}</td><td>${badgeRds(d.status)}</td>
-          <td style="font-size:.76rem">porta ${d.porta}</td>
+          <td>${esc(d.id)}</td>
+          <td>${badgeRds(d.status)}</td>
+          <td>Instance</td>
+          <td>${esc(d.engine)}</td>
+          <td>${esc((c.regiao || "us-east-1") + "a")}</td>
+          <td>${esc(d.classe)}</td>
           <td>
             ${d.status === "available" ? `<button class="caws-link" data-acao="rds-stop" data-db="${esc(d.id)}">Parar</button>` : ""}
             ${d.status === "stopped" ? `<button class="caws-link" data-acao="rds-start" data-db="${esc(d.id)}">Iniciar</button>` : ""}
             <button class="caws-link-perigo" data-acao="rds-excluir" data-db="${esc(d.id)}">Excluir</button>
           </td></tr>`).join("")
-      : `<tr><td colspan="6" class="caws-vazio">Nenhum banco. Clique em <strong>Criar banco</strong>.</td></tr>`;
+      : `<tr><td colspan="7" class="caws-vazio">You have no databases.</td></tr>`;
     return `
       ${migalha([["Console", "home"], ["RDS", "rds-bancos"]])}
       <div class="caws-pagina">
-        <div class="caws-cab-servico"><h1>🛢️ RDS — Bancos</h1><button class="caws-btn-primario" data-acao="ir" data-tela="rds-criar">Criar banco</button></div>
-        <table class="caws-tabela"><thead><tr><th>Identificador</th><th>Engine</th><th>Classe</th><th>Estado</th><th>Endpoint</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        <div class="caws-cab-servico"><h1>Databases</h1><button class="caws-btn-primario" data-acao="ir" data-tela="rds-criar">Create database</button></div>
+        <table class="caws-tabela"><thead><tr><th>DB identifier</th><th>Status</th><th>Role</th><th>Engine</th><th>Region &amp; AZ</th><th>Size</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
         ${dicaCli("Listar bancos no CLI:", "aws rds describe-db-instances")}
       </div>`;
   }
@@ -1287,22 +1301,22 @@
     const c = conta(); c.cloudwatch = c.cloudwatch || { alarmes: {} }; c.logs = c.logs || { grupos: {} };
     const al = Object.values(c.cloudwatch.alarmes);
     const alRows = al.length
-      ? al.map((a) => `<tr><td>${esc(a.nome)}</td><td>${esc(a.metrica)}</td><td>${esc(a.threshold == null ? "—" : a.threshold)}</td><td><span class="caws-estado ok">● ${esc(a.estado)}</span></td><td><button class="caws-link-perigo" data-acao="cw-del-alarme" data-nome="${esc(a.nome)}">Excluir</button></td></tr>`).join("")
-      : `<tr><td colspan="5" class="caws-vazio">Nenhum alarme.</td></tr>`;
+      ? al.map((a) => `<tr><td>${esc(a.nome)}</td><td><span class="caws-estado ok">● ${esc(a.estado)}</span></td><td>${esc(a.metrica)} &gt; ${esc(a.threshold == null ? "—" : a.threshold)}</td><td><button class="caws-link-perigo" data-acao="cw-del-alarme" data-nome="${esc(a.nome)}">Excluir</button></td></tr>`).join("")
+      : `<tr><td colspan="4" class="caws-vazio">You have no alarms.</td></tr>`;
     const gr = Object.values(c.logs.grupos);
     const grRows = gr.length
-      ? gr.map((g) => `<tr><td>${esc(g.nome)}</td><td><button class="caws-link-perigo" data-acao="cw-del-grupo" data-nome="${esc(g.nome)}">Excluir</button></td></tr>`).join("")
-      : `<tr><td colspan="2" class="caws-vazio">Nenhum grupo de logs.</td></tr>`;
+      ? gr.map((g) => `<tr><td>${esc(g.nome)}</td><td>Never expire</td><td><button class="caws-link-perigo" data-acao="cw-del-grupo" data-nome="${esc(g.nome)}">Excluir</button></td></tr>`).join("")
+      : `<tr><td colspan="3" class="caws-vazio">You have no log groups.</td></tr>`;
     return `
       ${migalha([["Console", "home"], ["CloudWatch", "cw-painel"]])}
       <div class="caws-pagina">
-        <div class="caws-cab-servico"><h1>📈 CloudWatch</h1>
-          <div class="caws-acoes-grupo"><button class="caws-btn-secundario" data-acao="cw-form-alarme">Criar alarme</button><button class="caws-btn-secundario" data-acao="cw-criar-grupo">Criar grupo de logs</button></div></div>
+        <div class="caws-cab-servico"><h1>CloudWatch</h1>
+          <div class="caws-acoes-grupo"><button class="caws-btn-secundario" data-acao="cw-form-alarme">Create alarm</button><button class="caws-btn-secundario" data-acao="cw-criar-grupo">Create log group</button></div></div>
         <div id="cawsPainelAcao"></div>
-        <h2 class="caws-secao">Alarmes</h2>
-        <table class="caws-tabela"><thead><tr><th>Nome</th><th>Métrica</th><th>Limite</th><th>Estado</th><th></th></tr></thead><tbody>${alRows}</tbody></table>
-        <h2 class="caws-secao">Grupos de logs</h2>
-        <table class="caws-tabela"><thead><tr><th>Grupo</th><th></th></tr></thead><tbody>${grRows}</tbody></table>
+        <h2 class="caws-secao">Alarms</h2>
+        <table class="caws-tabela"><thead><tr><th>Name</th><th>State</th><th>Conditions</th><th></th></tr></thead><tbody>${alRows}</tbody></table>
+        <h2 class="caws-secao">Log groups</h2>
+        <table class="caws-tabela"><thead><tr><th>Log group</th><th>Retention</th><th></th></tr></thead><tbody>${grRows}</tbody></table>
         ${dicaCli("Criar alarme no CLI:", "aws cloudwatch put-metric-alarm --alarm-name NOME --metric-name CPUUtilization --namespace AWS/EC2 --threshold 80 --comparison-operator GreaterThanThreshold")}
       </div>`;
   }
