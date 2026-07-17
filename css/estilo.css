@@ -644,9 +644,17 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 
 /* ---------- Responsivo simples ---------- */
 @media (max-width: 760px) {
-  main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-  #sidebar { max-height: 34vh; }
+  /* No celular a página ROLA (em vez de espremer tudo em 100vh, o que fazia o
+     terminal transbordar por cima do rodapé). Empilha header, sidebar, centro
+     e rodapé como um documento normal. */
+  html, body { height: auto; }
+  body { display: block; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
+  header { position: sticky; top: 0; z-index: 50; }
+  main { display: block; min-height: 0; }
+  #sidebar { max-height: 46vh; border-right: none; border-bottom: 1px solid var(--borda); }
   #cardDesafio { max-height: none; }
+  .centro { min-height: 58vh; }
+  #terminal { min-height: 260px; }
   .grade-conceitos { grid-template-columns: 1fr; }
   .grade-planos { grid-template-columns: 1fr; }
   /* header enxuto: logo + streak + ☰ na 1ª linha; barra de XP em linha própria */
@@ -656,6 +664,11 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   .nivel-box { order: 5; flex-basis: 100%; min-width: 0; max-width: none; }
   .streak { font-size: 0.9rem; padding: 4px 10px; }
   .menu-mobile-btn { margin-left: auto; }
+  /* rodapé enxuto: a dica longa de "Manuais" quebrava em várias linhas */
+  footer { flex-wrap: wrap; justify-content: center; gap: 6px; padding: 6px 10px; }
+  footer > span { display: none; }
+  footer button { font-size: 0.72rem; padding: 5px 10px; }
+  .aviso-marca { font-size: 0.62rem; padding: 6px 12px 10px; }
 }
 
 /* Menu ☰ do mobile (mobile-nav.js) */

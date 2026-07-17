@@ -21,6 +21,7 @@
       titulo: "📱 App melhor no celular",
       itens: [
         "No celular, os botões do topo (Conceitos, Conquistas, Turmas, Simulados, Console, Ranking…) agora ficam num <b>menu ☰</b> — o cabeçalho parou de ocupar meia tela.",
+        "A tela agora <b>rola normalmente</b> no celular: o rodapé não invade mais o meio e o terminal ganhou espaço de verdade (o topo fica fixo ao rolar).",
         "As tabelas do Console <b>rolam na horizontal</b> em vez de ficarem espremidas.",
       ],
     },
