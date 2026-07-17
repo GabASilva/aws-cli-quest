@@ -379,6 +379,14 @@
     else if (view.tela === "sqs-criar") corpo.innerHTML = formSqs();
     else if (view.tela === "secao") corpo.innerHTML = telaSecao();
     else corpo.innerHTML = telaHome();
+    // tabelas largas rolam na horizontal (evita amontoar no mobile)
+    corpo.querySelectorAll("table.caws-tabela").forEach((t) => {
+      if (t.parentElement && t.parentElement.classList.contains("caws-tbl-scroll")) return;
+      const w = document.createElement("div");
+      w.className = "caws-tbl-scroll";
+      t.parentNode.insertBefore(w, t);
+      w.appendChild(t);
+    });
     corpo.scrollTop = 0;
     renderNav();
   }

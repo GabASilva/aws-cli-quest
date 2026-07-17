@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28g",
+      data: "28 jun 2026",
+      titulo: "📱 App melhor no celular",
+      itens: [
+        "No celular, os botões do topo (Conceitos, Conquistas, Turmas, Simulados, Console, Ranking…) agora ficam num <b>menu ☰</b> — o cabeçalho parou de ocupar meia tela.",
+        "As tabelas do Console <b>rolam na horizontal</b> em vez de ficarem espremidas.",
+      ],
+    },
+    {
       versao: "2026-06-28f",
       data: "28 jun 2026",
       titulo: "📋 Telas do Console iguais às da AWS",

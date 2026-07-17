@@ -647,9 +647,34 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   #sidebar { max-height: 34vh; }
   #cardDesafio { max-height: none; }
-  header { flex-wrap: wrap; gap: 10px; }
   .grade-conceitos { grid-template-columns: 1fr; }
   .grade-planos { grid-template-columns: 1fr; }
+  /* header enxuto: logo + streak + ☰ na 1ª linha; barra de XP em linha própria */
+  header { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+  .logo { font-size: 1.05rem; }
+  .logo small { display: none; }
+  .nivel-box { order: 5; flex-basis: 100%; min-width: 0; max-width: none; }
+  .streak { font-size: 0.9rem; padding: 4px 10px; }
+  .menu-mobile-btn { margin-left: auto; }
+}
+
+/* Menu ☰ do mobile (mobile-nav.js) */
+.menu-mobile-btn { display: none; font-size: 1.15rem; line-height: 1; padding: 6px 13px; }
+.menu-mobile-painel { display: none; }
+.menu-mobile-painel.aberto {
+  display: flex; flex-direction: column; gap: 6px;
+  position: fixed; top: 52px; right: 8px; left: 8px; z-index: 4500;
+  background: var(--painel); border: 1px solid var(--borda); border-radius: 12px;
+  padding: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); max-height: 78vh; overflow-y: auto;
+}
+.menu-mobile-painel .botao { width: 100%; text-align: left; font-size: 0.95rem; padding: 11px 14px; }
+
+/* Console: tabelas largas rolam na horizontal no mobile (não amontoam) */
+.caws-tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 760px) {
+  .caws-tbl-scroll .caws-tabela { min-width: 560px; }
+  #consoleOverlay .caws-pagina { padding-left: 14px; padding-right: 14px; }
+  #consoleOverlay .caws-nav { width: 150px; flex-basis: 150px; }
 }
 
 /* ============================================================
