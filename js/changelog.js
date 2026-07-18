@@ -16,6 +16,15 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-06-28h",
+      data: "28 jun 2026",
+      titulo: "🐧 +12 desafios de Linux",
+      itens: [
+        "A trilha <b>Linux essencial</b> ganhou <b>12 desafios novos</b> com o que mais aparece no dia a dia de cloud: ler permissões com <code>ls -l</code>, criar árvore de pastas com <code>mkdir -p</code>, anexar com <code>&gt;&gt;</code>, ver o começo de um log com <code>head</code>, filtrar com <code>grep</code>, ajustar permissões (<code>chmod</code>), preparar o <code>.ssh</code> e um projeto final juntando tudo.",
+        "De quebra, o <code>mkdir -p</code> do laboratório agora cria os diretórios pais que faltam, igual ao Linux de verdade.",
+      ],
+    },
+    {
       versao: "2026-06-28g",
       data: "28 jun 2026",
       titulo: "📱 App melhor no celular",

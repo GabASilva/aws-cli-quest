@@ -158,10 +158,20 @@ const COMANDOS_LINUX = {
     const alvo = args.find((a) => !a.startsWith("-"));
     if (!alvo) throw new ErroLinux("mkdir: faltou o nome do diretório (uso: mkdir <nome>)");
     const abs = resolver(alvo, conta.cwd);
+    if (comP) {
+      // -p cria toda a árvore de diretórios que faltar (e não reclama se já existe)
+      let no = conta.fs;
+      for (const seg of abs.split("/").filter(Boolean)) {
+        if (!no.filhos[seg]) no.filhos[seg] = { tipo: "dir", modo: "755", filhos: {} };
+        else if (no.filhos[seg].tipo !== "dir") throw new ErroLinux(`mkdir: '${alvo}': o caminho tem um arquivo no lugar de um diretório`);
+        no = no.filhos[seg];
+      }
+      return "";
+    }
     const { paiAbs, nome } = pai(abs);
     const p = noEm(conta, paiAbs);
     if (!p || p.tipo !== "dir") throw new ErroLinux(`mkdir: não é possível criar o diretório '${alvo}': caminho inexistente`);
-    if (p.filhos[nome]) { if (comP) return ""; throw new ErroLinux(`mkdir: não é possível criar o diretório '${alvo}': Arquivo existe`); }
+    if (p.filhos[nome]) throw new ErroLinux(`mkdir: não é possível criar o diretório '${alvo}': Arquivo existe`);
     p.filhos[nome] = { tipo: "dir", modo: "755", filhos: {} };
     return "";
   },
@@ -371,6 +381,59 @@ const DESAFIOS_LINUX = [
     descricao: "A habilidade mais importante: ler a documentação. Abra o manual do comando <b>ls</b> com <b>man</b>.",
     dicas: ["man <comando>", "man ls"], solucao: ["man ls"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "man" },
+
+  // --- Nível 2: fundamentos que faltavam (inspirado no "Learn Linux") ---
+  { id: "lnx-16", servico: "linux", nivel: 1, xp: 30, titulo: "Quem é você?",
+    descricao: "Toda instância EC2 loga como um usuário. Descubra quem você é com <b>whoami</b>.",
+    dicas: ["Digite: whoami"], solucao: ["whoami"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "whoami" },
+  { id: "lnx-17", servico: "linux", nivel: 2, xp: 50, titulo: "Veja as permissões (ls -l)",
+    descricao: "Liste com detalhes (permissões, dono, tamanho) usando <b>ls -l</b>. Repare na 1ª coluna, tipo <code>-rw-r--r--</code>: são as permissões de <b>dono</b>, <b>grupo</b> e <b>outros</b>.",
+    dicas: ["ls -l", "d no começo = diretório; rwx = ler/escrever/executar."], solucao: ["ls -l"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "ls" && (cmd.args || []).some((a) => a === "-l" || a === "-la" || a === "-al") },
+  { id: "lnx-18", servico: "linux", nivel: 2, xp: 70, titulo: "Estrutura de uma vez (mkdir -p)",
+    descricao: "Crie de uma tacada só a estrutura <b>deploy/artefatos</b> com <b>mkdir -p</b> — o <code>-p</code> cria os diretórios pais que faltam.",
+    dicas: ["mkdir -p deploy/artefatos"], solucao: ["mkdir -p deploy/artefatos"],
+    validar: (c) => { const n = noRelHome(c, "deploy/artefatos"); return !!n && n.tipo === "dir"; } },
+  { id: "lnx-19", servico: "linux", nivel: 2, xp: 70, titulo: "Anexe sem apagar (>>)",
+    descricao: "O <b>notas.txt</b> já tem conteúdo. <b>Anexe</b> a linha <b>Revisar billing</b> no fim (sem apagar o resto) usando o redirecionamento duplo <code>&gt;&gt;</code>.",
+    dicas: ['Com um &gt; só, você SOBRESCREVE. Com &gt;&gt;, você ANEXA.', 'echo "Revisar billing" >> notas.txt'],
+    solucao: ['echo "Revisar billing" >> notas.txt'],
+    validar: (c) => { const n = noRelHome(c, "notas.txt"); return !!n && n.tipo === "arquivo" && n.conteudo.includes("Revisar billing") && n.conteudo.includes("Estudar AWS CLI"); } },
+  { id: "lnx-20", servico: "linux", nivel: 3, xp: 70, titulo: "Só o começo do log (head)",
+    descricao: "Arquivos de log ficam enormes. Mostre só as <b>3 primeiras linhas</b> do <b>logs/app.log</b> com <b>head -n 3</b>.",
+    dicas: ["head -n 3 logs/app.log", "head mostra o começo; tail mostraria o fim."], solucao: ["head -n 3 logs/app.log"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "head" },
+  { id: "lnx-21", servico: "linux", nivel: 3, xp: 70, titulo: "Filtre o que interessa (grep)",
+    descricao: "No <b>logs/app.log</b> tem linhas de INFO e de erro. Mostre só as de <b>INFO</b> com <b>grep</b>.",
+    dicas: ["grep INFO logs/app.log"], solucao: ["grep INFO logs/app.log"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "grep" && /INFO/.test((cmd.args || []).join(" ")) },
+  { id: "lnx-22", servico: "linux", nivel: 3, xp: 60, titulo: "Restrinja um arquivo (chmod 600)",
+    descricao: "Deixe o <b>notas.txt</b> acessível só pro dono (ler e escrever) com <b>chmod 600</b> — ninguém mais mexe.",
+    dicas: ["chmod 600 notas.txt", "6 = rw- (ler+escrever); 0 = nada."], solucao: ["chmod 600 notas.txt"],
+    validar: (c) => { const n = noRelHome(c, "notas.txt"); return !!n && n.modo === "600"; } },
+  { id: "lnx-23", servico: "linux", nivel: 4, xp: 90, titulo: "Prepare o SSH (.ssh em 700)",
+    descricao: "Na AWS de verdade, a pasta <b>.ssh</b> precisa ser privada ou o SSH recusa. Crie a pasta <b>.ssh</b> e deixe ela em <b>700</b> (só o dono entra).",
+    dicas: ["mkdir .ssh", "chmod 700 .ssh", "700 = dono rwx, grupo e outros nada."],
+    solucao: ["mkdir .ssh", "chmod 700 .ssh"],
+    validar: (c) => { const n = noRelHome(c, ".ssh"); return !!n && n.tipo === "dir" && n.modo === "700"; } },
+  { id: "lnx-24", servico: "linux", nivel: 3, xp: 80, titulo: "Apague uma pasta inteira (rm -r)",
+    descricao: "A pasta <b>projetos</b> não é mais necessária. Apague ela e tudo que tem dentro com <b>rm -r</b>.",
+    dicas: ["rm -r projetos", "Sem o -r, o rm se recusa a apagar diretórios."], solucao: ["rm -r projetos"],
+    validar: (c) => !noRelHome(c, "projetos") },
+  { id: "lnx-25", servico: "linux", nivel: 2, xp: 50, titulo: "Espie o relatório (cat)",
+    descricao: "Veja o conteúdo do <b>relatorio.csv</b> com <b>cat</b>.",
+    dicas: ["cat relatorio.csv"], solucao: ["cat relatorio.csv"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" && /relatorio/.test((cmd.args || []).join(" ")) },
+  { id: "lnx-26", servico: "linux", nivel: 3, xp: 60, titulo: "Conte as linhas do notas",
+    descricao: "Quantas linhas o <b>notas.txt</b> tem agora (depois do que você anexou)? Descubra com <b>wc -l</b>.",
+    dicas: ["wc -l notas.txt"], solucao: ["wc -l notas.txt"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "wc" && /notas/.test((cmd.args || []).join(" ")) },
+  { id: "lnx-27", servico: "linux", nivel: 4, xp: 120, titulo: "Projeto do zero (juntando tudo)",
+    descricao: "Monte um projeto do começo ao fim: crie a pasta <b>projeto-final</b>, <b>entre</b> nela, e crie o <b>readme.md</b> com o texto <b>Deploy na AWS</b> dentro.",
+    dicas: ["mkdir projeto-final", "cd projeto-final", 'echo "Deploy na AWS" > readme.md'],
+    solucao: ["mkdir projeto-final", "cd projeto-final", 'echo "Deploy na AWS" > readme.md'],
+    validar: (c) => { const n = noRelHome(c, "projeto-final/readme.md"); return !!n && n.tipo === "arquivo" && n.conteudo.includes("Deploy na AWS"); } },
 ];
 
 (function () {
