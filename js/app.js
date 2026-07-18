@@ -488,6 +488,15 @@ async function iniciar() {
   let sessao = null;
   try { sessao = await apiIniciar(); } catch (e) { /* offline */ }
 
+  // Abrir um link de redefinição de senha (?reset=...) é o fluxo de "esqueci a
+  // senha": quem esqueceu NÃO está logado. Então deslogamos qualquer sessão
+  // restaurada, pra o reset nunca ficar amarrado a uma conta logada por engano
+  // (e pra, depois de redefinir, a pessoa entrar limpo com a senha nova).
+  if (new URLSearchParams(location.search).get("reset")) {
+    if (typeof apiSair === "function") apiSair();
+    sessao = null;
+  }
+
   if (sessao && sessao.perfil) {
     aplicarProgressoNuvem(sessao.perfil, sessao.progresso);
   } else {

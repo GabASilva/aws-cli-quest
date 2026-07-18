@@ -159,6 +159,14 @@
         await apiRedefinirSenha(token, senha);
         modal.remove();
         limparUrl();
+        // Reset é fluxo de "esqueci a senha": garante estado DESLOGADO antes de
+        // abrir o login (nunca cai no confirm de "Sair da conta?" e não deixa
+        // nenhuma sessão antiga pendurada). Depois a pessoa entra com a nova senha.
+        if (typeof apiSair === "function") apiSair();
+        try { if (typeof carregarJogo === "function") carregarJogo(); } catch (e2) {}
+        try { if (typeof atualizarBotaoConta === "function") atualizarBotaoConta(); } catch (e2) {}
+        try { if (typeof renderCabecalho === "function") renderCabecalho(); } catch (e2) {}
+        try { if (typeof renderSidebar === "function") renderSidebar(); } catch (e2) {}
         toast("✅ Senha redefinida! Agora é só entrar com a nova senha.", "sucesso");
         if (typeof abrirModalConta === "function") abrirModalConta();
       } catch (e) {
