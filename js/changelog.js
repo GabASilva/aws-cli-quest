@@ -16,10 +16,11 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
-      versao: "2026-07-23d",
+      versao: "2026-07-23e",
       data: "23 jul 2026",
       titulo: "🎓 Simulados: 1 por dia no plano gratuito",
       itens: [
+        "Os simulados agora pedem <b>conta</b> (criar é grátis e leva 10 segundos) — assim suas notas e tentativas ficam salvas na sua conta, e não presas a um navegador.",
         "No <b>plano gratuito</b> agora é <b>1 simulado por dia</b> — tempo de sobra pra revisar o gabarito comentado e treinar os pontos fracos antes da próxima tentativa. No <b>Pro</b>, simulados <b>ilimitados</b>.",
         "A vez do dia só é usada quando você <b>entrega</b> a prova: se fechar a aba sem querer ou desistir no meio, não perde o dia.",
         "O contador zera à <b>meia-noite de Brasília</b>, e a tela dos simulados mostra quanto falta pra liberar.",

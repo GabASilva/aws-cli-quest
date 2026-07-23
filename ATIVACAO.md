@@ -125,10 +125,11 @@ Vitalício só por concessão sua.
 
 ## Limite de simulados do plano gratuito
 
-Conta **free** faz **1 simulado por dia**; **Pro** é ilimitado. A contagem fica
-na conta (`usuarios[nome].simuladosDia`), então **não dá pra burlar** limpando o
-localStorage. O dia vira à **meia-noite de Brasília** (não em UTC) e a vez só é
-consumida quando a prova é **entregue**.
+Simulado **exige conta** (deslogado nem começa — vê a tela e é mandado pro
+cadastro). Conta **free** faz **1 simulado por dia**; **Pro** é ilimitado. A
+contagem fica na conta (`usuarios[nome].simuladosDia`), então **não dá pra
+burlar** limpando o localStorage nem deslogando. O dia vira à **meia-noite de
+Brasília** (não em UTC) e a vez só é consumida quando a prova é **entregue**.
 
 Pra mudar o limite (ex.: liberar 2/dia numa campanha):
 
@@ -136,7 +137,10 @@ Pra mudar o limite (ex.: liberar 2/dia numa campanha):
 flyctl secrets set SIMULADOS_LIMITE_FREE=2 -a aws-cli-quest
 ```
 
-> Quem está **deslogado** também tem 1/dia, mas aí a contagem é no navegador
-> (sem conta, não há o que rastrear no servidor — e travar por IP derrubaria uma
-> escola inteira, que sai por um IP só). Se isso virar problema, o caminho é
-> exigir login pra fazer simulado.
+> Efeito colateral esperado: **se o backend cair, ninguém faz simulado** (sem
+> servidor não dá pra validar conta). O resto do app continua funcionando
+> local — só os simulados dependem da conta.
+>
+> A contagem local (`climb.simulados.dia`) só entra em modo **degradado**: conta
+> já validada + servidor oscilando na hora do check. Quando o servidor volta, a
+> contagem dele é que vale.

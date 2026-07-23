@@ -4,10 +4,10 @@
 // Trava do plano free nos simulados: 1 simulado por dia (Pro = ilimitado).
 //
 // COMO FUNCIONA
+//  - Simulado EXIGE CONTA. Sem conta não há o que contar no servidor, e a
+//    contagem local seria burlada só deslogando — então deslogado nem começa.
 //  - Logado: o SERVIDOR manda (/api/simulados/status e /registrar). Não dá pra
 //    burlar limpando o localStorage — a contagem mora na conta.
-//  - Deslogado (anônimo): contagem no localStorage, o melhor que dá sem conta
-//    (travar por IP derrubaria uma escola inteira, que sai por um IP só).
 //  - A tentativa é consumida quando a prova é ENTREGUE, não ao iniciar: quem
 //    fecha a aba sem querer ou desiste no meio não perde o dia.
 //  - O dia vira à meia-noite de BRASÍLIA (igual ao servidor), não em UTC.
@@ -21,7 +21,7 @@
 (function () {
   if (typeof window === "undefined") return;
 
-  const CHAVE_DIA = "climb.simulados.dia"; // uso do dia (só pra anônimo)
+  const CHAVE_DIA = "climb.simulados.dia"; // uso do dia (só no modo degradado)
   const LIMITE_FREE = 1;
   const FUSO_BR_MS = 3 * 60 * 60 * 1000;
 
@@ -43,11 +43,18 @@
   function ehPro() {
     try { return typeof temPro === "function" && temPro(); } catch (e) { return false; }
   }
-  function logado() {
-    return !!(typeof api !== "undefined" && api && api.usuario && api.online);
+  // tem conta ativa nesta sessão?
+  function temConta() {
+    return !!(typeof api !== "undefined" && api && api.usuario);
+  }
+  // backend respondendo? (sem ele não dá pra validar conta nenhuma)
+  function backendNoAr() {
+    return !(typeof api !== "undefined" && api && api.online === false);
   }
 
-  // ---------- contagem local (anônimo) ----------
+  // ---------- contagem local ----------
+  // Só entra em cena no modo DEGRADADO: conta válida + servidor oscilando na
+  // hora do check. Deslogado não usa isso (deslogado nem faz simulado).
   function lerLocal() {
     try {
       const d = JSON.parse(localStorage.getItem(CHAVE_DIA) || "{}");
@@ -75,16 +82,22 @@
   function situacaoPro() {
     return { pro: true, limite: null, feitos: 0, restantes: null, podeIniciar: true, proximaLiberacao: null };
   }
+  // Sem conta (ou sem servidor pra validar a conta): não começa.
+  function situacaoSemConta() {
+    return { pro: false, podeIniciar: false, precisaConta: true, semServidor: !backendNoAr() };
+  }
 
-  // Busca a situação atual — servidor quando logado, local quando anônimo.
+  // Busca a situação atual. Simulado exige conta — o servidor é a fonte da verdade.
   async function buscarSituacao() {
+    if (!temConta()) { estado = situacaoSemConta(); return estado; }
     if (ehPro()) { estado = situacaoPro(); return estado; }
-    if (logado() && typeof apiSimuladosStatus === "function") {
+    if (typeof apiSimuladosStatus === "function") {
       try {
         estado = await apiSimuladosStatus();
         return estado;
       } catch (e) {
-        // servidor fora do ar / sessão caiu: não trava o aluno injustamente
+        // conta válida, mas o servidor oscilou agora: cai no modo degradado
+        // (limite local) em vez de travar quem já está logado.
         estado = situacaoLocal();
         return estado;
       }
@@ -98,6 +111,21 @@
     const s = await buscarSituacao();
     atualizarFaixa();
     if (s.podeIniciar) return true;
+
+    if (s.precisaConta) {
+      if (s.semServidor) {
+        if (typeof toast === "function") {
+          toast("📡 <strong>Sem conexão com o servidor.</strong> Os simulados voltam assim que a conexão voltar.", "neutro");
+        }
+        return false;
+      }
+      if (typeof toast === "function") {
+        toast("👤 <strong>Os simulados são pra quem tem conta.</strong> Criar é grátis e leva 10 segundos — e seu progresso fica salvo.", "neutro");
+      }
+      abrirConta();
+      return false;
+    }
+
     if (typeof toast === "function") {
       toast(`🔒 <strong>Você já fez seu simulado de hoje.</strong> Libera em ${faltaPara(s.proximaLiberacao)} — ou vire Pro pra fazer quantos quiser.`, "neutro");
     }
@@ -106,22 +134,39 @@
     return false;
   };
 
+  // fecha o overlay dos simulados e abre o modal de conta (o overlay é
+  // full-screen; abrir o modal por baixo dele não adiantaria)
+  function abrirConta() {
+    const sair = document.querySelector("#simSair");
+    if (sair) sair.click();
+    if (typeof abrirModalConta === "function") { try { abrirModalConta(); return; } catch (e) { /* ok */ } }
+    const btnConta = document.querySelector("#btnConta");
+    if (btnConta) btnConta.click();
+  }
+
   // ---------- gancho 2: prova entregue -> consome a tentativa ----------
   window.simuladoEntregue = async function () {
-    if (ehPro()) return;
-    if (logado() && typeof apiSimuladosRegistrar === "function") {
+    if (ehPro() || !temConta()) return; // Pro é ilimitado; sem conta nem começa
+    if (typeof apiSimuladosRegistrar === "function") {
       try {
         estado = await apiSimuladosRegistrar();
+        atualizarFaixa();
+        return;
       } catch (e) {
-        // 403 (já tinha usado) ou rede: reflete o que o servidor disser depois
-        try { estado = await apiSimuladosStatus(); } catch (e2) { /* ok */ }
+        // 403 (já tinha usado) ou rede caída: tenta reler do servidor
+        try {
+          estado = await apiSimuladosStatus();
+          atualizarFaixa();
+          return;
+        } catch (e2) { /* servidor fora: cai no local abaixo */ }
       }
-    } else {
-      const d = lerLocal();
-      d.feitos += 1;
-      gravarLocal(d);
-      estado = situacaoLocal();
     }
+    // modo degradado: marca localmente pra não liberar infinito enquanto o
+    // servidor não responde (quando ele voltar, a contagem dele é que vale)
+    const d = lerLocal();
+    d.feitos += 1;
+    gravarLocal(d);
+    estado = situacaoLocal();
     atualizarFaixa();
   };
 
@@ -134,6 +179,21 @@
 
   function htmlFaixa(s) {
     if (!s) return `<div class="sim-limite" id="simFaixaLimite"></div>`;
+    if (s.precisaConta) {
+      if (s.semServidor) {
+        return `<div class="sim-limite bloqueado" id="simFaixaLimite">
+          <span class="sim-limite-ic">📡</span>
+          <div><strong>Sem conexão com o servidor.</strong>
+          <small>Os simulados precisam da sua conta pra contar as tentativas — voltam assim que a conexão voltar.</small></div>
+        </div>`;
+      }
+      return `<div class="sim-limite bloqueado" id="simFaixaLimite">
+        <span class="sim-limite-ic">👤</span>
+        <div><strong>Os simulados são pra quem tem conta.</strong>
+        <small>Criar é <b>grátis</b> e leva 10 segundos. No plano gratuito é 1 simulado por dia — e seu histórico de notas fica salvo.</small></div>
+        <button class="sim-btn-pro" data-acao-limite="conta">👤 Criar conta / Entrar</button>
+      </div>`;
+    }
     if (s.pro) {
       return `<div class="sim-limite pro" id="simFaixaLimite">
         <span class="sim-limite-ic">⭐</span>
@@ -165,11 +225,12 @@
     atual.replaceWith(novo.firstElementChild);
   }
 
-  // clique no CTA do Pro: fecha o simulado e abre o painel de planos
+  // cliques nos CTAs da faixa (fecham o overlay full-screen antes de abrir o modal)
   document.addEventListener("click", (e) => {
-    const b = e.target.closest && e.target.closest('[data-acao-limite="pro"]');
+    const b = e.target.closest && e.target.closest("[data-acao-limite]");
     if (!b) return;
     e.preventDefault();
+    if (b.dataset.acaoLimite === "conta") return abrirConta();
     const sair = document.querySelector("#simSair");
     if (sair) sair.click();
     const btnPlano = document.querySelector("#btnPlano");
