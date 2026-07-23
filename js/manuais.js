@@ -23,6 +23,11 @@ SERVIÇOS DISPONÍVEIS
     apigateway  APIs HTTP gerenciadas
     route53     DNS e domínios
     cloudfront  CDN (cache nas bordas)
+    ecr         Registro de imagens de contêiner
+    ecs         Rodar contêineres (clusters, tarefas, serviços)
+    secretsmanager  Senhas e segredos
+    stepfunctions   Orquestração de passos (fluxos)
+    events      EventBridge: eventos e agendamentos
     sts         Identidade da sessão (get-caller-identity)
 
 MANUAIS
@@ -841,6 +846,58 @@ quando dá certo (igual ao AWS de verdade).`,
   "cloudfront.get-distribution": `aws cloudfront get-distribution\n\nUSO\n    aws cloudfront get-distribution --id <id>\n\nDetalhes da distribuição, incluindo o DomainName\n(ex.: d123abc.cloudfront.net) que você usa pra acessar.`,
   "cloudfront.create-invalidation": `aws cloudfront create-invalidation\n\nUSO\n    aws cloudfront create-invalidation --distribution-id <id> --paths "/*"\n\nApaga o cache das bordas. Use quando publicou uma versão nova e as\npessoas ainda veem a antiga. "/*" limpa tudo.\n(Na AWS real, invalidação em excesso é cobrada.)`,
   "cloudfront.list-invalidations": `aws cloudfront list-invalidations\n\nUSO\n    aws cloudfront list-invalidations --id <id>\n\nLista as invalidações já pedidas pra essa distribuição.`,
+
+  // ===== ECR (registro de imagens) =====
+  ecr: `aws ecr — Elastic Container Registry\n\nO "armário" das imagens de contêiner. A imagem é construída na sua\nmáquina (docker build), enviada pro ECR (docker push) e o ECS/EKS\nbaixa dali pra rodar.\n\nCOMANDOS\n    create-repository       cria um repositório\n    describe-repositories   lista os repositórios\n    get-login-password      senha temporária pro docker login\n    list-images             lista as imagens de um repositório\n    delete-repository       apaga o repositório`,
+  "ecr.create-repository": `aws ecr create-repository\n\nUSO\n    aws ecr create-repository --repository-name loja-imagens\n\nCria o repositório e devolve a repositoryUri — é ela que vai na\n"image" da task definition do ECS.`,
+  "ecr.describe-repositories": `aws ecr describe-repositories\n\nUSO\n    aws ecr describe-repositories\n\nLista os repositórios da conta com suas URIs.`,
+  "ecr.get-login-password": `aws ecr get-login-password\n\nUSO\n    aws ecr get-login-password\n    aws ecr get-login-password | docker login --username AWS --password-stdin <conta>.dkr.ecr.<regiao>.amazonaws.com\n\nGera uma senha temporária (12h) pro Docker autenticar no ECR.`,
+  "ecr.list-images": `aws ecr list-images\n\nUSO\n    aws ecr list-images --repository-name loja-imagens\n\nLista as tags de imagem do repositório. As imagens chegam pelo\n'docker push' — isso acontece fora da AWS CLI.`,
+  "ecr.delete-repository": `aws ecr delete-repository\n\nUSO\n    aws ecr delete-repository --repository-name loja-imagens [--force]\n\nApaga o repositório. Com imagens dentro, exige --force.`,
+
+  // ===== ECS (contêineres) =====
+  ecs: `aws ecs — Elastic Container Service\n\nRoda contêineres sem você cuidar de servidor (Fargate).\n\nAS TRÊS PEÇAS\n    CLUSTER          onde roda\n    TASK DEFINITION  a receita (qual imagem, quanta memória)\n    SERVICE          mantém N cópias da tarefa no ar pra sempre\n\nCOMANDOS\n    create-cluster / list-clusters / delete-cluster\n    register-task-definition / list-task-definitions\n    create-service / list-services / describe-services\n    update-service (escalar)  / delete-service`,
+  "ecs.create-cluster": `aws ecs create-cluster\n\nUSO\n    aws ecs create-cluster --cluster-name cluster-loja\n\nCria o cluster (o "lugar" onde as tarefas vão rodar).`,
+  "ecs.list-clusters": `aws ecs list-clusters\n\nUSO\n    aws ecs list-clusters\n\nLista os ARNs dos clusters da conta.`,
+  "ecs.register-task-definition": `aws ecs register-task-definition\n\nUSO\n    aws ecs register-task-definition --family tarefa-web --container-definitions file://tarefa-web.json\n    aws ecs register-task-definition --family tarefa-web --container-definitions '[{"name":"web","image":"nginx:latest","memory":512}]'\n\nCada registro cria uma REVISÃO nova (tarefa-web:1, :2, :3...) — as\nanteriores continuam existindo, então dá pra voltar atrás.`,
+  "ecs.list-task-definitions": `aws ecs list-task-definitions\n\nUSO\n    aws ecs list-task-definitions\n\nLista as task definitions registradas (com a revisão).`,
+  "ecs.create-service": `aws ecs create-service\n\nUSO\n    aws ecs create-service --cluster cluster-loja --service-name servico-web --task-definition tarefa-web --desired-count 2\n\nO serviço mantém --desired-count cópias rodando. Se uma cair, o ECS\nsobe outra sozinho.`,
+  "ecs.list-services": `aws ecs list-services\n\nUSO\n    aws ecs list-services --cluster cluster-loja\n\nLista os serviços (de um cluster, se você passar --cluster).`,
+  "ecs.describe-services": `aws ecs describe-services\n\nUSO\n    aws ecs describe-services --cluster cluster-loja --services servico-web\n\nMostra quantas cópias estão rodando x quantas você pediu.`,
+  "ecs.update-service": `aws ecs update-service\n\nUSO\n    aws ecs update-service --cluster cluster-loja --service servico-web --desired-count 5\n\nEscala o serviço (pra cima ou pra baixo) e também troca a versão da\ntask definition em produção.`,
+  "ecs.delete-service": `aws ecs delete-service\n\nUSO\n    aws ecs delete-service --cluster cluster-loja --service servico-web\n\nApaga o serviço. Precisa estar com 0 cópias (--desired-count 0) ou\nusar --force.`,
+  "ecs.delete-cluster": `aws ecs delete-cluster\n\nUSO\n    aws ecs delete-cluster --cluster cluster-loja\n\nApaga o cluster. Só funciona sem serviços ativos dentro.`,
+
+  // ===== Secrets Manager =====
+  secretsmanager: `aws secretsmanager — guarda senhas e chaves\n\nSenha no código vaza no primeiro commit. Aqui o segredo fica cifrado,\ncom permissão por IAM, e a aplicação busca pelo NOME em tempo de\nexecução — trocar a senha não exige novo deploy.\n\nCOMANDOS\n    create-secret      guarda um segredo\n    list-secrets       lista os segredos (sem mostrar valor)\n    get-secret-value   lê o valor\n    update-secret      troca o valor\n    delete-secret      marca pra apagar (com janela de recuperação)\n    restore-secret     desfaz a exclusão agendada`,
+  "secretsmanager.create-secret": `aws secretsmanager create-secret\n\nUSO\n    aws secretsmanager create-secret --name senha-banco-loja --secret-string troque-me-123\n\nGuarda o segredo cifrado. O valor pode ser texto ou JSON\n(ex.: {"usuario":"admin","senha":"..."}).`,
+  "secretsmanager.list-secrets": `aws secretsmanager list-secrets\n\nUSO\n    aws secretsmanager list-secrets\n\nLista os segredos — repare que o VALOR nunca aparece aqui.`,
+  "secretsmanager.get-secret-value": `aws secretsmanager get-secret-value\n\nUSO\n    aws secretsmanager get-secret-value --secret-id senha-banco-loja\n\nDevolve o SecretString. É esta chamada que a aplicação faz ao subir.`,
+  "secretsmanager.update-secret": `aws secretsmanager update-secret\n\nUSO\n    aws secretsmanager update-secret --secret-id senha-banco-loja --secret-string senha-nova\n\nCria uma versão nova do valor. Quem lê pelo nome já pega a nova.`,
+  "secretsmanager.delete-secret": `aws secretsmanager delete-secret\n\nUSO\n    aws secretsmanager delete-secret --secret-id senha-banco-loja --recovery-window-in-days 7\n    aws secretsmanager delete-secret --secret-id senha-banco-loja --force-delete-without-recovery\n\nPor padrão NÃO apaga na hora: agenda (7 a 30 dias) e dá pra desfazer\ncom restore-secret. O --force apaga de vez, sem volta.`,
+  "secretsmanager.restore-secret": `aws secretsmanager restore-secret\n\nUSO\n    aws secretsmanager restore-secret --secret-id senha-banco-loja\n\nCancela a exclusão agendada e devolve o segredo ao normal.`,
+
+  // ===== Step Functions =====
+  stepfunctions: `aws stepfunctions — orquestração de passos\n\nQuando um processo tem várias etapas (validar ➜ cobrar ➜ enviar), a\nmáquina de estados coordena, repete o que falhou e mostra em qual\npasso cada execução parou.\n\nCOMANDOS\n    create-state-machine     cria o fluxo (definição em JSON/ASL)\n    list-state-machines      lista os fluxos\n    describe-state-machine   mostra a definição\n    start-execution          roda o fluxo\n    list-executions          histórico de execuções\n    describe-execution       detalhe de uma execução\n    delete-state-machine     apaga o fluxo`,
+  "stepfunctions.create-state-machine": `aws stepfunctions create-state-machine\n\nUSO\n    aws stepfunctions create-state-machine --name pedido-fluxo --definition file://maquina-estados.json --role-arn arn:aws:iam::123456789012:role/papel-lambda\n\nA definição é escrita em ASL (Amazon States Language): precisa de\n"StartAt" e "States". Existe um maquina-estados.json pronto no lab.`,
+  "stepfunctions.list-state-machines": `aws stepfunctions list-state-machines\n\nUSO\n    aws stepfunctions list-state-machines\n\nLista as máquinas de estados e seus ARNs.`,
+  "stepfunctions.describe-state-machine": `aws stepfunctions describe-state-machine\n\nUSO\n    aws stepfunctions describe-state-machine --state-machine-arn <arn>\n\nMostra a definição completa e a role usada.`,
+  "stepfunctions.start-execution": `aws stepfunctions start-execution\n\nUSO\n    aws stepfunctions start-execution --state-machine-arn <arn> --input '{"pedido":1001}'\n\nInicia uma execução. O --input é o JSON que chega no primeiro estado.`,
+  "stepfunctions.list-executions": `aws stepfunctions list-executions\n\nUSO\n    aws stepfunctions list-executions --state-machine-arn <arn>\n\nLista as execuções e o status de cada uma (RUNNING, SUCCEEDED, FAILED).`,
+  "stepfunctions.describe-execution": `aws stepfunctions describe-execution\n\nUSO\n    aws stepfunctions describe-execution --execution-arn <arn>\n\nDetalhe de uma execução: entrada, saída e status.`,
+  "stepfunctions.delete-state-machine": `aws stepfunctions delete-state-machine\n\nUSO\n    aws stepfunctions delete-state-machine --state-machine-arn <arn>\n\nApaga a máquina de estados.`,
+
+  // ===== EventBridge (aws events) =====
+  events: `aws events — EventBridge (eventos e agendamentos)\n\nDuas utilidades:\n  1. AGENDAR   "todo dia às 3h, chame essa Lambda"\n  2. REAGIR    "quando uma instância EC2 parar, avise no SNS"\n\nUma REGRA define quando dispara; os ALVOS definem quem é chamado.\n\nCOMANDOS\n    put-rule              cria/atualiza a regra\n    list-rules            lista as regras\n    describe-rule         detalhe de uma regra\n    put-targets           liga a regra a um alvo (Lambda, SQS, SNS...)\n    list-targets-by-rule  lista os alvos\n    remove-targets        tira alvos\n    disable-rule / enable-rule   pausa e retoma\n    delete-rule           apaga a regra`,
+  "events.put-rule": `aws events put-rule\n\nUSO\n    aws events put-rule --name limpeza-noturna --schedule-expression "rate(1 day)"\n    aws events put-rule --name ec2-parou --event-pattern '{"source":["aws.ec2"]}'\n\nAGENDAMENTO: rate(5 minutes) | rate(1 day) | cron(0 3 * * ? *)\nEVENTO: um padrão que casa com o que acontece na conta.`,
+  "events.list-rules": `aws events list-rules\n\nUSO\n    aws events list-rules\n\nLista as regras, o agendamento/padrão e se estão ENABLED.`,
+  "events.describe-rule": `aws events describe-rule\n\nUSO\n    aws events describe-rule --name limpeza-noturna\n\nDetalhe de uma regra.`,
+  "events.put-targets": `aws events put-targets\n\nUSO\n    aws events put-targets --rule limpeza-noturna --targets '[{"Id":"1","Arn":"arn:aws:lambda:us-east-1:123456789012:function:limpeza"}]'\n\nSem alvo, a regra dispara e não chama ninguém. Cada alvo precisa de\num Id (seu, pra referência) e o Arn de quem será chamado.`,
+  "events.list-targets-by-rule": `aws events list-targets-by-rule\n\nUSO\n    aws events list-targets-by-rule --rule limpeza-noturna\n\nLista os alvos ligados à regra.`,
+  "events.remove-targets": `aws events remove-targets\n\nUSO\n    aws events remove-targets --rule limpeza-noturna --ids 1\n\nDesliga alvos da regra (pelos Ids).`,
+  "events.disable-rule": `aws events disable-rule\n\nUSO\n    aws events disable-rule --name limpeza-noturna\n\nPausa a regra sem apagar (para de disparar, configuração preservada).`,
+  "events.enable-rule": `aws events enable-rule\n\nUSO\n    aws events enable-rule --name limpeza-noturna\n\nVolta a disparar uma regra pausada.`,
+  "events.delete-rule": `aws events delete-rule\n\nUSO\n    aws events delete-rule --name limpeza-noturna\n\nApaga a regra. Precisa remover os alvos antes (ou usar --force).`,
 };
 
 function obterManual(caminho) {

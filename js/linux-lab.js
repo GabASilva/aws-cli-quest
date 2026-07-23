@@ -25,9 +25,12 @@ function semearArvore() {
     const nome = partes[partes.length - 1];
     filhos[nome] = { tipo: "arquivo", conteudo: conteudo !== undefined ? conteudo : "(arquivo de exemplo)\n", modo: modo || "644" };
   }
-  // mesma lista que o 'aws s3 cp' enxerga, pra o 'ls' bater com os desafios
+  // mesma lista que o 'aws s3 cp' enxerga, pra o 'ls' bater com os desafios.
+  // ARQUIVOS_CONTEUDO (preenchido pelos módulos de serviço) dá o conteúdo de
+  // verdade dos arquivos de lab — assim 'cat tarefa-web.json' mostra o JSON.
   if (typeof ARQUIVOS_LOCAIS !== "undefined") {
-    for (const p of Object.keys(ARQUIVOS_LOCAIS)) por(p);
+    const conteudos = typeof ARQUIVOS_CONTEUDO !== "undefined" ? ARQUIVOS_CONTEUDO : {};
+    for (const p of Object.keys(ARQUIVOS_LOCAIS)) por(p, conteudos[p]);
   }
   // conteúdos e arquivos próprios do tutorial de Linux
   por("relatorio.csv", "data,valor\n2026-01,1200\n2026-02,1850\n");
@@ -48,6 +51,16 @@ function semearArvore() {
 function fsSeed(conta) {
   if (!conta.fs) {
     conta.fs = { tipo: "dir", modo: "755", filhos: { home: { tipo: "dir", modo: "755", filhos: { "ec2-user": { tipo: "dir", modo: "755", filhos: semearArvore() } } } } };
+  } else if (typeof ARQUIVOS_CONTEUDO !== "undefined") {
+    // conta antiga: completa só os arquivos de lab que ainda não existem no
+    // home (senão quem já jogava nunca veria os arquivos novos de exemplo).
+    const home = ((((conta.fs.filhos || {}).home || {}).filhos || {})["ec2-user"] || {}).filhos;
+    if (home) {
+      for (const nome of Object.keys(ARQUIVOS_CONTEUDO)) {
+        if (nome.includes("/") || home[nome]) continue;
+        home[nome] = { tipo: "arquivo", conteudo: ARQUIVOS_CONTEUDO[nome], modo: "644" };
+      }
+    }
   }
   if (!conta.cwd) conta.cwd = LAR;
 }

@@ -543,9 +543,14 @@
     SERVICOS.route53 = cmdRoute53;
     SERVICOS.cloudfront = cmdCloudFront;
   }
-  // arquivo pronto no "disco" pro change-batch do Route 53
+  // arquivo pronto no "disco" pro change-batch do Route 53 (o conteúdo real vai
+  // em ARQUIVOS_CONTEUDO pra o 'cat registro-dns.json' mostrar o JSON de verdade)
   if (typeof ARQUIVOS_LOCAIS !== "undefined" && !ARQUIVOS_LOCAIS["registro-dns.json"]) {
     ARQUIVOS_LOCAIS["registro-dns.json"] = 268;
+  }
+  if (typeof window !== "undefined") {
+    window.ARQUIVOS_CONTEUDO = window.ARQUIVOS_CONTEUDO || {};
+    window.ARQUIVOS_CONTEUDO["registro-dns.json"] = JSON.stringify(REGISTRO_DNS_PADRAO, null, 2) + "\n";
   }
 
   // ============================================================

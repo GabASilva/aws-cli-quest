@@ -16,6 +16,21 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23h",
+      data: "23 jul 2026",
+      titulo: "📦 Contêineres, segredos, fluxos e agendamentos",
+      itens: [
+        "<b>+31 atividades</b> em 5 trilhas novas — o CLImb chegou a <b>344 atividades</b> no catálogo de comandos.",
+        "<b>🐳 ECR</b> — o armário das imagens de contêiner: criar repositório, pegar a senha temporária do <code>docker login</code> e listar imagens.",
+        "<b>🚢 ECS</b> — rodar contêineres de verdade: cluster, <i>task definition</i> (com revisões), serviço mantendo N cópias no ar, escalar pra Black Friday e desligar na ordem certa.",
+        "<b>🔐 Secrets Manager</b> — pare de deixar senha no código: guardar, ler, trocar sem novo deploy, e a exclusão com <b>janela de recuperação</b> (dá pra desfazer com <code>restore-secret</code>).",
+        "<b>🔀 Step Functions</b> — orquestre processos de vários passos e veja o histórico de execuções.",
+        "<b>⏰ EventBridge</b> — o despertador da nuvem: agende com <code>rate(1 day)</code>, ligue a regra a um alvo, pause sem apagar.",
+        "As trilhas respeitam os limites reais da AWS: o ECS recusa apagar serviço com cópias no ar, o EventBridge recusa apagar regra que ainda tem alvo e o ECR pede <code>--force</code> pra repositório com imagens.",
+        "Novos arquivos prontos no lab pra você espiar com <code>cat</code>: <b>tarefa-web.json</b> e <b>maquina-estados.json</b>.",
+      ],
+    },
+    {
       versao: "2026-07-23g",
       data: "23 jul 2026",
       titulo: "🧩 6 serviços novos: SQS, SNS, EBS, API Gateway, Route 53 e CloudFront",
@@ -391,7 +406,7 @@
     {
       icone: "🧩",
       titulo: "Mais serviços AWS",
-      desc: "ECS/ECR (contêineres), Secrets Manager, Step Functions e EventBridge. SQS, SNS, EBS, API Gateway, Route 53 e CloudFront já entraram — veja em \"O que mudou\".",
+      desc: "EKS (Kubernetes), Athena, Glue e KMS. Já entraram: SQS, SNS, EBS, API Gateway, Route 53, CloudFront, ECR, ECS, Secrets Manager, Step Functions e EventBridge — veja em \"O que mudou\".",
     },
     {
       icone: "🗺️",
