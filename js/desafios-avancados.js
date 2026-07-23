@@ -172,7 +172,8 @@ const DESAFIOS_AVANCADOS = [
       "aws iam remove-user-from-group --user-name temp1 --group-name obsoleto",
       "aws iam delete-group --group-name obsoleto",
     ],
-    validar: (conta) => !conta.iam.grupos["obsoleto"],
+    // exige o delete-group DAR CERTO (estado "não existe" sozinho completaria de graça)
+    validar: (conta, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-group") && !conta.iam.grupos["obsoleto"],
   },
   {
     id: "ges-4", servico: "adv-gestao", nivel: 3, xp: 110,
@@ -183,7 +184,7 @@ const DESAFIOS_AVANCADOS = [
       "aws iam create-role --role-name role-teste --assume-role-policy-document file://trust.json",
       "aws iam delete-role --role-name role-teste",
     ],
-    validar: (conta) => !conta.iam.roles["role-teste"],
+    validar: (conta, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-role") && !conta.iam.roles["role-teste"],
   },
   {
     id: "ges-5", servico: "adv-gestao", nivel: 3, xp: 110,
@@ -194,7 +195,7 @@ const DESAFIOS_AVANCADOS = [
       "aws iam create-policy --policy-name descartavel --policy-document file://politica-publica.json",
       "aws iam delete-policy --policy-arn arn:aws:iam::123456789012:policy/descartavel",
     ],
-    validar: (conta) => !conta.iam.policies["descartavel"],
+    validar: (conta, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-policy") && !conta.iam.policies["descartavel"],
   },
 
   // ==================== 🧩 MISSÕES CEGAS (poucas dicas) ====================

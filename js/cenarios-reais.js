@@ -159,7 +159,7 @@
         "aws iam detach-user-policy --user-name ex-dev --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
         "aws iam delete-user --user-name ex-dev",
       ],
-      validar: (c) => !c.iam.usuarios["ex-dev"],
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-user") && !c.iam.usuarios["ex-dev"],
     },
     {
       nivel: 3, xp: 120, titulo: "Desliga o que não usa",

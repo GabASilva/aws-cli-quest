@@ -63,7 +63,7 @@
       descricao: "Crie uma VPC de teste <b>192.168.0.0/16</b> e <b>apague</b> ela em seguida.",
       dicas: ["Pegue o id no describe-vpcs e use delete-vpc --vpc-id."],
       solucao: ["aws ec2 create-vpc --cidr-block 192.168.0.0/16", "aws ec2 delete-vpc --vpc-id <vpc-id>"],
-      validar: (c) => !!c.vpc && !Object.values(c.vpc.vpcs).some((v) => v.cidr === "192.168.0.0/16") },
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-vpc") && !!c.vpc && !Object.values(c.vpc.vpcs).some((v) => v.cidr === "192.168.0.0/16") },
     { id: "vpc-10", servico: "vpc", nivel: 3, xp: 100, titulo: "Rede completa de ponta a ponta",
       descricao: "Monte uma rede pronta pra internet: VPC <b>10.20.0.0/16</b>, uma sub-rede, um internet gateway e <b>conecte</b> os dois.",
       dicas: ["São 4 passos: create-vpc, create-subnet, create-internet-gateway, attach-internet-gateway."],
@@ -71,7 +71,7 @@
       validar: (c) => { const v = c.vpc && Object.values(c.vpc.vpcs).find((x) => x.cidr === "10.20.0.0/16"); return !!(v && v.igw); } },
 
     // ==================== IAM (+4) ====================
-    { id: "iam-8", servico: "iam", nivel: 2, xp: 70, titulo: "Crie uma role",
+    { id: "iam-8", servico: "iam", nivel: 2, xp: 70, titulo: "Role com trust pronto",
       descricao: "Crie a role <b>papel-ec2</b> usando o documento de confiança pronto <b>trust.json</b>.",
       dicas: ["aws iam create-role --role-name papel-ec2 --assume-role-policy-document file://trust.json"],
       solucao: ["aws iam create-role --role-name papel-ec2 --assume-role-policy-document file://trust.json"],
@@ -85,7 +85,7 @@
       descricao: "Liste só as políticas <b>criadas por você</b> (escopo Local).",
       dicas: ["aws iam list-policies --scope Local"], solucao: ["aws iam list-policies --scope Local"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-policies") },
-    { id: "iam-11", servico: "iam", nivel: 2, xp: 70, titulo: "Permissão pro grupo",
+    { id: "iam-11", servico: "iam", nivel: 2, xp: 70, titulo: "Analistas só-leitura",
       descricao: "Crie o grupo <b>analistas</b> e anexe a ele a política <b>AmazonS3ReadOnlyAccess</b>.",
       dicas: ["aws iam attach-group-policy --group-name analistas --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
       solucao: ["aws iam create-group --group-name analistas", "aws iam attach-group-policy --group-name analistas --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
@@ -179,7 +179,7 @@
       descricao: "Crie o alarme <b>temp-alarme</b> e <b>apague</b> ele.",
       dicas: ["aws cloudwatch delete-alarms --alarm-names temp-alarme"],
       solucao: ["aws cloudwatch put-metric-alarm --alarm-name temp-alarme --metric-name CPUUtilization --namespace AWS/EC2 --threshold 50 --comparison-operator GreaterThanThreshold", "aws cloudwatch delete-alarms --alarm-names temp-alarme"],
-      validar: (c) => !!c.cloudwatch && !c.cloudwatch.alarmes["temp-alarme"] },
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "cloudwatch", "delete-alarms") && !!c.cloudwatch && !c.cloudwatch.alarmes["temp-alarme"] },
     { id: "cw-7", servico: "cloudwatch", nivel: 1, xp: 50, titulo: "Liste os grupos de logs",
       descricao: "Crie o grupo <b>/app/prod</b> e liste os grupos de logs.",
       dicas: ["aws logs describe-log-groups"],
@@ -194,7 +194,7 @@
       descricao: "Crie o grupo <b>/app/temp</b> e <b>apague</b> ele.",
       dicas: ["aws logs delete-log-group --log-group-name /app/temp"],
       solucao: ["aws logs create-log-group --log-group-name /app/temp", "aws logs delete-log-group --log-group-name /app/temp"],
-      validar: (c) => !!c.logs && !c.logs.grupos["/app/temp"] },
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-log-group") && !!c.logs && !c.logs.grupos["/app/temp"] },
 
     // ==================== CloudFormation (+3) ====================
     { id: "cfn-7", servico: "cloudformation", nivel: 1, xp: 50, titulo: "Valide o template",

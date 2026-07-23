@@ -85,12 +85,15 @@
     d("pec2-run1", "ec2", 2, 70, "Servidor de jogo", "A galera quer um servidor de Minecraft. Suba uma instância <b>t3.small</b> (a t2.micro não aguenta).",
       ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.small"], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.small"],
       (c) => Object.values(c.ec2.instancias).some((i) => i.tipo === "t3.small" && i.estado === "running")),
-    d("pec2-run2", "ec2", 3, 90, "Cluster de processamento", "Um job pesado precisa de força. Suba <b>3 instâncias t3.medium</b> de uma vez.",
-      ["Quantidade é --count 3."], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.medium --count 3"],
-      (c) => Object.values(c.ec2.instancias).filter((i) => i.tipo === "t3.medium").length >= 3),
     d("pec2-run3", "ec2", 2, 80, "Banco de dados próprio", "Vão rodar um banco numa VM robusta. Suba uma <b>m5.large</b>.",
       ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type m5.large"], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type m5.large"],
       (c) => Object.values(c.ec2.instancias).some((i) => i.tipo === "m5.large")),
+  ]);
+  // --count é ensinado no ec2-8 ("Suba uma frota") — o reforço vem DEPOIS dele
+  at("ec2-8", [
+    d("pec2-run2", "ec2", 3, 90, "Cluster de processamento", "Um job pesado precisa de força. Suba <b>3 instâncias t3.medium</b> de uma vez.",
+      ["Quantidade é --count 3."], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.medium --count 3"],
+      (c) => Object.values(c.ec2.instancias).filter((i) => i.tipo === "t3.medium").length >= 3),
   ]);
   // stop / start
   at("ec2-4", [

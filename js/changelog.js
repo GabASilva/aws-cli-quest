@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23c",
+      data: "23 jul 2026",
+      titulo: "🔧 Auditoria das atividades",
+      itens: [
+        "Passamos um pente-fino nas <b>272 atividades</b>: 9 desafios de \"criar e apagar\" completavam sozinhos sem você fazer nada (o validador só olhava se o recurso não existia) — agora exigem o comando de verdade.",
+        "O desafio <b>Cluster de processamento</b> (nível 3) aparecia cedo demais na trilha de EC2 e travava iniciantes — foi movido pra depois de \"Suba uma frota\", onde o <code>--count</code> é ensinado.",
+        "Títulos duplicados renomeados e um novo teste automático de coerência didática garante que atividades futuras mantenham a ordem lógica.",
+      ],
+    },
+    {
       versao: "2026-07-23b",
       data: "23 jul 2026",
       titulo: "🖥️ Console completo: todas as seções da nav agora abrem",
