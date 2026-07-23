@@ -108,6 +108,22 @@ for (const d of DESAFIOS) {
   if (f && (d.xp < f[0] || d.xp > f[1])) avisos.push(`xp fora da faixa n${d.nivel} (${d.xp}xp): ${d.id} — ${d.titulo}`);
 }
 
+// ---------- NIVEIS: cliente (js/jogo.js) x servidor (lib/perfil-publico.js) ----------
+// A página pública /u/<usuario> é renderizada no SERVIDOR e mostra o título do
+// nível, então a tabela está duplicada lá. Aqui garantimos que não divergiu.
+try {
+  const nivServidor = require(path.join(raiz, "lib", "perfil-publico.js")).NIVEIS;
+  if (JSON.stringify(nivServidor) !== JSON.stringify(NIVEIS)) {
+    problemas.push("NIVEIS divergiram entre js/jogo.js e lib/perfil-publico.js — o perfil público mostraria outro título/nível");
+    console.log("\n  cliente : " + JSON.stringify(NIVEIS));
+    console.log("  servidor: " + JSON.stringify(nivServidor));
+  } else {
+    console.log(`\n=== NIVEIS sincronizados cliente x servidor: ${NIVEIS.length} níveis ✓ ===`);
+  }
+} catch (e) {
+  problemas.push("não consegui comparar NIVEIS com lib/perfil-publico.js: " + e.message);
+}
+
 // ---------- Resumo ----------
 console.log("\n=== PROBLEMAS (" + problemas.length + ") ===");
 problemas.forEach((p) => console.log("✗ " + p));

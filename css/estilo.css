@@ -1271,3 +1271,35 @@ body.console-aberto { overflow: hidden; }
 #consoleOverlay .caws-st-painel p { color: #c6c6cd; }
 #consoleOverlay .caws-st-card span, #consoleOverlay .caws-st-card small { color: #9ba2ab; }
 #consoleOverlay .caws-info { color: #42b4ff; }
+
+/* ---------- Perfil: card de compartilhar + campos novos ---------- */
+.perfil-share {
+  margin-top: 18px; padding: 14px 16px; border-radius: 12px;
+  background: var(--painel-2); border: 1px solid var(--laranja);
+}
+.perfil-share.sem-conta, .perfil-share.fechado { border-color: var(--borda); }
+.perfil-share-tit { font-weight: 700; margin-bottom: 4px; }
+.perfil-share p { margin: 0 0 10px; font-size: 0.82rem; color: var(--texto-fraco); line-height: 1.5; }
+.perfil-share-link { display: flex; gap: 8px; margin-bottom: 8px; }
+.perfil-share-link input {
+  flex: 1; min-width: 0; background: var(--fundo); border: 1px solid var(--borda);
+  border-radius: 8px; color: var(--texto); padding: 8px 10px;
+  font-family: var(--fonte-mono); font-size: 0.8rem;
+}
+.perfil-share-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.perfil-share-acoes .botao { font-size: 0.8rem; text-decoration: none; }
+.perfil-share-previa {
+  margin: 10px 0 0; padding: 10px 12px; background: var(--fundo); border: 1px solid var(--borda);
+  border-radius: 8px; font-size: 0.76rem; color: var(--texto-fraco); line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word; font-family: inherit;
+}
+.pf-nota { display: block; margin-top: 4px; font-size: 0.72rem; color: var(--texto-fraco); }
+.pf-nota.ok { color: var(--verde); }
+.pf-nota.alerta { color: var(--laranja); }
+.perfil-form .pf-check { flex-direction: row; align-items: flex-start; gap: 8px; cursor: pointer; }
+.perfil-form .pf-check input { width: auto; flex: 0 0 auto; margin-top: 2px; }
+.perfil-form .pf-check span { font-size: 0.78rem; line-height: 1.45; }
+@media (max-width: 600px) {
+  .perfil-share-link { flex-wrap: wrap; }
+  .perfil-share-link .botao, .perfil-share-acoes .botao { width: 100%; text-align: center; }
+}

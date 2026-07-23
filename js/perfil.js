@@ -174,6 +174,90 @@
     return { feitos, diasAtivos, conquistas, simTent, simMelhor };
   }
 
+  // ---------- Compartilhar: link público + resumo pra colar no LinkedIn ----------
+  // O link só existe pra quem tem conta: a página /u/<usuario> é montada com o
+  // que está no SERVIDOR (quem joga deslogado só tem dados no próprio navegador).
+  function linkPerfil() {
+    if (!(api && api.usuario)) return "";
+    return location.origin + "/u/" + encodeURIComponent(api.usuario);
+  }
+  function resumoTexto() {
+    garantirCampos();
+    const nivel = nivelAtual(jogo.xp);
+    const m = metricas();
+    const s = jogo.streakDias;
+    const partes = [
+      `${nivel.icone} ${nivel.titulo}`,
+      `${jogo.xp.toLocaleString("pt-BR")} XP`,
+      `${m.feitos} atividades de AWS CLI concluídas`,
+    ];
+    if (s.melhor >= 2) partes.push(`${s.melhor} dias seguidos de estudo`);
+    if (m.simMelhor) partes.push(`${m.simMelhor}% no simulado Cloud Practitioner`);
+    return `🚀 Meu progresso no CLImb — treinando AWS de verdade pela linha de comando:\n` +
+      partes.map((x) => "• " + x).join("\n") +
+      (linkPerfil() ? `\n\n${linkPerfil()}` : "");
+  }
+
+  function cartaoCompartilhar(p) {
+    const link = linkPerfil();
+    if (!link) {
+      return `<div class="perfil-share sem-conta">
+        <div class="perfil-share-tit">🔗 Seu perfil público</div>
+        <p>Crie uma conta (grátis) pra ganhar um <b>link do seu perfil</b> — dá pra colar no LinkedIn,
+        no currículo ou mandar pra alguém, mostrando seu progresso em AWS.</p>
+        <button class="botao" data-pf="entrar">👤 Criar conta / Entrar</button>
+      </div>`;
+    }
+    if (p.publico === false) {
+      return `<div class="perfil-share fechado">
+        <div class="perfil-share-tit">🔒 Seu perfil está fechado</div>
+        <p>Ninguém consegue abrir seu link. Pra compartilhar, ligue <b>Perfil público</b> em ✏️ Editar.</p>
+      </div>`;
+    }
+    return `<div class="perfil-share">
+      <div class="perfil-share-tit">🔗 Compartilhe seu progresso</div>
+      <p>Cole este link no LinkedIn, no currículo ou onde quiser — ele abre uma página
+      com o resumo do seu desempenho (sem precisar de login pra ver).</p>
+      <div class="perfil-share-link">
+        <input id="pfLink" readonly value="${escaparHtml(link)}" spellcheck="false">
+        <button class="botao" data-pf="copiar-link">📋 Copiar link</button>
+      </div>
+      <div class="perfil-share-acoes">
+        <button class="botao secundario" data-pf="copiar-resumo">📝 Copiar resumo pro LinkedIn</button>
+        <a class="botao secundario" href="${escaparHtml(link)}" target="_blank" rel="noopener">👁️ Ver como ficou</a>
+      </div>
+      <pre class="perfil-share-previa" id="pfPrevia">${escaparHtml(resumoTexto())}</pre>
+    </div>`;
+  }
+
+  async function copiar(texto, msg) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast(msg, "sucesso");
+    } catch (e) {
+      // clipboard bloqueado (http, permissão): seleciona pra copiar na mão
+      const campo = document.querySelector("#pfLink");
+      if (campo) { campo.focus(); campo.select(); }
+      toast("Não consegui copiar sozinho — o texto está selecionado, use Ctrl+C.", "neutro");
+    }
+  }
+
+  function ligarCartaoCompartilhar(corpo) {
+    corpo.querySelectorAll("[data-pf]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const acao = b.dataset.pf;
+        if (acao === "copiar-link") return copiar(linkPerfil(), "🔗 Link copiado! Agora é só colar.");
+        if (acao === "copiar-resumo") return copiar(resumoTexto(), "📝 Resumo copiado! Cole no LinkedIn.");
+        if (acao === "entrar") {
+          modal.classList.remove("aberto");
+          if (typeof abrirModalConta === "function") { try { return abrirModalConta(); } catch (e) { /* ok */ } }
+          const btnConta = document.querySelector("#btnConta");
+          if (btnConta) btnConta.click();
+        }
+      });
+    });
+  }
+
   // ---------- Modal ----------
   let modal = null;
   let editando = false;
@@ -213,6 +297,16 @@
       : (api && api.usuario ? "" : "Jogando sem conta — progresso salvo neste navegador");
 
     if (editando) {
+      const temConta = !!(api && api.usuario);
+      const emailAtual = (api && api.email) || "";
+      const statusEmail = !temConta
+        ? `<small class="pf-nota">Entre numa conta pra cadastrar um e-mail (é ele que recupera sua senha).</small>`
+        : emailAtual
+          ? (api.emailVerificado
+              ? `<small class="pf-nota ok">✅ E-mail confirmado.</small>`
+              : `<small class="pf-nota alerta">⚠️ Ainda não confirmado — veja o link que enviamos.</small>`)
+          : `<small class="pf-nota">Sem e-mail cadastrado. Sem ele não dá pra recuperar a senha.</small>`;
+
       corpo.innerHTML = `
         <h2>🪪 Editar perfil</h2>
         <div class="perfil-form">
@@ -221,21 +315,62 @@
           <label>Localização<input id="pfLocal" maxlength="60" value="${escaparHtml(p.local || "")}" placeholder="Cidade, País"></label>
           <label>GitHub<input id="pfGithub" maxlength="80" value="${escaparHtml(p.github || "")}" placeholder="seu-usuario"></label>
           <label>LinkedIn<input id="pfLinkedin" maxlength="120" value="${escaparHtml(p.linkedin || "")}" placeholder="seu-usuario ou URL do perfil"></label>
+          <label>E-mail
+            <input id="pfEmail" type="email" maxlength="120" value="${escaparHtml(emailAtual)}"
+              placeholder="voce@exemplo.com" autocomplete="email" ${temConta ? "" : "disabled"}>
+            ${statusEmail}
+          </label>
+          <label class="pf-check">
+            <input type="checkbox" id="pfPublico" ${p.publico === false ? "" : "checked"}>
+            <span>Perfil público — qualquer pessoa com o link <b>${escaparHtml(linkPerfil() || "(precisa de conta)")}</b> vê seu progresso, bio e links. Seu e-mail nunca aparece.</span>
+          </label>
+          <p class="codigo-erro" id="pfErro"></p>
           <div class="perfil-form-acoes">
             <button class="botao" id="pfSalvar">Salvar</button>
             <button class="botao secundario" id="pfCancelar">Cancelar</button>
           </div>
         </div>`;
-      corpo.querySelector("#pfSalvar").addEventListener("click", () => {
+      corpo.querySelector("#pfSalvar").addEventListener("click", async () => {
+        const btn = corpo.querySelector("#pfSalvar");
+        const erro = corpo.querySelector("#pfErro");
+        erro.textContent = "";
         p.nome = corpo.querySelector("#pfNome").value.trim();
         p.bio = corpo.querySelector("#pfBio").value.trim();
         p.local = corpo.querySelector("#pfLocal").value.trim();
         p.github = corpo.querySelector("#pfGithub").value.trim();
         p.linkedin = corpo.querySelector("#pfLinkedin").value.trim();
+        p.publico = corpo.querySelector("#pfPublico").checked;
         salvarJogo();
+
+        // e-mail vai por outra rota (é dado de conta, não de progresso):
+        // trocar o e-mail dispara um novo link de confirmação.
+        const novoEmail = (corpo.querySelector("#pfEmail").value || "").trim().toLowerCase();
+        let avisoEmail = "";
+        if (temConta && novoEmail !== (emailAtual || "").toLowerCase()) {
+          if (novoEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(novoEmail)) {
+            erro.textContent = "E-mail inválido — confira o endereço.";
+            return;
+          }
+          if (novoEmail) {
+            btn.disabled = true;
+            btn.textContent = "Salvando…";
+            try {
+              await apiDefinirEmail(novoEmail);
+              avisoEmail = " Confirme o e-mail pelo link que acabamos de enviar.";
+            } catch (e) {
+              btn.disabled = false;
+              btn.textContent = "Salvar";
+              erro.textContent = e.message || "Não consegui salvar o e-mail.";
+              return;
+            }
+            btn.disabled = false;
+            btn.textContent = "Salvar";
+          }
+        }
         editando = false;
         renderPerfil();
-        toast("✅ Perfil atualizado!", "sucesso");
+        if (typeof atualizarBotaoConta === "function") { try { atualizarBotaoConta(); } catch (e) { /* ok */ } }
+        toast("✅ Perfil atualizado!" + avisoEmail, "sucesso");
       });
       corpo.querySelector("#pfCancelar").addEventListener("click", () => { editando = false; renderPerfil(); });
       return;
@@ -289,6 +424,8 @@
         ${m.simTent ? `<div class="perfil-card"><strong>${m.simMelhor}%</strong><span>melhor simulado<br>(${m.simTent} tentativa${m.simTent === 1 ? "" : "s"})</span></div>` : ""}
       </div>
 
+      ${cartaoCompartilhar(p)}
+
       <h3 class="perfil-sec">📆 Atividade</h3>
       ${htmlHeatmap()}
 
@@ -297,6 +434,7 @@
       ${trilhas ? `<h3 class="perfil-sec">🛤️ Trilhas</h3><div class="perfil-trilhas">${trilhas}</div>` : ""}
     `;
     corpo.querySelector("#pfEditar").addEventListener("click", () => { editando = true; renderPerfil(); });
+    ligarCartaoCompartilhar(corpo);
   }
 
   // ---------- Botão no cabeçalho + integração ----------

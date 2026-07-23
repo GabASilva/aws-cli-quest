@@ -16,6 +16,18 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23f",
+      data: "23 jul 2026",
+      titulo: "🔗 Perfil público com link pra compartilhar",
+      itens: [
+        "Seu perfil agora tem um <b>link próprio</b> (<code>climb/u/seu-usuario</code>) que abre uma página com seu nível, XP, atividades concluídas, sequência de dias e mapa de atividade — <b>sem precisar de login pra ver</b>. Cole no LinkedIn, no currículo ou mande pra quem quiser.",
+        "No seu perfil tem um card novo pra <b>copiar o link</b> com um clique e outro pra <b>copiar um resumo pronto</b> do seu desempenho, formatado pra colar num post.",
+        "Dá pra <b>fechar o perfil</b> quando quiser (✏️ Editar → Perfil público): aí o link para de abrir pra todo mundo. Seu e-mail <b>nunca</b> aparece na página.",
+        "Também dá pra <b>trocar o e-mail da conta</b> direto na edição do perfil — o novo endereço recebe um link de confirmação.",
+        "Corrigimos de quebra um problema que fazia bio, sequência de dias e mapa de atividade ficarem só no navegador: agora vão pra sua conta e acompanham você em qualquer dispositivo.",
+      ],
+    },
+    {
       versao: "2026-07-23e",
       data: "23 jul 2026",
       titulo: "🎓 Simulados: 1 por dia no plano gratuito",

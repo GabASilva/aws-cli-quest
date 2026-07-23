@@ -14,6 +14,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
 const RAIZ = __dirname;
@@ -383,6 +384,26 @@ function mapaSeguro(obj, maxChaves, transformarValor) {
   }
   return out;
 }
+// Texto livre do usuário: corta no tamanho e tira control chars. NÃO escapa HTML
+// aqui (quem escapa é a saída — a página pública monta HTML no servidor).
+function textoLimitado(v, max) {
+  if (typeof v !== "string") return "";
+  return v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+}
+// Campos do perfil que o usuário edita (aparecem na página pública /u/<nome>).
+function perfilSeguro(p) {
+  if (!p || typeof p !== "object") return {};
+  return {
+    nome: textoLimitado(p.nome, 30),
+    bio: textoLimitado(p.bio, 280),
+    local: textoLimitado(p.local, 60),
+    github: textoLimitado(p.github, 80),
+    linkedin: textoLimitado(p.linkedin, 120),
+    // perfil público é o padrão (a graça é poder compartilhar), mas dá pra fechar
+    publico: p.publico === false ? false : true,
+  };
+}
+
 // Reconstrói só os campos conhecidos do progresso, em faixas seguras. Campos
 // desconhecidos enviados pelo cliente são descartados (anti mass-assignment).
 function sanearProgresso(p) {
@@ -399,6 +420,20 @@ function sanearProgresso(p) {
   out.missoesConsole = mapaSeguro(p.missoesConsole, 200, (v) => !!v);
   out.sequenciasPerdidas = Array.isArray(p.sequenciasPerdidas)
     ? p.sequenciasPerdidas.slice(0, 3).map((x) => intLimitado(x, TETO_STREAK)) : [];
+  // perfil (bio, links) — texto do usuário: cortado no tamanho aqui e ESCAPADO
+  // na saída (a página pública é HTML gerado no servidor).
+  out.perfilPublico = perfilSeguro(p.perfilPublico);
+  // heatmap: "YYYY-MM-DD" -> nº de atividades no dia (2 anos de histórico)
+  out.atividadeDiaria = mapaSeguro(p.atividadeDiaria, 800, (v) => intLimitado(v, 5000));
+  for (const dia of Object.keys(out.atividadeDiaria)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) delete out.atividadeDiaria[dia];
+  }
+  const sd = p.streakDias && typeof p.streakDias === "object" ? p.streakDias : {};
+  out.streakDias = {
+    atual: intLimitado(sd.atual, 10000),
+    melhor: intLimitado(sd.melhor, 10000),
+    ultimo: typeof sd.ultimo === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sd.ultimo) ? sd.ultimo : "",
+  };
   // `conta` é o estado da AWS simulada do próprio usuário — guarda como veio
   // (já limitado pelo teto de 100KB do corpo). Só barra chaves perigosas no topo.
   if (p.conta && typeof p.conta === "object") out.conta = mapaSeguro(p.conta, 50, (v) => v);
@@ -1020,7 +1055,7 @@ const MIMES = {
 // só estes tipos podem ser servidos (o resto = 404)
 const EXT_PUBLICAS = new Set([".html", ".js", ".css", ".png", ".svg", ".ico", ".jpg", ".jpeg", ".webp", ".woff2"]);
 // nunca servir código de servidor, scripts de admin, dados, configs etc.
-const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
+const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|lib\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
 
 const PROD = !!process.env.DADOS_DIR; // no Fly o Dockerfile define DADOS_DIR
 
@@ -1047,6 +1082,38 @@ function calcularVersao() {
   }
 }
 const VERSAO = calcularVersao();
+
+// ---------- Perfil público: GET /u/<usuario> ----------
+// HTML pronto do servidor (robô de preview do LinkedIn/WhatsApp não roda JS).
+// Perfil inexistente e perfil fechado devolvem a MESMA resposta, pra a página
+// não virar um detector de "esse usuário existe?".
+function urlBase(req) {
+  if (process.env.URL_BASE) return String(process.env.URL_BASE).replace(/\/+$/, "");
+  const proto = (req.headers["x-forwarded-proto"] || "http").split(",")[0].trim();
+  const host = (req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].trim();
+  return host ? `${proto}://${host}` : "";
+}
+function dadosPerfilPublico(nome) {
+  if (!nome || !bd.usuarios[nome]) return null;
+  const u = bd.usuarios[nome];
+  if (u.banido) return null;
+  const d = perfilPub.dadosPublicos(nome, u, licencaPublica(u).pro);
+  return d.publico ? d : null;
+}
+function servirPerfilPublico(req, res, rota) {
+  const nome = rota.slice(3).replace(/\/+$/, "");
+  const d = dadosPerfilPublico(nome);
+  const base = urlBase(req);
+  const html = d ? perfilPub.paginaHtml(d, { base }) : perfilPub.paginaIndisponivel(base);
+  res.writeHead(d ? 200 : 404, {
+    "Content-Type": "text/html; charset=utf-8",
+    // sem cache: se a pessoa fechar o perfil (ou editar a bio), a mudança vale
+    // na hora — privacidade acima de micro-otimização (a página é barata).
+    "Cache-Control": "no-cache",
+    ...HEADERS_SEG,
+  });
+  res.end(html);
+}
 
 function servirEstatico(req, res, rota) {
   const relativo = rota === "/" ? "index.html" : rota.replace(/^\/+/, "");
@@ -1311,6 +1378,7 @@ http
       if (rota === "/api/eventos" && req.method === "GET") return responderJson(res, 200, { eventos: eventosAtivos().map((e) => ({ id: e.id, titulo: e.titulo, mensagem: e.mensagem, tipo: e.tipo, fim: e.fim })) });
       if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
       if (rota.startsWith("/api/")) return await tratarApi(req, res, rota);
+      if (rota.startsWith("/u/")) return servirPerfilPublico(req, res, rota);
       servirEstatico(req, res, rota);
     } catch (e) {
       responderJson(res, 400, { erro: e.message || "erro" });
