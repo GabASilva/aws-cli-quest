@@ -18,6 +18,11 @@ SERVIÇOS DISPONÍVEIS
     iam         Usuários, grupos, papéis (roles) e permissões
     lambda      Funções serverless
     dynamodb    Banco de dados NoSQL
+    sqs         Filas de mensagens
+    sns         Notificações (pub/sub)
+    apigateway  APIs HTTP gerenciadas
+    route53     DNS e domínios
+    cloudfront  CDN (cache nas bordas)
     sts         Identidade da sessão (get-caller-identity)
 
 MANUAIS
@@ -778,6 +783,64 @@ quando dá certo (igual ao AWS de verdade).`,
   "logs.create-log-group": `aws logs create-log-group\n\nUSO\n    aws logs create-log-group --log-group-name /climb/app\n\nCria um grupo onde os logs ficam guardados.`,
   "logs.describe-log-groups": `aws logs describe-log-groups\n\nUSO\n    aws logs describe-log-groups\n\nLista os grupos de logs.`,
   "logs.delete-log-group": `aws logs delete-log-group\n\nUSO\n    aws logs delete-log-group --log-group-name /climb/app\n\nApaga um grupo de logs.`,
+
+  // ===== SQS (filas) =====
+  sqs: `aws sqs — filas de mensagens (Simple Queue Service)\n\nA fila desacopla: quem produz joga a tarefa nela e segue a vida; quem\nconsome processa no ritmo dele. Se o consumidor cair, nada se perde.\n\nCOMANDOS\n    create-queue           cria uma fila\n    list-queues            lista as filas\n    get-queue-url          descobre a URL de uma fila pelo nome\n    send-message           coloca uma mensagem na fila\n    receive-message        pega mensagens pra processar\n    delete-message         confirma o processamento (tira da fila)\n    get-queue-attributes   quantas mensagens estão esperando\n    purge-queue            esvazia a fila\n    delete-queue           apaga a fila\n\nATENÇÃO: quase todo comando pede a --queue-url (não o nome).`,
+  "sqs.create-queue": `aws sqs create-queue\n\nUSO\n    aws sqs create-queue --queue-name pedidos-novos\n    aws sqs create-queue --queue-name pagamentos.fifo --attributes FifoQueue=true\n\nCria a fila e devolve a QueueUrl. Fila FIFO garante a ORDEM e exige\nnome terminando em .fifo.`,
+  "sqs.list-queues": `aws sqs list-queues\n\nUSO\n    aws sqs list-queues\n\nLista as URLs das filas da conta.`,
+  "sqs.get-queue-url": `aws sqs get-queue-url\n\nUSO\n    aws sqs get-queue-url --queue-name pedidos-novos\n\nDescobre a URL a partir do nome da fila.`,
+  "sqs.send-message": `aws sqs send-message\n\nUSO\n    aws sqs send-message --queue-url <url> --message-body "pedido 1001"\n\nColoca uma mensagem na fila. Devolve o MessageId.`,
+  "sqs.receive-message": `aws sqs receive-message\n\nUSO\n    aws sqs receive-message --queue-url <url> [--max-number-of-messages 10]\n\nPega mensagens pra processar. Cada uma vem com um ReceiptHandle —\nguarde: é o comprovante que o delete-message pede.`,
+  "sqs.delete-message": `aws sqs delete-message\n\nUSO\n    aws sqs delete-message --queue-url <url> --receipt-handle <handle>\n\nConfirma que a mensagem foi processada e tira ela da fila. Sem isso\nela volta a ficar visível — é assim que a SQS garante que nenhuma\ntarefa se perde se o processador cair no meio.`,
+  "sqs.get-queue-attributes": `aws sqs get-queue-attributes\n\nUSO\n    aws sqs get-queue-attributes --queue-url <url> --attribute-names All\n\nMostra ApproximateNumberOfMessages (esperando),\nApproximateNumberOfMessagesNotVisible (sendo processadas) e o ARN.`,
+  "sqs.purge-queue": `aws sqs purge-queue\n\nUSO\n    aws sqs purge-queue --queue-url <url>\n\nDescarta TODAS as mensagens da fila (não tem volta).`,
+  "sqs.delete-queue": `aws sqs delete-queue\n\nUSO\n    aws sqs delete-queue --queue-url <url>\n\nApaga a fila inteira.`,
+
+  // ===== SNS (notificações) =====
+  sns: `aws sns — notificações (Simple Notification Service)\n\nÉ o megafone: você publica num TÓPICO e todo mundo que ASSINOU recebe\n(e-mail, SMS, fila SQS, Lambda...). Um publica, muitos recebem.\n\nCOMANDOS\n    create-topic                 cria um tópico\n    list-topics                  lista os tópicos\n    subscribe                    inscreve alguém no tópico\n    list-subscriptions-by-topic  lista quem assinou\n    publish                      publica uma mensagem\n    unsubscribe                  cancela uma assinatura\n    delete-topic                 apaga o tópico`,
+  "sns.create-topic": `aws sns create-topic\n\nUSO\n    aws sns create-topic --name alertas-loja\n\nCria o tópico e devolve o TopicArn (guarde: os outros pedem ele).`,
+  "sns.list-topics": `aws sns list-topics\n\nUSO\n    aws sns list-topics\n\nLista os ARNs dos tópicos da conta.`,
+  "sns.subscribe": `aws sns subscribe\n\nUSO\n    aws sns subscribe --topic-arn <arn> --protocol email --notification-endpoint voce@exemplo.com\n    aws sns subscribe --topic-arn <arn> --protocol sqs --notification-endpoint <arn-da-fila>\n\nPROTOCOLOS: email, sms, sqs, lambda, https, http\n\nE-mail e SMS entram como "pending confirmation": a pessoa precisa\nconfirmar antes de começar a receber.`,
+  "sns.list-subscriptions-by-topic": `aws sns list-subscriptions-by-topic\n\nUSO\n    aws sns list-subscriptions-by-topic --topic-arn <arn>\n\nLista as assinaturas do tópico (protocolo e endpoint de cada uma).`,
+  "sns.publish": `aws sns publish\n\nUSO\n    aws sns publish --topic-arn <arn> --message "Estoque acabando"\n\nEnvia a mensagem pra TODOS os assinantes. Se uma fila SQS assinou,\na mensagem cai dentro dela (é o padrão fan-out).`,
+  "sns.unsubscribe": `aws sns unsubscribe\n\nUSO\n    aws sns unsubscribe --subscription-arn <arn-da-assinatura>\n\nCancela uma assinatura. Pegue o ARN no list-subscriptions-by-topic.`,
+  "sns.delete-topic": `aws sns delete-topic\n\nUSO\n    aws sns delete-topic --topic-arn <arn>\n\nApaga o tópico e todas as assinaturas dele.`,
+
+  // ===== EBS (discos — dentro do aws ec2) =====
+  "ec2.create-volume": `aws ec2 create-volume\n\nUSO\n    aws ec2 create-volume --availability-zone us-east-1a --size 10 --volume-type gp3\n\nCria um disco EBS. Ele nasce numa ZONA e só encaixa em instância da\nmesma zona. Tipos: gp2, gp3, io1, io2, st1, sc1, standard.`,
+  "ec2.describe-volumes": `aws ec2 describe-volumes\n\nUSO\n    aws ec2 describe-volumes\n\nLista os volumes, o tamanho e em qual instância cada um está preso.`,
+  "ec2.attach-volume": `aws ec2 attach-volume\n\nUSO\n    aws ec2 attach-volume --volume-id vol-xxxx --instance-id i-xxxx --device /dev/sdf\n\nEncaixa o disco na máquina. Depois, dentro do Linux, ainda é preciso\nformatar e montar (mkfs / mount).`,
+  "ec2.detach-volume": `aws ec2 detach-volume\n\nUSO\n    aws ec2 detach-volume --volume-id vol-xxxx\n\nTira o disco da máquina (obrigatório antes de apagar o volume).`,
+  "ec2.delete-volume": `aws ec2 delete-volume\n\nUSO\n    aws ec2 delete-volume --volume-id vol-xxxx\n\nApaga o disco. CUIDADO: volume solto (sem instância) continua\ncustando — é o desperdício mais comum numa conta AWS.`,
+  "ec2.create-snapshot": `aws ec2 create-snapshot\n\nUSO\n    aws ec2 create-snapshot --volume-id vol-xxxx --description "backup-diario"\n\nTira uma "foto" do disco (backup incremental, guardado no S3).`,
+  "ec2.describe-snapshots": `aws ec2 describe-snapshots\n\nUSO\n    aws ec2 describe-snapshots\n\nLista os snapshots da conta.`,
+
+  // ===== API Gateway =====
+  apigateway: `aws apigateway — APIs HTTP gerenciadas\n\nA porta de entrada da aplicação: recebe a requisição HTTP e encaminha\n(pra uma Lambda, um servidor, outro serviço).\n\nORDEM DE MONTAGEM\n    1. create-rest-api      cria a API (guarde o id)\n    2. get-resources        pega o id do recurso raiz "/"\n    3. create-resource      cria o caminho (ex.: /pedidos)\n    4. put-method           define o verbo (GET, POST...)\n    5. create-deployment    publica num estágio (ex.: prod)\n\nOUTROS\n    get-rest-apis    lista as APIs\n    get-stages       lista os estágios publicados\n    delete-rest-api  apaga a API`,
+  "apigateway.create-rest-api": `aws apigateway create-rest-api\n\nUSO\n    aws apigateway create-rest-api --name api-loja\n\nCria a API e devolve o id (os outros comandos pedem --rest-api-id).`,
+  "apigateway.get-rest-apis": `aws apigateway get-rest-apis\n\nUSO\n    aws apigateway get-rest-apis\n\nLista as REST APIs da conta com seus ids.`,
+  "apigateway.get-resources": `aws apigateway get-resources\n\nUSO\n    aws apigateway get-resources --rest-api-id <id>\n\nLista os caminhos da API. O recurso com path "/" é a raiz — é o id\ndele que vai no --parent-id do create-resource.`,
+  "apigateway.create-resource": `aws apigateway create-resource\n\nUSO\n    aws apigateway create-resource --rest-api-id <id> --parent-id <id-do-pai> --path-part pedidos\n\nCria um caminho pendurado no pai (a raiz ou outro recurso).`,
+  "apigateway.put-method": `aws apigateway put-method\n\nUSO\n    aws apigateway put-method --rest-api-id <id> --resource-id <id> --http-method GET --authorization-type NONE\n\nDefine qual verbo HTTP o caminho aceita.\n--authorization-type NONE = aberto; AWS_IAM = exige credencial.`,
+  "apigateway.create-deployment": `aws apigateway create-deployment\n\nUSO\n    aws apigateway create-deployment --rest-api-id <id> --stage-name prod\n\nPublica a API num ESTÁGIO. Enquanto não houver deployment, nada do\nque você configurou responde pro mundo.`,
+  "apigateway.get-stages": `aws apigateway get-stages\n\nUSO\n    aws apigateway get-stages --rest-api-id <id>\n\nLista os estágios publicados e a URL de cada um.`,
+  "apigateway.delete-rest-api": `aws apigateway delete-rest-api\n\nUSO\n    aws apigateway delete-rest-api --rest-api-id <id>\n\nApaga a API inteira (recursos, métodos e estágios juntos).`,
+
+  // ===== Route 53 (DNS) =====
+  route53: `aws route53 — DNS gerenciado\n\nTraduz nome (climb-labs.com) em endereço (203.0.113.10). A "hosted zone"\né o conjunto de registros de um domínio.\n\nCOMANDOS\n    create-hosted-zone           cria a zona de um domínio\n    list-hosted-zones            lista as zonas\n    list-resource-record-sets    lista os registros da zona\n    change-resource-record-sets  cria/atualiza/apaga registros\n    delete-hosted-zone           apaga a zona\n\nTIPOS DE REGISTRO comuns: A (aponta pra um IP), CNAME (apelido pra\noutro nome), MX (e-mail), TXT (verificações), NS/SOA (a AWS cria).`,
+  "route53.create-hosted-zone": `aws route53 create-hosted-zone\n\nUSO\n    aws route53 create-hosted-zone --name climb-labs.com --caller-reference climb-1\n\n--caller-reference é um texto único que VOCÊ inventa: repetindo a\nchamada com o mesmo valor, a AWS não cria duplicado.\nA zona já nasce com os registros NS e SOA.`,
+  "route53.list-hosted-zones": `aws route53 list-hosted-zones\n\nUSO\n    aws route53 list-hosted-zones\n\nLista as zonas e seus ids (formato /hostedzone/ZXXXX).`,
+  "route53.list-resource-record-sets": `aws route53 list-resource-record-sets\n\nUSO\n    aws route53 list-resource-record-sets --hosted-zone-id <id>\n\nLista todos os registros DNS da zona.`,
+  "route53.change-resource-record-sets": `aws route53 change-resource-record-sets\n\nUSO\n    aws route53 change-resource-record-sets --hosted-zone-id <id> --change-batch file://registro-dns.json\n    aws route53 change-resource-record-sets --hosted-zone-id <id> --change-batch '{"Changes":[...]}'\n\nCria (CREATE), substitui (UPSERT) ou remove (DELETE) registros.\nExiste um registro-dns.json pronto no lab — veja com 'cat registro-dns.json'.`,
+  "route53.delete-hosted-zone": `aws route53 delete-hosted-zone\n\nUSO\n    aws route53 delete-hosted-zone --id <id>\n\nApaga a zona. Só funciona se ela não tiver registros próprios\n(os NS e SOA que a AWS criou não contam).`,
+
+  // ===== CloudFront (CDN) =====
+  cloudfront: `aws cloudfront — CDN (rede de entrega de conteúdo)\n\nCopia seu conteúdo pra servidores espalhados pelo mundo: quem acessa do\nJapão pega do Japão, não da Virgínia. Mais rápido pra quem acessa e\nmais barato que servir tudo da origem.\n\nCOMANDOS\n    create-distribution   cria a distribuição (aponta pra uma origem)\n    list-distributions    lista as distribuições\n    get-distribution      detalhes (inclusive o domínio .cloudfront.net)\n    create-invalidation   limpa o cache de um caminho\n    list-invalidations    histórico de limpezas`,
+  "cloudfront.create-distribution": `aws cloudfront create-distribution\n\nUSO\n    aws cloudfront create-distribution --origin-domain-name meu-site-climb.s3.amazonaws.com\n\nA ORIGEM é de onde o CloudFront busca o conteúdo original\n(normalmente um bucket S3 ou um load balancer).`,
+  "cloudfront.list-distributions": `aws cloudfront list-distributions\n\nUSO\n    aws cloudfront list-distributions\n\nLista as distribuições, o status e o domínio de cada uma.`,
+  "cloudfront.get-distribution": `aws cloudfront get-distribution\n\nUSO\n    aws cloudfront get-distribution --id <id>\n\nDetalhes da distribuição, incluindo o DomainName\n(ex.: d123abc.cloudfront.net) que você usa pra acessar.`,
+  "cloudfront.create-invalidation": `aws cloudfront create-invalidation\n\nUSO\n    aws cloudfront create-invalidation --distribution-id <id> --paths "/*"\n\nApaga o cache das bordas. Use quando publicou uma versão nova e as\npessoas ainda veem a antiga. "/*" limpa tudo.\n(Na AWS real, invalidação em excesso é cobrada.)`,
+  "cloudfront.list-invalidations": `aws cloudfront list-invalidations\n\nUSO\n    aws cloudfront list-invalidations --id <id>\n\nLista as invalidações já pedidas pra essa distribuição.`,
 };
 
 function obterManual(caminho) {

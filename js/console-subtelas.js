@@ -75,10 +75,25 @@
   function instAtivas(c) {
     return Object.entries(c.ec2.instancias || {}).filter(([, i]) => i.estado !== "terminated");
   }
+  // Volumes REAIS criados pela CLI (aws ec2 create-volume) + o volume raiz que
+  // toda instância ganha. Assim o Console e a CLI mostram a mesma coisa.
   function linhasVolumes(c) {
-    return instAtivas(c).map(([id, i]) => [
+    const reais = Object.values((c.ec2 || {}).volumes || {}).map((v) => [
+      "—", esc(v.id), esc(v.tipo), v.tamanho + " GiB", v.tipo === "gp3" ? "3000" : "100", "125", "—",
+      esc(dataCurta(v.criadoEm)), esc(v.az),
+      v.instancia ? `<span class="caws-estado ok">● In-use</span>` : `<span class="caws-estado off">● Available</span>`,
+      "—", esc(v.instancia || "—"), "✔", "Not encrypted", "—",
+    ]);
+    const raiz = instAtivas(c).map(([id, i]) => [
       "—", esc(idDeriv("vol-", id)), "gp3", "8 GiB", "3000", "125", "—", esc(dataCurta(i.criadaEm)), esc(az(c)),
       `<span class="caws-estado ok">● In-use</span>`, "—", esc(id), "✔", "Not encrypted", "—",
+    ]);
+    return reais.concat(raiz);
+  }
+  function linhasSnapshots(c) {
+    return Object.values((c.ec2 || {}).snapshots || {}).map((s) => [
+      "—", esc(s.id), s.tamanho + " GiB", s.tamanho + " GiB", esc(s.descricao || "—"), "Standard",
+      `<span class="caws-estado ok">● Completed</span>`, esc(dataCurta(s.criadoEm)), "100%", "Not encrypted", "—",
     ]);
   }
   function linhasEni(c) {
@@ -205,11 +220,13 @@
     emptyT: "No volumes", emptyD: "You do not have any volumes in this region. Every running instance gets a root EBS volume.",
     cli: "aws ec2 describe-volumes",
   });
-  R["ec2|Snapshots"] = () => lista({
-    h1: "Snapshots", n: 0, primario: "Create snapshot", botoes: ["Actions"], busca: "Find snapshot",
+  R["ec2|Snapshots"] = (c) => lista({
+    h1: "Snapshots", n: linhasSnapshots(c).length, primario: "Create snapshot", botoes: ["Actions"], busca: "Find snapshot",
     tabs: ["Owned by me", "Private snapshots", "Public snapshots"],
     colunas: ["Name", "Snapshot ID", "Full snapshot size", "Volume size", "Description", "Storage tier", "Snapshot status", "Started", "Progress", "Encryption", "KMS key ID"],
+    linhas: linhasSnapshots(c),
     emptyT: "No snapshots", emptyD: "You do not have any snapshots in this region.",
+    cli: "aws ec2 create-snapshot --volume-id vol-xxxx",
   });
   R["ec2|Lifecycle Manager"] = () => painelInfo("Amazon Data Lifecycle Manager", [
     { t: "Automate snapshot and AMI lifecycles", p: "O Data Lifecycle Manager automatiza a criação, retenção e exclusão de snapshots do EBS e de AMIs. Escolha um tipo de política: EBS snapshot policy, EBS-backed AMI policy ou Cross-account copy event policy." },

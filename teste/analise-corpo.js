@@ -67,10 +67,32 @@ for (const sid of ordemTrilhas) {
 console.log("\n=== EXECUÇÃO SEQUENCIAL (auto-pass + validadores quebrados) ===");
 const conta = criarContaAws();
 let ultimoCmd = null;
+// Cópia da mesma função do teste/fumaca.js — mexeu num, mexa no outro.
 function resolver(linha) {
-  if (linha.includes("<id-da-inst")) { const ids = Object.keys(conta.ec2.instancias); linha = linha.replace(/<id-da-inst[^>]*>/, ids[ids.length - 1]); }
-  if (linha.includes("<vpc-id>") && conta.vpc) { const ids = Object.keys(conta.vpc.vpcs); linha = linha.replace(/<vpc-id>/g, ids[ids.length - 1]); }
-  if (linha.includes("<igw-id>") && conta.vpc) { const ids = Object.keys(conta.vpc.igws); linha = linha.replace(/<igw-id>/g, ids[ids.length - 1]); }
+  const ult = (obj) => { const k = Object.keys(obj || {}); return k[k.length - 1]; };
+  if (linha.includes("<id-da-inst")) linha = linha.replace(/<id-da-inst[^>]*>/, ult(conta.ec2.instancias));
+  if (linha.includes("<vpc-id>") && conta.vpc) linha = linha.replace(/<vpc-id>/g, ult(conta.vpc.vpcs));
+  if (linha.includes("<igw-id>") && conta.vpc) linha = linha.replace(/<igw-id>/g, ult(conta.vpc.igws));
+  if (linha.includes("<vol-id>")) linha = linha.replace(/<vol-id>/g, ult(conta.ec2.volumes));
+  if (linha.includes("<zone-id>") && conta.route53) linha = linha.replace(/<zone-id>/g, ult(conta.route53.zonas));
+  if (linha.includes("<dist-id>") && conta.cloudfront) linha = linha.replace(/<dist-id>/g, ult(conta.cloudfront.distribuicoes));
+  if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
+  if ((linha.includes("<root-id>") || linha.includes("<resource-id>")) && conta.apigateway) {
+    const api = conta.apigateway.apis[ult(conta.apigateway.apis)];
+    if (api) {
+      linha = linha.replace(/<root-id>/g, api.raiz);
+      const filhos = Object.keys(api.recursos).filter((r) => r !== api.raiz);
+      linha = linha.replace(/<resource-id>/g, filhos[filhos.length - 1] || api.raiz);
+    }
+  }
+  if (linha.includes("<receipt-handle>")) {
+    let handle = "";
+    for (const f of Object.values((conta.sqs || {}).filas || {})) {
+      const m = (f.mensagens || []).find((x) => x.handle);
+      if (m) { handle = m.handle; break; }
+    }
+    linha = linha.replace(/<receipt-handle>/g, handle);
+  }
   return linha;
 }
 const autopass = [];

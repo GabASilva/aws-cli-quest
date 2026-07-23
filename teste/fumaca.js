@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
-const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "desafios-extra.js", "desafios-pratica.js"]
+const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "desafios-extra.js", "desafios-pratica.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -28,19 +28,37 @@ const teste = `
     return r;
   }
 
-  // ids reais são aleatórios — resolve placeholders <id-da-instância>, <vpc-id>, <igw-id>
+  // ids reais são aleatórios — resolve os placeholders das soluções.
+  // ATENÇÃO: teste/analise-corpo.js tem uma cópia desta função — mexeu aqui,
+  // mexa lá também (os dois harnesses executam as mesmas soluções).
   function resolver(linha) {
+    const ult = (obj) => { const k = Object.keys(obj || {}); return k[k.length - 1]; };
     if (linha.includes("<id-da-inst")) {
-      const ids = Object.keys(conta.ec2.instancias);
-      linha = linha.replace(/<id-da-inst[^>]*>/, ids[ids.length - 1]);
+      linha = linha.replace(/<id-da-inst[^>]*>/, ult(conta.ec2.instancias));
     }
-    if (linha.includes("<vpc-id>") && conta.vpc) {
-      const ids = Object.keys(conta.vpc.vpcs);
-      linha = linha.replace(/<vpc-id>/g, ids[ids.length - 1]);
+    if (linha.includes("<vpc-id>") && conta.vpc) linha = linha.replace(/<vpc-id>/g, ult(conta.vpc.vpcs));
+    if (linha.includes("<igw-id>") && conta.vpc) linha = linha.replace(/<igw-id>/g, ult(conta.vpc.igws));
+    if (linha.includes("<vol-id>")) linha = linha.replace(/<vol-id>/g, ult(conta.ec2.volumes));
+    if (linha.includes("<zone-id>") && conta.route53) linha = linha.replace(/<zone-id>/g, ult(conta.route53.zonas));
+    if (linha.includes("<dist-id>") && conta.cloudfront) linha = linha.replace(/<dist-id>/g, ult(conta.cloudfront.distribuicoes));
+    if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
+    if ((linha.includes("<root-id>") || linha.includes("<resource-id>")) && conta.apigateway) {
+      const api = conta.apigateway.apis[ult(conta.apigateway.apis)];
+      if (api) {
+        linha = linha.replace(/<root-id>/g, api.raiz);
+        // o "resource-id" é o último recurso criado (o /pedidos), não a raiz
+        const filhos = Object.keys(api.recursos).filter((r) => r !== api.raiz);
+        linha = linha.replace(/<resource-id>/g, filhos[filhos.length - 1] || api.raiz);
+      }
     }
-    if (linha.includes("<igw-id>") && conta.vpc) {
-      const ids = Object.keys(conta.vpc.igws);
-      linha = linha.replace(/<igw-id>/g, ids[ids.length - 1]);
+    if (linha.includes("<receipt-handle>")) {
+      // pega um handle de mensagem já recebida em qualquer fila
+      let handle = "";
+      for (const f of Object.values((conta.sqs || {}).filas || {})) {
+        const m = (f.mensagens || []).find((x) => x.handle);
+        if (m) { handle = m.handle; break; }
+      }
+      linha = linha.replace(/<receipt-handle>/g, handle);
     }
     return linha;
   }

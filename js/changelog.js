@@ -16,6 +16,21 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23g",
+      data: "23 jul 2026",
+      titulo: "🧩 6 serviços novos: SQS, SNS, EBS, API Gateway, Route 53 e CloudFront",
+      itens: [
+        "<b>+41 atividades</b> em 6 trilhas novas, todas com comandos de verdade no terminal (o CLImb passou de 272 para <b>313 atividades</b>).",
+        "<b>📨 SQS</b> — filas de mensagens: criar, enviar, receber, confirmar o processamento com o <code>ReceiptHandle</code> (o jeito que a AWS garante que nenhuma tarefa se perde) e filas FIFO.",
+        "<b>📣 SNS</b> — notificações: tópicos, assinaturas por e-mail e o padrão <b>fan-out</b> de verdade — publique no tópico e veja a mensagem <b>cair na sua fila SQS</b>.",
+        "<b>💽 EBS</b> — os discos das máquinas: criar volume, anexar na instância, tirar snapshot de backup, desanexar e apagar (incluindo o erro real de quem tenta apagar disco ainda encaixado).",
+        "<b>🚪 API Gateway</b> — monte uma API HTTP na ordem real: criar a API, achar a raiz, criar o caminho <code>/pedidos</code>, definir o método GET e publicar no estágio <code>prod</code>.",
+        "<b>🌐 Route 53</b> — DNS: criar a zona do domínio, listar registros e apontar o <code>www</code> pro servidor com um change-batch (tem um <code>registro-dns.json</code> pronto no lab).",
+        "<b>🚀 CloudFront</b> — CDN: colocar o site na borda e invalidar o cache quando publicou versão nova e todo mundo ainda vê a antiga.",
+        "Tudo espelhado no <b>Console</b>: fila criada pelo terminal aparece na tela de SQS (com a contagem real de mensagens), e volumes/snapshots aparecem no EC2.",
+      ],
+    },
+    {
       versao: "2026-07-23f",
       data: "23 jul 2026",
       titulo: "🔗 Perfil público com link pra compartilhar",
@@ -376,7 +391,7 @@
     {
       icone: "🧩",
       titulo: "Mais serviços AWS",
-      desc: "SQS (filas), SNS (notificações), EBS (discos), API Gateway, Route 53 (DNS) e CloudFront — ampliando além de VPC/RDS/CloudWatch.",
+      desc: "ECS/ECR (contêineres), Secrets Manager, Step Functions e EventBridge. SQS, SNS, EBS, API Gateway, Route 53 e CloudFront já entraram — veja em \"O que mudou\".",
     },
     {
       icone: "🗺️",

@@ -599,7 +599,15 @@
   function telaSqs() {
     const c = conta(); const sqs = estadoSqs(c); const nomes = Object.keys(sqs.filas);
     const linhas = nomes.length
-      ? nomes.map((n) => { const f = sqs.filas[n]; const cbd = (f.tipo === "FIFO") ? "Disabled" : "-"; return `<tr><td>${esc(n)}</td><td>${esc(f.tipo || "Standard")}</td><td>${esc(f.criadoEm || "—")}</td><td>0</td><td>0</td><td>SSE-SQS</td><td>${cbd}</td><td><button class="caws-link-perigo" data-acao="sqs-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`; }).join("")
+      ? nomes.map((n) => {
+          const f = sqs.filas[n];
+          const cbd = (f.tipo === "FIFO") ? "Disabled" : "-";
+          // contagem REAL (as mensagens vêm do `aws sqs send-message` / fan-out do SNS)
+          const msgs = f.mensagens || [];
+          const esperando = msgs.filter((m) => !m.recebida).length;
+          const emVoo = msgs.filter((m) => m.recebida).length;
+          return `<tr><td>${esc(n)}</td><td>${esc(f.tipo || "Standard")}</td><td>${esc(f.criadoEm || "—")}</td><td>${esperando}</td><td>${emVoo}</td><td>SSE-SQS</td><td>${cbd}</td><td><button class="caws-link-perigo" data-acao="sqs-apagar" data-nome="${esc(n)}">Excluir</button></td></tr>`;
+        }).join("")
       : `<tr><td colspan="8" class="caws-vazio">You don't have any queues. Click <strong>Create queue</strong>.</td></tr>`;
     return `${migalha([["Console", "home"], ["Amazon SQS", "sqs-filas"]])}
       <div class="caws-pagina">
