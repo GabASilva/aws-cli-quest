@@ -1143,3 +1143,89 @@ body.console-aberto { overflow: hidden; }
 .sala-voce small { color: var(--texto-fraco); font-weight: 400; }
 .sala-vazia, .sala-total { font-size: 0.78rem; color: var(--texto-fraco); }
 .sala-total { display: block; margin-top: 6px; }
+
+/* ---------- Perfil (js/perfil.js) ---------- */
+.dias-chip { cursor: pointer; }
+.dias-chip small { color: var(--texto-fraco); margin-left: 2px; }
+.perfil-caixa { max-height: 92vh; overflow-y: auto; }
+.perfil-topo { display: flex; align-items: flex-start; gap: 14px; }
+.perfil-avatar {
+  width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--laranja-escuro), var(--laranja));
+  color: #10151f; font-size: 1.8rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.perfil-id { flex: 1; min-width: 0; }
+.perfil-id h2 { margin: 0 0 2px; }
+.perfil-arroba { color: var(--texto-fraco); font-weight: 400; font-size: 0.85rem; }
+.perfil-nivel { margin: 0; color: var(--laranja); font-weight: 600; }
+.perfil-meta { margin: 2px 0 0; font-size: 0.8rem; color: var(--texto-fraco); }
+.perfil-links { margin: 4px 0 0; display: flex; gap: 12px; font-size: 0.85rem; }
+.perfil-links a { color: var(--azul); text-decoration: none; }
+.perfil-links a:hover { text-decoration: underline; }
+.perfil-editar { flex: 0 0 auto; }
+.perfil-bio { margin: 10px 0 0; font-size: 0.9rem; line-height: 1.5; }
+.perfil-bio.vazia { color: var(--texto-fraco); font-style: italic; }
+.perfil-metricas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 14px; }
+.perfil-card {
+  background: var(--painel-2); border: 1px solid var(--borda); border-radius: 10px;
+  padding: 10px 8px; text-align: center;
+}
+.perfil-card strong { display: block; font-size: 1.25rem; color: var(--texto); }
+.perfil-card span { font-size: 0.7rem; color: var(--texto-fraco); line-height: 1.3; display: block; margin-top: 2px; }
+.perfil-sec { margin: 18px 0 8px; font-size: 0.95rem; }
+/* heatmap estilo GitHub */
+.perfil-heat-rotulos { display: flex; gap: 3px; margin-bottom: 2px; padding-left: 0; }
+.perfil-heat-mes { width: 12px; flex: 0 0 12px; font-size: 0.6rem; color: var(--texto-fraco); overflow: visible; white-space: nowrap; }
+.perfil-heat { display: flex; gap: 3px; }
+.perfil-heat-col { display: flex; flex-direction: column; gap: 3px; }
+.perfil-heat-cel { width: 12px; height: 12px; border-radius: 3px; background: var(--painel-2); border: 1px solid var(--borda); display: inline-block; }
+.perfil-heat-cel.h-fora { visibility: hidden; }
+.perfil-heat-cel.h1 { background: #4a3413; border-color: #6b4a15; }
+.perfil-heat-cel.h2 { background: #8a5b10; border-color: #a06a12; }
+.perfil-heat-cel.h3 { background: #cc7a00; border-color: #e08600; }
+.perfil-heat-cel.h4 { background: var(--laranja); border-color: #ffb84d; }
+.perfil-heat-legenda { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.7rem; color: var(--texto-fraco); }
+.perfil-heat-escala { display: inline-flex; align-items: center; gap: 3px; }
+.perfil-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.perfil-badge { font-size: 1.3rem; padding: 6px; background: var(--painel-2); border: 1px solid var(--borda); border-radius: 10px; cursor: default; }
+.perfil-badge.ok { border-color: var(--laranja); }
+.perfil-badge.off { opacity: 0.45; }
+.perfil-trilhas { display: flex; flex-direction: column; gap: 6px; }
+.perfil-trilha { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.perfil-trilha-nome { flex: 0 0 40%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perfil-trilha-barra { flex: 1; height: 8px; background: var(--painel-2); border: 1px solid var(--borda); border-radius: 6px; overflow: hidden; }
+.perfil-trilha-barra div { height: 100%; background: linear-gradient(90deg, var(--laranja-escuro), var(--laranja)); }
+.perfil-trilha-num { flex: 0 0 auto; color: var(--texto-fraco); font-size: 0.75rem; }
+.perfil-form { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.perfil-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--texto-fraco); }
+.perfil-form input, .perfil-form textarea {
+  background: var(--painel-2); border: 1px solid var(--borda); border-radius: 8px;
+  color: var(--texto); padding: 8px 10px; font-family: inherit; font-size: 0.9rem;
+}
+.perfil-form textarea { resize: vertical; }
+.perfil-form-acoes { display: flex; gap: 8px; margin-top: 4px; }
+@media (max-width: 760px) {
+  .perfil-heat, .perfil-heat-rotulos { overflow-x: auto; }
+  .perfil-topo { flex-wrap: wrap; }
+}
+
+/* ---------- Console home: widgets (Visitados recentemente / Integridade) ---------- */
+.caws-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.caws-widget { background: #fff; border: 1px solid #d5dbdb; border-radius: 16px; padding: 16px 18px; }
+.caws-widget-tit { font-weight: 700; margin-bottom: 10px; }
+.caws-recentes { list-style: none; margin: 0; padding: 0; }
+.caws-recentes li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(128,128,128,0.15); }
+.caws-recentes li:last-child { border-bottom: 0; }
+.caws-recentes a { color: #0073bb; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+.caws-recentes a:hover { text-decoration: underline; }
+.caws-recentes small { color: #5f6b7a; }
+.caws-rec-ic { width: 22px; text-align: center; }
+.caws-widget-vazio { margin: 0; font-size: 0.85rem; color: #5f6b7a; line-height: 1.5; }
+.caws-widget-ok { margin: 0 0 6px; font-weight: 600; color: #037f0c; }
+.caws-widget-nota { color: #5f6b7a; }
+#consoleOverlay .caws-widget { background: #1b232d; border-color: #424650; }
+#consoleOverlay .caws-widget-tit { color: #ebebf0; }
+#consoleOverlay .caws-recentes a { color: #42b4ff; }
+#consoleOverlay .caws-recentes small, #consoleOverlay .caws-widget-vazio, #consoleOverlay .caws-widget-nota { color: #9ba2ab; }
+#consoleOverlay .caws-widget-ok { color: #2bb534; }

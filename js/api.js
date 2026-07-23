@@ -14,6 +14,7 @@ const api = {
   twofa: false, // 2FA ativado nesta conta?
   email: null, // e-mail cadastrado (pra recuperação de senha)
   emailVerificado: false, // o e-mail já foi confirmado pelo link?
+  criadoEm: null, // quando a conta foi criada ("Membro desde" no perfil)
 };
 
 function temPro() {
@@ -51,6 +52,7 @@ async function apiIniciar() {
   try {
     const r = await apiFetch("/api/eu");
     api.usuario = r.perfil.usuario;
+    api.criadoEm = r.perfil.criadoEm || null;
     api.licenca = r.licenca || { tier: "free", pro: false };
     api.twofa = !!r.twofa;
     api.email = r.email || null;
@@ -67,6 +69,7 @@ async function apiCadastrar(usuario, senha, email) {
   const r = await apiFetch("/api/cadastrar", { method: "POST", body: JSON.stringify({ usuario, senha, email }) });
   api.token = r.token;
   api.usuario = r.perfil.usuario;
+  api.criadoEm = r.perfil.criadoEm || null;
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.email = r.email || null;
     api.emailVerificado = !!r.emailVerificado;
@@ -81,6 +84,7 @@ async function apiLogin(usuario, senha, codigo) {
   if (r.precisa2fa) return r; // ainda não logou — falta o 2º fator
   api.token = r.token;
   api.usuario = r.perfil.usuario;
+  api.criadoEm = r.perfil.criadoEm || null;
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.twofa = !!r.twofa;
   api.email = r.email || null;
@@ -96,6 +100,7 @@ function apiSair() {
   api.twofa = false;
   api.email = null;
   api.emailVerificado = false;
+  api.criadoEm = null;
   try { localStorage.removeItem(CHAVE_TOKEN); } catch (e) { /* ok */ }
 }
 
@@ -147,6 +152,7 @@ async function apiGoogle(credential) {
   const r = await apiFetch("/api/google", { method: "POST", body: JSON.stringify({ credential }) });
   api.token = r.token;
   api.usuario = r.perfil.usuario;
+  api.criadoEm = r.perfil.criadoEm || null;
   api.licenca = r.licenca || { tier: "free", pro: false };
   api.twofa = !!r.twofa;
   api.email = r.email || null;

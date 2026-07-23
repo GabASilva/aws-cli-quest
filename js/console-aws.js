@@ -641,6 +641,23 @@
       { id: "sns", icone: "📣", nome: "SNS", desc: "Notificações (pub/sub)", ativo: true, extra: `${nTopicos} tópico(s)` },
       { id: "sqs", icone: "📨", nome: "SQS", desc: "Filas de mensagens", ativo: true, extra: `${nFilas} fila(s)` },
     ];
+    // widgets no estilo da página inicial do console real (Recently visited etc.)
+    const recentes = lerRecentes().map((id) => servicos.find((s) => s.id === id)).filter(Boolean);
+    const widgetRecentes = `
+      <div class="caws-widget">
+        <div class="caws-widget-tit">Visitados recentemente</div>
+        ${recentes.length
+          ? `<ul class="caws-recentes">${recentes.map((s) =>
+              `<li><a href="#" data-acao="abrir-servico" data-servico="${s.id}"><span class="caws-rec-ic">${s.icone}</span> ${esc(s.nome)}</a><small>${esc(s.extra || "")}</small></li>`
+            ).join("")}</ul>`
+          : `<p class="caws-widget-vazio">Você ainda não visitou nenhum serviço.<br>Abra um serviço abaixo e ele aparece aqui.</p>`}
+      </div>`;
+    const widgetSaude = `
+      <div class="caws-widget">
+        <div class="caws-widget-tit">Integridade do serviço</div>
+        <p class="caws-widget-ok">✅ Todos os serviços operando normalmente</p>
+        <small class="caws-widget-nota">Região ${esc(c.regiao || "us-east-1")} · emulação — aqui nada cai e nada gera custo 😉</small>
+      </div>`;
     return `
       <div class="caws-pagina">
         <div class="caws-banner">
@@ -649,6 +666,7 @@
           usa a <strong>mesma conta virtual</strong> da linha de comando — crie um bucket aqui e ele
           aparece no <code>aws s3 ls</code>. É o mesmo sistema, duas formas de operar.</p>
         </div>
+        <div class="caws-widgets">${widgetRecentes}${widgetSaude}</div>
         <h2 class="caws-secao">Serviços</h2>
         <div class="caws-grade">
           ${servicos.map((s) => `
@@ -664,6 +682,19 @@
         </div>
       </div>
     `;
+  }
+
+  // ---------- Home: "Visitados recentemente" (como o widget do console real) ----------
+  const CHAVE_RECENTES = "climb.console.recentes";
+  function lerRecentes() {
+    try { return JSON.parse(localStorage.getItem(CHAVE_RECENTES) || "[]"); } catch (e) { return []; }
+  }
+  function marcarRecente(sid) {
+    try {
+      const r = lerRecentes().filter((x) => x !== sid);
+      r.unshift(sid);
+      localStorage.setItem(CHAVE_RECENTES, JSON.stringify(r.slice(0, 6)));
+    } catch (e) { /* ok */ }
   }
 
   // ---------- S3: lista de buckets ----------
@@ -1369,7 +1400,7 @@
 
     if (acao === "abrir-servico") {
       const t = SERVICO_ABRIR[alvo.dataset.servico];
-      if (t) { view = { tela: t, bucket: null, prefixo: "" }; render(); }
+      if (t) { marcarRecente(alvo.dataset.servico); view = { tela: t, bucket: null, prefixo: "" }; render(); }
       return;
     }
     if (acao === "secao") {

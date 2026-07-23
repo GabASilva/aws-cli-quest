@@ -51,6 +51,9 @@ function estadoInicial() {
     etapasProjetos: {}, // id do projeto -> [bool, bool, ...]
     sequenciasPerdidas: [], // últimas 3 sequências mais altas antes de perder
     missoesConsole: {}, // id da missão do Console -> true (concluída)
+    perfilPublico: {}, // página de perfil: { nome, bio, local, github, linkedin }
+    atividadeDiaria: {}, // "YYYY-MM-DD" -> nº de atividades concluídas no dia (heatmap)
+    streakDias: { atual: 0, melhor: 0, ultimo: "" }, // dias SEGUIDOS estudando (streak diário)
     conta: criarContaAws(),
   };
 }
@@ -92,6 +95,9 @@ function sincronizarNuvem() {
         etapasProjetos: jogo.etapasProjetos,
         sequenciasPerdidas: jogo.sequenciasPerdidas,
         missoesConsole: jogo.missoesConsole,
+        perfilPublico: jogo.perfilPublico,
+        atividadeDiaria: jogo.atividadeDiaria,
+        streakDias: jogo.streakDias,
         conta: jogo.conta,
       },
     });
@@ -122,6 +128,9 @@ function aplicarProgressoNuvem(perfil, progresso) {
     jogo.etapasProjetos = progresso.etapasProjetos || {};
     jogo.sequenciasPerdidas = progresso.sequenciasPerdidas || [];
     jogo.missoesConsole = progresso.missoesConsole || {};
+    jogo.perfilPublico = progresso.perfilPublico || {};
+    jogo.atividadeDiaria = progresso.atividadeDiaria || {};
+    jogo.streakDias = progresso.streakDias || { atual: 0, melhor: 0, ultimo: "" };
     if (progresso.conta) jogo.conta = progresso.conta;
   }
   jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)
@@ -165,6 +174,18 @@ function mesclarEstados(local, nuvem) {
   const perdidas = (nuvem.sequenciasPerdidas && nuvem.sequenciasPerdidas.length)
     ? nuvem.sequenciasPerdidas
     : (local.sequenciasPerdidas || []);
+
+  // atividade diária: união dos dois lados, maior contagem por dia
+  const atividadeDiaria = {};
+  for (const dia of new Set([...Object.keys(local.atividadeDiaria || {}), ...Object.keys(nuvem.atividadeDiaria || {})])) {
+    atividadeDiaria[dia] = Math.max((local.atividadeDiaria || {})[dia] || 0, (nuvem.atividadeDiaria || {})[dia] || 0);
+  }
+  const sdL = local.streakDias || {}, sdN = nuvem.streakDias || {};
+  const streakDias = {
+    atual: Math.max(sdL.atual || 0, sdN.atual || 0),
+    melhor: Math.max(sdL.melhor || 0, sdN.melhor || 0),
+    ultimo: (sdL.ultimo || "") > (sdN.ultimo || "") ? (sdL.ultimo || "") : (sdN.ultimo || ""),
+  };
   return {
     concluidos,
     revelados,
@@ -174,6 +195,9 @@ function mesclarEstados(local, nuvem) {
     streak: Math.max(local.streak || 0, nuvem.streak || 0),
     melhorStreak: Math.max(local.melhorStreak || 0, nuvem.melhorStreak || 0),
     sequenciasPerdidas: perdidas.slice(0, 3),
+    perfilPublico: Object.assign({}, nuvem.perfilPublico, local.perfilPublico),
+    atividadeDiaria,
+    streakDias,
   };
 }
 
@@ -189,6 +213,9 @@ function entrarComConta(perfil, progressoNuvem) {
     streak: jogo.streak,
     melhorStreak: jogo.melhorStreak,
     sequenciasPerdidas: jogo.sequenciasPerdidas,
+    perfilPublico: jogo.perfilPublico,
+    atividadeDiaria: jogo.atividadeDiaria,
+    streakDias: jogo.streakDias,
   };
   const tinhaLocal = Object.keys(local.concluidos || {}).length > 0;
   const tinhaNuvem = !!(progressoNuvem && Object.keys(progressoNuvem.concluidos || {}).length > 0);
@@ -204,6 +231,9 @@ function entrarComConta(perfil, progressoNuvem) {
   jogo.revelados = merged.revelados;
   jogo.etapasProjetos = merged.etapasProjetos;
   jogo.sequenciasPerdidas = merged.sequenciasPerdidas || [];
+  jogo.perfilPublico = merged.perfilPublico || {};
+  jogo.atividadeDiaria = merged.atividadeDiaria || {};
+  jogo.streakDias = merged.streakDias || { atual: 0, melhor: 0, ultimo: "" };
   jogo.conta = normalizarConta(merged.conta); // migra contas antigas (campos novos)
 
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }

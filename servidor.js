@@ -269,7 +269,7 @@ function responderJson(res, status, obj) {
 
 function perfilPublico(nome) {
   const u = bd.usuarios[nome];
-  return { usuario: nome, xp: u.xp || 0, melhorStreak: u.melhorStreak || 0 };
+  return { usuario: nome, xp: u.xp || 0, melhorStreak: u.melhorStreak || 0, criadoEm: u.criadoEm || null };
 }
 
 // ---------- Licenças ----------

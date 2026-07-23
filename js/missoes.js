@@ -147,11 +147,27 @@ const BANCO = [
 
   function servirAleatoria() {
     modoTreino = true;
+    // Revisão espaçada (inspirado no Training Grounds do boot.dev):
+    // 1º o que nunca fez; se acabou, metade das vezes revisa o que você fez
+    // com a resposta revelada (onde teve dificuldade), senão o que foi feito
+    // há mais tempo (10 mais antigos) — pra memória não enferrujar.
     const pend = BANCO.filter((b) => !desafioConcluido(b.id));
-    const pool = pend.length ? pend : BANCO;
-    const d = pool[Math.floor(Math.random() * pool.length)];
+    let d, revisao = false;
+    if (pend.length) {
+      d = pend[Math.floor(Math.random() * pend.length)];
+    } else {
+      revisao = true;
+      // só faz sentido revisar o que exige ação de novo (o validador ainda não
+      // está satisfeito pelo estado atual da conta — ex.: recurso já existe)
+      const refazivel = (b) => { try { return !b.validar(jogo.conta, null, false); } catch (e) { return true; } };
+      const dificeis = BANCO.filter((b) => (jogo.concluidos[b.id] || {}).revelado && refazivel(b));
+      const antigos = BANCO.filter(refazivel)
+        .sort((a, b) => ((jogo.concluidos[a.id] || {}).quando || 0) - ((jogo.concluidos[b.id] || {}).quando || 0)).slice(0, 10);
+      const pool = (dificeis.length && Math.random() < 0.5) ? dificeis : (antigos.length ? antigos : BANCO);
+      d = pool[Math.floor(Math.random() * pool.length)];
+    }
     selecionarDesafio(d.id);
-    toast(`🎲 Nova missão: <strong>${d.titulo}</strong> <small>(${NOMES_NIVEL[d.nivel]})</small>`, "neutro");
+    toast(`${revisao ? "🔁 Revisão" : "🎲 Nova missão"}: <strong>${d.titulo}</strong> <small>(${NOMES_NIVEL[d.nivel]})</small>`, "neutro");
   }
 
   function completarAvulso(d) {
@@ -182,7 +198,14 @@ const BANCO = [
       const d = ui && ui.desafioAtivo ? obterDesafio(ui.desafioAtivo) : null;
       if (d && d.avulso) {
         if (desafioConcluido(d.id)) {
-          if (modoTreino) setTimeout(servirAleatoria, 600); // já feito: roda a próxima
+          if (!modoTreino) return;
+          // modo revisão: valida de novo, comemora, mas NÃO repete o XP
+          let okRev = false;
+          try { okRev = !!d.validar(jogo.conta, cmd, true); } catch (e) { okRev = false; }
+          if (okRev) {
+            toast(`🔁 <strong>${d.titulo}</strong> revisado — memória afiada! 🧠 <small>(sem XP repetido)</small>`, "sucesso");
+            setTimeout(servirAleatoria, 900);
+          }
           return;
         }
         let ok = false;
