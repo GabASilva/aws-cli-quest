@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
-const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "desafios-extra.js", "desafios-pratica.js"]
+const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "desafios-extra.js", "desafios-pratica.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -54,6 +54,7 @@ const teste = `
     if (linha.includes("<key-id>") && conta.kms) linha = linha.replace(/<key-id>/g, ult(conta.kms.chaves));
     if (linha.includes("<query-id>") && conta.athena) linha = linha.replace(/<query-id>/g, ult(conta.athena.execucoes));
     if (linha.includes("<blob>")) linha = linha.replace(/<blob>/g, ((conta.kms || {}).ultimoBlob) || "");
+    if (linha.includes("<pool-id>") && conta.cognito) linha = linha.replace(/<pool-id>/g, ult(conta.cognito.pools));
     if (linha.includes("<receipt-handle>")) {
       // pega um handle de mensagem já recebida em qualquer fila
       let handle = "";

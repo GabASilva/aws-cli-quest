@@ -16,6 +16,18 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23j",
+      data: "23 jul 2026",
+      titulo: "🕵️ Auditoria, configuração, login e elasticidade",
+      itens: [
+        "<b>+26 atividades</b> em 4 trilhas novas — o CLImb chegou a <b>430 atividades</b> e <b>39 trilhas</b>.",
+        "<b>🕵️ CloudTrail</b> — a câmera de segurança da conta. E ela grava de verdade: o <code>lookup-events</code> mostra <b>tudo o que você já rodou neste terminal</b>. Inclui a pegadinha clássica (criar a trilha não liga a gravação) e o detalhe de que o CloudTrail registra o nome da <b>API</b> — por isso <code>aws s3 mb</code> aparece como <code>CreateBucket</code>.",
+        "<b>🎛️ Systems Manager</b> — Parameter Store: tire configuração do código, use caminhos hierárquicos pra puxar tudo de uma vez e guarde valores sensíveis como <code>SecureString</code> (que só abre com <code>--with-decryption</code>).",
+        "<b>🎫 Cognito</b> — login pronto sem escrever autenticação: user pool, app client e usuários com senha temporária.",
+        "<b>📶 Auto Scaling</b> — e este <b>sobe máquinas de verdade</b>: crie o grupo e veja as instâncias aparecerem no <code>aws ec2 describe-instances</code>. Escale pra Black Friday, desça depois (as sobrando são encerradas) e configure a política que faz tudo isso sozinho.",
+      ],
+    },
+    {
       versao: "2026-07-23i",
       data: "23 jul 2026",
       titulo: "☸️ Kubernetes, dados e criptografia: EKS, Glue, Athena e KMS",
@@ -419,7 +431,7 @@
     {
       icone: "🧩",
       titulo: "Mais serviços AWS",
-      desc: "Já são 35 trilhas. Os próximos candidatos: CloudTrail (auditoria), Systems Manager (Parameter Store), Cognito (login de usuários) e Auto Scaling. Tem um serviço que faz falta no seu dia a dia? Fale com o responsável pelo app.",
+      desc: "Já são 39 trilhas e 29 serviços na linha de comando. Daqui pra frente o foco muda: em vez de mais serviços soltos, vêm projetos que juntam vários deles numa arquitetura completa. Tem um serviço que faz falta no seu dia a dia? Fale com o responsável pelo app.",
     },
     {
       icone: "🗺️",
