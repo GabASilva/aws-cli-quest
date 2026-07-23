@@ -480,3 +480,68 @@ Ordem por valor didático + facilidade (já temos o motor Cloudscape dark + nav)
 > Este doc é **vivo**: extraído ao vivo do console (us-west-2). Para pegar mais
 > detalhes de uma sub-página específica (colunas completas, wording de wizard),
 > reconectar via extensão e rodar o mesmo extrator na URL da página.
+
+---
+
+## Capturas 2026-07-23 (us-east-1, conta da escola, console em pt-BR)
+Subpáginas levantadas ao vivo pra alimentar o `js/console-subtelas.js` (labels
+convertidos pra EN no CLImb, consistentes com o resto do doc).
+
+### EC2
+- **Instance Types**: colunas `Instance type` · `Free tier eligible` · `vCPUs` ·
+  `Architecture` · `Memory (GiB)` · `Storage (GB)` · `Storage type` ·
+  `Network performance` · `On-Demand Windows/Linux pricing`. Botões
+  `Instance type finder`, `Actions`.
+- **Spot Requests**: `Request ID` · `Request type` · `State` · `Capacity` ·
+  `Status` · `Persistence` · `Created` · `vCPU-hours` · `Memory (GiB)-hours` ·
+  `Total Spot cost (USD)` · `Total savings`. Botões `Pricing history`,
+  `Create Spot Fleet request`.
+- **Reserved Instances**: `ID` · `Instance type` · `Scope` · `Availability Zone`
+  · `Instance count` · `Start` · `Expires` · `Term` · `Payment option` ·
+  `Offering class` · `State`. Botão `Purchase Reserved Instances`.
+- **Dedicated Hosts** (21 colunas; principais): `Name` · `Host ID` · `AZ` ·
+  `State` · `vCPU utilization` · `Instance family/type` · `Owner` ·
+  `Auto-placement` · `Host recovery` · `Total vCPUs`. Botões `Allocate Dedicated
+  Host`, `Dedicated Host Reservations`. Empty: "No Dedicated Hosts / You do not
+  have any Dedicated Hosts in this region".
+- **Capacity Reservations**: landing "Garantia de capacidade sem compromissos"
+  (ODCRs + Capacity Blocks for ML) com `Comece a usar`.
+- **AMI Catalog**: abas `Quickstart AMIs (46)` · `My AMIs (0)` · `Marketplace
+  (8039)` · `Community (500)`; filtros (nível gratuito, SO, arquitetura); cards
+  com Amazon Linux 2023 etc. Botões `Criar modelo com AMI`, `Executar instância
+  com AMI`.
+- **Events**: `Name` · `Resource ID` · `Event status` · `Event type` ·
+  `Description` · `Progress` · `Duration` · `Start time` · `Deadline`.
+
+### Outros serviços
+- **Lambda › Layers**: `Name` · `Version` · `Description` · `Compatible
+  runtimes` · `Compatible architectures` · `Created`.
+- **Lambda › Applications**: `Name` · `Description` · `Status` ·
+  `Last modified`; empty "You don't have any serverless applications".
+- **DynamoDB › Explore items**: seletor "Tables (N)" + filtro por tag; vazio =
+  "No table available / You can query and check items in a chosen table.
+  Create a table to get started."
+- **SNS › Subscriptions**: `ID` · `Endpoint` · `Status` · `Protocol` · `Topic`;
+  botões `Edit`/`Delete`/`Request confirmation`/`Confirm subscription`/
+  `Create subscription`; empty "No subscriptions found".
+- **RDS › Snapshots**: abas `Manual`/`System`/`Shared with me`/`Public`/
+  `Backup service`/`Exports in Amazon S3`; 15 colunas (Snapshot name, Engine
+  version, DB cluster or instance, creation time, Status, Progress, VPC, Type,
+  Storage, Zone, Encrypted…). Botão `Take snapshot`.
+- **RDS › Subnet groups**: `Name` · `Description` · `Status` · `VPC`; botão
+  `Create DB subnet group`.
+- **CloudWatch › Dashboards**: abas Custom/Automatic; `Name` · `Sharing` ·
+  `Favorite` · `Last updated (UTC)`; botões `Share dashboard`/`Delete`/
+  `Create dashboard`.
+- **IAM › Account settings**: painéis "Password policy" (mín. 8 chars, 3 de 4
+  tipos, nunca expira) e "STS" (endpoints regionais).
+- **IAM › Credential report**: texto "lista todos os usuários IAM e o status
+  das credenciais; disponível por até 4h" + `Download credentials report`.
+- **S3 › Batch Operations**: `Job ID` · `Status` · `Description` · `Operation`
+  · `Creation date` · `Total objects` · `% complete` · `Total failed (rate)` ·
+  `Priority`; botões `Run job`/`Actions`/`Clone job`/`Create job`.
+
+> Implementação: `js/console-subtelas.js` (registro `CAWS_SUBTELAS`) — telas
+> 100% visuais; listas puxam o estado da conta simulada quando existe
+> (security groups, key pairs, subnets, IGWs, log groups, volumes/ENIs
+> derivados das instâncias, parameter/option groups derivados dos bancos).

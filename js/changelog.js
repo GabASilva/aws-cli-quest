@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23b",
+      data: "23 jul 2026",
+      titulo: "🖥️ Console completo: todas as seções da nav agora abrem",
+      itens: [
+        "Todos os itens da navegação lateral do Console que eram \"em branco\" agora abrem <b>telas fiéis ao AWS real</b> (capturadas do console ao vivo): EC2 (Instance Types, Volumes, Snapshots, Security Groups, Key Pairs, AMI Catalog, Spot, Reserved, Dedicated Hosts…), VPC (Subnets, Route tables, Internet gateways, NACLs…), S3, IAM, RDS, CloudWatch, Lambda, DynamoDB e SNS.",
+        "Onde a sua conta simulada tem recursos, as listas mostram os <b>dados de verdade</b>: security groups e key pairs criados na CLI, volumes e interfaces de rede das suas instâncias, log groups, subnets, roles/policies e até parameter groups derivados dos seus bancos RDS.",
+        "É tudo <b>simulação visual</b> (nada gera custo nem cria recurso novo) — os controles decorativos avisam quando clicados, e as ações de verdade continuam nas telas em destaque e na CLI.",
+      ],
+    },
+    {
       versao: "2026-07-23a",
       data: "23 jul 2026",
       titulo: "🪪 Perfil, streak diário e revisão inteligente",

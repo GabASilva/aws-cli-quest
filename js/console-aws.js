@@ -547,8 +547,14 @@
     const label = view.secaoLabel || "Recursos";
     const cfg = NAV[sid] || { titulo: sid };
     const lista = SERVICO_LISTA[sid];
+    const mig = migalha([["Console", "home"], [cfg.titulo, lista], [label, null]]);
+    // subtelas fiéis (console-subtelas.js) — se existir uma pro rótulo, usa
+    if (typeof window.cawsSubtela === "function") {
+      const html = window.cawsSubtela(sid, label, conta());
+      if (html) return mig + html;
+    }
     return `
-      ${migalha([["Console", "home"], [cfg.titulo, lista], [label, null]])}
+      ${mig}
       <div class="caws-pagina">
         <div class="caws-cab-servico"><h1>${esc(label)}</h1></div>
         <div class="caws-estado-vazio">
@@ -1406,6 +1412,10 @@
     if (acao === "secao") {
       view = { tela: "secao", servico: alvo.dataset.servico, secaoLabel: alvo.dataset.label };
       render();
+      return;
+    }
+    if (acao === "st-aviso") {
+      avisar("🖥️ Este controle é <strong>decorativo</strong> (fiel ao console real). As ações de verdade ficam nas telas em destaque e na CLI. 😉");
       return;
     }
     if (acao === "sns-apagar") {

@@ -1229,3 +1229,45 @@ body.console-aberto { overflow: hidden; }
 #consoleOverlay .caws-recentes a { color: #42b4ff; }
 #consoleOverlay .caws-recentes small, #consoleOverlay .caws-widget-vazio, #consoleOverlay .caws-widget-nota { color: #9ba2ab; }
 #consoleOverlay .caws-widget-ok { color: #2bb534; }
+
+/* ---------- Console: subtelas fiéis (console-subtelas.js) ---------- */
+.caws-cab-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.caws-info { font-size: 0.75rem; color: #0073bb; font-weight: 400; margin-left: 4px; }
+.caws-st-sub { max-width: 900px; font-size: 0.88rem; line-height: 1.5; color: #5f6b7a; margin: 0 0 14px; }
+.caws-st-toolbar { display: flex; gap: 10px; align-items: center; margin: 0 0 10px; }
+.caws-st-busca {
+  flex: 1; max-width: 480px; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid #aab7b8; background: #fff; color: #16191f; font-size: 0.85rem;
+}
+.caws-st-tools { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
+.caws-st-pag { font-size: 0.82rem; color: #5f6b7a; padding: 0 4px; }
+.caws-st-tabs { display: flex; gap: 0; margin: 0 0 12px; border-bottom: 1px solid #d5dbdb; flex-wrap: wrap; }
+.caws-st-tab {
+  background: none; border: none; border-bottom: 3px solid transparent;
+  padding: 8px 14px; cursor: pointer; font-size: 0.86rem; font-weight: 600; color: #5f6b7a;
+}
+.caws-st-tab.ativo { color: #0073bb; border-bottom-color: #0073bb; }
+.caws-st-painel { background: #fff; border: 1px solid #d5dbdb; border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; }
+.caws-st-painel h2 { margin: 0 0 8px; font-size: 1rem; }
+.caws-st-painel p { margin: 0 0 6px; font-size: 0.86rem; line-height: 1.5; color: #414d5c; }
+.caws-st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.caws-st-card { background: #fff; border: 1px solid #d5dbdb; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 3px; }
+.caws-st-card strong { font-size: 1.15rem; }
+.caws-st-card span, .caws-st-card small { font-size: 0.76rem; color: #5f6b7a; line-height: 1.35; }
+.caws-st-grid.amis { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.caws-st-card.ami strong { font-size: 0.95rem; }
+.caws-st-card.ami button { margin-top: 8px; align-self: flex-start; }
+.caws-st-editor {
+  background: #0f141a; color: #d5dbdb; border-radius: 8px; padding: 12px 14px;
+  font-family: var(--fonte-mono); font-size: 0.82rem; line-height: 1.5; overflow-x: auto; margin: 0 0 8px;
+}
+.caws-st-cli { font-size: 0.8rem; color: #5f6b7a; margin: 10px 0 0; }
+#consoleOverlay .caws-st-busca { background: #0f141a; border-color: #424650; color: #c6c6cd; }
+#consoleOverlay .caws-st-sub, #consoleOverlay .caws-st-pag, #consoleOverlay .caws-st-cli { color: #9ba2ab; }
+#consoleOverlay .caws-st-tabs { border-bottom-color: #424650; }
+#consoleOverlay .caws-st-tab { color: #9ba2ab; }
+#consoleOverlay .caws-st-tab.ativo { color: #42b4ff; border-bottom-color: #42b4ff; }
+#consoleOverlay .caws-st-painel, #consoleOverlay .caws-st-card { background: #1b232d; border-color: #424650; }
+#consoleOverlay .caws-st-painel p { color: #c6c6cd; }
+#consoleOverlay .caws-st-card span, #consoleOverlay .caws-st-card small { color: #9ba2ab; }
+#consoleOverlay .caws-info { color: #42b4ff; }
