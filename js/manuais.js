@@ -28,6 +28,10 @@ SERVIÇOS DISPONÍVEIS
     secretsmanager  Senhas e segredos
     stepfunctions   Orquestração de passos (fluxos)
     events      EventBridge: eventos e agendamentos
+    eks         Kubernetes gerenciado
+    glue        Catálogo de dados (e crawlers)
+    athena      SQL direto nos arquivos do S3
+    kms         Chaves de criptografia
     sts         Identidade da sessão (get-caller-identity)
 
 MANUAIS
@@ -898,6 +902,51 @@ quando dá certo (igual ao AWS de verdade).`,
   "events.disable-rule": `aws events disable-rule\n\nUSO\n    aws events disable-rule --name limpeza-noturna\n\nPausa a regra sem apagar (para de disparar, configuração preservada).`,
   "events.enable-rule": `aws events enable-rule\n\nUSO\n    aws events enable-rule --name limpeza-noturna\n\nVolta a disparar uma regra pausada.`,
   "events.delete-rule": `aws events delete-rule\n\nUSO\n    aws events delete-rule --name limpeza-noturna\n\nApaga a regra. Precisa remover os alvos antes (ou usar --force).`,
+
+  // ===== EKS (Kubernetes gerenciado) =====
+  eks: `aws eks — Kubernetes gerenciado\n\nA AWS cuida do control plane (o "cérebro" do Kubernetes) e você cuida\ndos seus contêineres. Duas peças:\n    CLUSTER     o control plane (precisa de 2+ sub-redes, em AZs diferentes)\n    NODEGROUP   as máquinas EC2 onde os pods realmente rodam\n\nCOMANDOS\n    create-cluster / list-clusters / describe-cluster / delete-cluster\n    create-nodegroup / list-nodegroups / delete-nodegroup\n    update-kubeconfig   liga o kubectl ao cluster\n\nECS x EKS: o ECS é mais simples e só existe na AWS; o EKS é Kubernetes\nde verdade — mais complexo, mas seu conhecimento vale em qualquer nuvem.`,
+  "eks.create-cluster": `aws eks create-cluster\n\nUSO\n    aws eks create-cluster --name cluster-k8s --role-arn <arn-da-role> --resources-vpc-config subnetIds=subnet-aaa1,subnet-bbb2\n\nExige ao menos 2 sub-redes em zonas diferentes (o control plane fica\nespalhado). Na AWS real demora ~10 minutos pra ficar ACTIVE.`,
+  "eks.list-clusters": `aws eks list-clusters\n\nUSO\n    aws eks list-clusters\n\nLista os nomes dos clusters EKS da região.`,
+  "eks.describe-cluster": `aws eks describe-cluster\n\nUSO\n    aws eks describe-cluster --name cluster-k8s\n\nMostra status, versão do Kubernetes, endpoint e sub-redes.`,
+  "eks.update-kubeconfig": `aws eks update-kubeconfig\n\nUSO\n    aws eks update-kubeconfig --name cluster-k8s\n\nEscreve o contexto no ~/.kube/config — é o comando que faz o kubectl\nconseguir falar com o cluster. Depois dele, 'kubectl get nodes' funciona.`,
+  "eks.create-nodegroup": `aws eks create-nodegroup\n\nUSO\n    aws eks create-nodegroup --cluster-name cluster-k8s --nodegroup-name nos-app --node-role <arn> --subnets subnet-aaa1 subnet-bbb2\n\nCria o grupo de máquinas que executa os pods. Sem nodegroup o cluster\nexiste, mas não tem onde rodar nada.`,
+  "eks.list-nodegroups": `aws eks list-nodegroups\n\nUSO\n    aws eks list-nodegroups --cluster-name cluster-k8s\n\nLista os nodegroups do cluster.`,
+  "eks.delete-nodegroup": `aws eks delete-nodegroup\n\nUSO\n    aws eks delete-nodegroup --cluster-name cluster-k8s --nodegroup-name nos-app\n\nApaga o grupo de máquinas.`,
+  "eks.delete-cluster": `aws eks delete-cluster\n\nUSO\n    aws eks delete-cluster --name cluster-k8s\n\nApaga o cluster. Só funciona depois de apagar os nodegroups.`,
+
+  // ===== Glue (catálogo de dados) =====
+  glue: `aws glue — catálogo de dados e ETL\n\nO Glue guarda o MAPA dos seus dados: quais tabelas existem, quais\ncolunas têm e onde os arquivos estão no S3. Quem consulta é o Athena.\n\nIMPORTANTE: a tabela do Glue é só METADADO. O dado continua no S3 —\ncriar uma tabela não copia nada.\n\nCOMANDOS\n    create-database / get-databases / delete-database\n    create-table / get-tables\n    create-crawler / start-crawler / get-crawler\n\nO CRAWLER é o robô que varre o S3 e descobre as colunas sozinho.`,
+  "glue.create-database": `aws glue create-database\n\nUSO\n    aws glue create-database --database-input '{"Name":"dados_loja"}'\n\nCria um banco no catálogo (um agrupador de tabelas).`,
+  "glue.get-databases": `aws glue get-databases\n\nUSO\n    aws glue get-databases\n\nLista os bancos do catálogo.`,
+  "glue.create-table": `aws glue create-table\n\nUSO\n    aws glue create-table --database-name dados_loja --table-input file://tabela-vendas.json\n\nO TableInput descreve as colunas e o Location (caminho no S3).\nExiste um tabela-vendas.json pronto no lab — veja com 'cat'.`,
+  "glue.get-tables": `aws glue get-tables\n\nUSO\n    aws glue get-tables --database-name dados_loja\n\nLista as tabelas do banco, com colunas e caminho no S3.`,
+  "glue.create-crawler": `aws glue create-crawler\n\nUSO\n    aws glue create-crawler --name crawler-vendas --role <arn> --database-name dados_loja --targets '{"S3Targets":[{"Path":"s3://meu-bucket/vendas/"}]}'\n\nCria o robô que lê os arquivos do S3 e escreve a tabela sozinho\n(descobre colunas e tipos).`,
+  "glue.start-crawler": `aws glue start-crawler\n\nUSO\n    aws glue start-crawler --name crawler-vendas\n\nRoda o crawler agora (também dá pra agendar).`,
+  "glue.get-crawler": `aws glue get-crawler\n\nUSO\n    aws glue get-crawler --name crawler-vendas\n\nMostra o estado do crawler (READY, RUNNING, STOPPING).`,
+  "glue.delete-database": `aws glue delete-database\n\nUSO\n    aws glue delete-database --name dados_loja\n\nApaga o banco do catálogo. Os arquivos no S3 NÃO são apagados.`,
+
+  // ===== Athena (SQL no S3) =====
+  athena: `aws athena — SQL direto nos arquivos do S3\n\nSem servidor, sem carregar nada: o Athena lê o catálogo do Glue pra\nsaber onde estão os dados e roda SQL em cima dos arquivos. Você paga\npor dado escaneado.\n\nO FLUXO É ASSÍNCRONO\n    1. start-query-execution   devolve um QueryExecutionId\n    2. get-query-execution     a consulta terminou? (SUCCEEDED/FAILED)\n    3. get-query-results       traz as linhas\n\nSempre precisa de um bucket de saída (--result-configuration).`,
+  "athena.start-query-execution": `aws athena start-query-execution\n\nUSO\n    aws athena start-query-execution --query-string "SELECT * FROM dados_loja.vendas" --result-configuration OutputLocation=s3://meu-bucket-resultados/\n\nEnvia a consulta e devolve o QueryExecutionId. A tabela precisa\nexistir no catálogo do Glue.`,
+  "athena.get-query-execution": `aws athena get-query-execution\n\nUSO\n    aws athena get-query-execution --query-execution-id <id>\n\nMostra o estado (QUEUED, RUNNING, SUCCEEDED, FAILED), o motivo do\nerro e quantos bytes foram escaneados (é o que você paga).`,
+  "athena.get-query-results": `aws athena get-query-results\n\nUSO\n    aws athena get-query-results --query-execution-id <id>\n\nTraz as linhas do resultado. A PRIMEIRA linha é o cabeçalho com os\nnomes das colunas.`,
+  "athena.list-query-executions": `aws athena list-query-executions\n\nUSO\n    aws athena list-query-executions\n\nLista os ids das consultas já executadas.`,
+
+  // ===== KMS (chaves) =====
+  kms: `aws kms — Key Management Service\n\nGuarda as chaves que cifram seus dados. O ponto central: a chave\nNUNCA sai do KMS — você manda o dado pra lá pra cifrar/decifrar, e\nquem pode usar a chave é definido por IAM.\n\nCOMANDOS\n    create-key / list-keys / describe-key\n    create-alias / list-aliases      apelido no lugar do id enorme\n    encrypt / decrypt                cifra e decifra\n    enable-key-rotation / get-key-rotation-status\n    disable-key / enable-key\n    schedule-key-deletion / cancel-key-deletion\n\nAPAGAR CHAVE É IRREVERSÍVEL: o que foi cifrado com ela nunca mais abre.\nPor isso a AWS obriga uma espera de 7 a 30 dias.`,
+  "kms.create-key": `aws kms create-key\n\nUSO\n    aws kms create-key --description "chave da loja"\n\nCria uma chave simétrica. Anote o KeyId — ou melhor, dê um alias.`,
+  "kms.list-keys": `aws kms list-keys\n\nUSO\n    aws kms list-keys\n\nLista os ids das chaves da conta.`,
+  "kms.describe-key": `aws kms describe-key\n\nUSO\n    aws kms describe-key --key-id alias/chave-loja\n\nDetalhes da chave: estado, uso e data de exclusão (se agendada).\nAceita o id, o ARN ou o alias.`,
+  "kms.create-alias": `aws kms create-alias\n\nUSO\n    aws kms create-alias --alias-name alias/chave-loja --target-key-id <key-id>\n\nO alias precisa começar com "alias/". Com ele você referencia a chave\npor nome — e pode apontar pra outra chave depois sem mexer no código.`,
+  "kms.list-aliases": `aws kms list-aliases\n\nUSO\n    aws kms list-aliases\n\nLista os aliases e pra qual chave cada um aponta.`,
+  "kms.encrypt": `aws kms encrypt\n\nUSO\n    aws kms encrypt --key-id alias/chave-loja --plaintext cartao-1234\n\nDevolve o CiphertextBlob — é ISSO que você guarda no banco/arquivo.\n(No CLImb a "cifra" é didática, não criptografia real.)`,
+  "kms.decrypt": `aws kms decrypt\n\nUSO\n    aws kms decrypt --ciphertext-blob <blob>\n\nVolta ao texto original. Repare que você NÃO informa a chave: o blob\njá carrega qual chave foi usada — o KMS descobre sozinho.`,
+  "kms.enable-key-rotation": `aws kms enable-key-rotation\n\nUSO\n    aws kms enable-key-rotation --key-id alias/chave-loja\n\nA AWS passa a trocar o material da chave uma vez por ano, sozinha.\nO que já foi cifrado continua abrindo normalmente.`,
+  "kms.get-key-rotation-status": `aws kms get-key-rotation-status\n\nUSO\n    aws kms get-key-rotation-status --key-id alias/chave-loja\n\nDiz se a rotação automática está ligada.`,
+  "kms.disable-key": `aws kms disable-key\n\nUSO\n    aws kms disable-key --key-id alias/chave-loja\n\nDesliga a chave: ninguém cifra nem decifra com ela até habilitar\nde novo. Reversível (diferente de apagar).`,
+  "kms.enable-key": `aws kms enable-key\n\nUSO\n    aws kms enable-key --key-id alias/chave-loja\n\nLiga de volta uma chave desabilitada.`,
+  "kms.schedule-key-deletion": `aws kms schedule-key-deletion\n\nUSO\n    aws kms schedule-key-deletion --key-id alias/chave-loja --pending-window-in-days 7\n\nAgenda a destruição (7 a 30 dias — não dá pra apagar na hora).\nÉ IRREVERSÍVEL depois do prazo: dado cifrado com ela vira lixo.`,
+  "kms.cancel-key-deletion": `aws kms cancel-key-deletion\n\nUSO\n    aws kms cancel-key-deletion --key-id alias/chave-loja\n\nCancela a exclusão agendada. A chave volta DESABILITADA — ligue com\n'aws kms enable-key'.`,
 };
 
 function obterManual(caminho) {

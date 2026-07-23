@@ -16,6 +16,19 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23i",
+      data: "23 jul 2026",
+      titulo: "☸️ Kubernetes, dados e criptografia: EKS, Glue, Athena e KMS",
+      itens: [
+        "<b>+26 atividades</b> em 4 trilhas novas — o CLImb chegou a <b>404 atividades</b>.",
+        "<b>☸️ EKS</b> — Kubernetes gerenciado: subir o cluster (que exige 2 zonas, como na AWS de verdade), criar o nodegroup e ligar o <code>kubectl</code> com <code>update-kubeconfig</code>.",
+        "<b>🧬 Glue</b> — o catálogo: banco, tabela apontando pros arquivos no S3 e o <b>crawler</b> que descobre as colunas sozinho.",
+        "<b>🔎 Athena</b> — SQL direto no S3, no fluxo assíncrono real: dispara a consulta, pergunta se terminou, busca as linhas. E ela <b>lê o catálogo do Glue</b>: se a tabela não estiver lá, a consulta falha — igualzinho à AWS.",
+        "<b>🗝️ KMS</b> — chaves de criptografia: criar, apelidar com alias, <b>cifrar e decifrar de verdade</b> (o texto volta!), ligar rotação anual e agendar a destruição — com o aviso de que apagar chave é irreversível, e o resgate com <code>cancel-key-deletion</code>.",
+        "Detalhe que vale ver: no <code>decrypt</code> você não informa a chave — ela vem identificada dentro do próprio blob, como no KMS real.",
+      ],
+    },
+    {
       versao: "2026-07-23h",
       data: "23 jul 2026",
       titulo: "📦 Contêineres, segredos, fluxos e agendamentos",
@@ -406,7 +419,7 @@
     {
       icone: "🧩",
       titulo: "Mais serviços AWS",
-      desc: "EKS (Kubernetes), Athena, Glue e KMS. Já entraram: SQS, SNS, EBS, API Gateway, Route 53, CloudFront, ECR, ECS, Secrets Manager, Step Functions e EventBridge — veja em \"O que mudou\".",
+      desc: "Já são 35 trilhas. Os próximos candidatos: CloudTrail (auditoria), Systems Manager (Parameter Store), Cognito (login de usuários) e Auto Scaling. Tem um serviço que faz falta no seu dia a dia? Fale com o responsável pelo app.",
     },
     {
       icone: "🗺️",

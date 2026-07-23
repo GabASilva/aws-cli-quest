@@ -85,6 +85,9 @@ function resolver(linha) {
       linha = linha.replace(/<resource-id>/g, filhos[filhos.length - 1] || api.raiz);
     }
   }
+  if (linha.includes("<key-id>") && conta.kms) linha = linha.replace(/<key-id>/g, ult(conta.kms.chaves));
+  if (linha.includes("<query-id>") && conta.athena) linha = linha.replace(/<query-id>/g, ult(conta.athena.execucoes));
+  if (linha.includes("<blob>")) linha = linha.replace(/<blob>/g, ((conta.kms || {}).ultimoBlob) || "");
   if (linha.includes("<receipt-handle>")) {
     let handle = "";
     for (const f of Object.values((conta.sqs || {}).filas || {})) {
