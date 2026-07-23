@@ -213,8 +213,15 @@
         </div>
       </div>`).join("");
 
+    // faixa do limite diário (simulados-limite.js) — vazia pra quem é Pro
+    let faixaLimite = "";
+    if (typeof window.simuladoFaixaHome === "function") {
+      try { faixaLimite = window.simuladoFaixaHome() || ""; } catch (e) { faixaLimite = ""; }
+    }
+
     return `
       <div class="sim-pagina">
+        ${faixaLimite}
         <div class="sim-banner">
           <h1>🎓 Simulados de certificação</h1>
           <p>Provas no estilo das certificações da AWS, separadas por certificação. Cada simulado
@@ -229,9 +236,16 @@
   }
 
   // ---------- Configurar e iniciar a prova ----------
-  function abrirCert(id) {
+  async function abrirCert(id) {
     cert = CERTS[id];
     if (!cert) return;
+    // trava do plano free (simulados-limite.js): 1 por dia. Se bloquear, o
+    // próprio módulo mostra a tela explicando — aqui só não iniciamos.
+    if (typeof window.simuladoPodeIniciar === "function") {
+      let liberado = true;
+      try { liberado = await window.simuladoPodeIniciar(); } catch (e) { liberado = true; }
+      if (!liberado) return;
+    }
     const total = cert.banco().length;
     const qtd = Math.min(cert.qtdProva, total);
     iniciarProva(qtd);
@@ -343,6 +357,10 @@
     ultimoResultado = { acertos, total: questoes.length, pct, aprovado, porDominio, detalhe };
     view = "resultado";
     render();
+    // prova ENTREGUE: é aqui que a tentativa do dia é consumida (simulados-limite.js)
+    if (typeof window.simuladoEntregue === "function") {
+      try { window.simuladoEntregue(cert.id, pct); } catch (e) { /* nunca atrapalha o resultado */ }
+    }
   }
 
   // ---------- Tela de resultado + análise ----------

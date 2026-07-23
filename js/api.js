@@ -173,6 +173,16 @@ async function apiAssinar(tier, meses) {
   return apiFetch("/api/assinar", { method: "POST", body: JSON.stringify({ tier, meses }) });
 }
 
+// ---------- Simulados: limite diário do plano free ----------
+// Quantos simulados ainda posso fazer hoje (null = ilimitado/Pro).
+async function apiSimuladosStatus() {
+  return apiFetch("/api/simulados/status");
+}
+// Consome a tentativa do dia (chamado ao ENTREGAR a prova).
+async function apiSimuladosRegistrar() {
+  return apiFetch("/api/simulados/registrar", { method: "POST", body: "{}" });
+}
+
 // Resgata um código de ativação. Atualiza api.licenca em caso de sucesso.
 async function apiResgatar(codigo) {
   const r = await apiFetch("/api/licenca/resgatar", { method: "POST", body: JSON.stringify({ codigo }) });

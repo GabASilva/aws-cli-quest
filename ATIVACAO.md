@@ -122,3 +122,21 @@ cadastro; o alerta acima cobre o acúmulo ao longo do dia.
 Planos e preços: Mensal R$ 19,90 · Semestral R$ 89,90 · Anual R$ 149,90 ·
 Personalizado (1–24 meses, desconto progressivo) · Escola R$ 49,90/aluno/ano ·
 Vitalício só por concessão sua.
+
+## Limite de simulados do plano gratuito
+
+Conta **free** faz **1 simulado por dia**; **Pro** é ilimitado. A contagem fica
+na conta (`usuarios[nome].simuladosDia`), então **não dá pra burlar** limpando o
+localStorage. O dia vira à **meia-noite de Brasília** (não em UTC) e a vez só é
+consumida quando a prova é **entregue**.
+
+Pra mudar o limite (ex.: liberar 2/dia numa campanha):
+
+```
+flyctl secrets set SIMULADOS_LIMITE_FREE=2 -a aws-cli-quest
+```
+
+> Quem está **deslogado** também tem 1/dia, mas aí a contagem é no navegador
+> (sem conta, não há o que rastrear no servidor — e travar por IP derrubaria uma
+> escola inteira, que sai por um IP só). Se isso virar problema, o caminho é
+> exigir login pra fazer simulado.

@@ -418,6 +418,44 @@ const ALERTA_CADASTRO_IP_DIA = Number(process.env.ALERTA_CADASTRO_IP_DIA) || 10;
 
 function diaHoje() { return new Date().toISOString().slice(0, 10); }
 
+// ---------- Limite diário de simulados (conta free) ----------
+// Free faz N simulados por dia; Pro é ilimitado. O "dia" vira à meia-noite de
+// Brasília (UTC-3), não à meia-noite UTC: quem faz um simulado às 22h não pode
+// perder a vez do dia seguinte só porque em UTC já virou.
+const SIMULADOS_LIMITE_FREE = Number(process.env.SIMULADOS_LIMITE_FREE) || 1;
+const FUSO_BR_MS = 3 * 60 * 60 * 1000;
+
+function diaSimulado(agora) {
+  return new Date((agora || Date.now()) - FUSO_BR_MS).toISOString().slice(0, 10);
+}
+// Quando a próxima tentativa libera (meia-noite de Brasília, em epoch ms).
+function proximaLiberacaoSimulado(agora) {
+  agora = agora || Date.now();
+  const meiaNoiteBr = new Date(diaSimulado(agora) + "T00:00:00.000Z").getTime() + FUSO_BR_MS;
+  return meiaNoiteBr + 24 * 60 * 60 * 1000;
+}
+// Situação atual do usuário. `consumir: true` registra uma tentativa (se puder).
+function situacaoSimulados(u, consumir) {
+  const pro = licencaPublica(u).pro;
+  const hoje = diaSimulado();
+  if (!u.simuladosDia || u.simuladosDia.dia !== hoje) u.simuladosDia = { dia: hoje, feitos: 0 };
+  const feitos = u.simuladosDia.feitos || 0;
+  const podeIniciar = pro || feitos < SIMULADOS_LIMITE_FREE;
+  if (consumir && podeIniciar) {
+    u.simuladosDia.feitos = feitos + 1;
+    salvarBd();
+  }
+  const feitosAgora = u.simuladosDia.feitos || 0;
+  return {
+    pro,
+    limite: pro ? null : SIMULADOS_LIMITE_FREE,
+    feitos: feitosAgora,
+    restantes: pro ? null : Math.max(0, SIMULADOS_LIMITE_FREE - feitosAgora),
+    podeIniciar: pro || feitosAgora < SIMULADOS_LIMITE_FREE,
+    proximaLiberacao: pro ? null : proximaLiberacaoSimulado(),
+  };
+}
+
 // Marca presença do usuário ("último acesso"). Quem volta com a sessão salva NÃO
 // passa por /api/login — entra direto pelo /api/eu — então sem isso o painel só
 // via o dia de quem digitava senha. Persiste no máx. 1x/dia por usuário pra não
@@ -580,6 +618,30 @@ async function tratarApi(req, res, rota) {
     u.ultimoAcesso = Date.now();
     salvarBd();
     return responderJson(res, 200, { ok: true });
+  }
+
+  // GET /api/simulados/status  (autenticado) — quantos simulados ainda posso fazer hoje
+  if (rota === "/api/simulados/status" && req.method === "GET") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra ver seus simulados." });
+    return responderJson(res, 200, situacaoSimulados(bd.usuarios[nome], false));
+  }
+
+  // POST /api/simulados/registrar  (autenticado) — consome a tentativa do dia.
+  // Chamado quando a prova é ENTREGUE (não ao iniciar): quem desiste no meio
+  // ou fecha a aba sem querer não perde o dia.
+  if (rota === "/api/simulados/registrar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra registrar o simulado." });
+    if (!dentroDoLimite("sim:" + nome, 30, 60000)) {
+      return responderJson(res, 429, { erro: "Calma aí — muitos registros seguidos." });
+    }
+    const u = bd.usuarios[nome];
+    const antes = situacaoSimulados(u, false);
+    if (!antes.podeIniciar) {
+      return responderJson(res, 403, Object.assign({ erro: "Você já usou seu simulado de hoje. O plano Pro é ilimitado." }, antes));
+    }
+    return responderJson(res, 200, situacaoSimulados(u, true));
   }
 
   // GET /api/ranking  (público — top 50)

@@ -83,7 +83,7 @@ function podeAcessar(d) {
     } else {
       btn.textContent = "⭐ Assinar Pro";
       btn.classList.add("secundario");
-      btn.title = "Desbloqueie EC2, IAM, Lambda, DynamoDB, projetos e mais";
+      btn.title = "Desbloqueie EC2, IAM, Lambda, DynamoDB, projetos e simulados ilimitados";
     }
   }
 
