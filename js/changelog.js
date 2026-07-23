@@ -16,6 +16,17 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23a",
+      data: "23 jul 2026",
+      titulo: "🪪 Perfil, streak diário e revisão inteligente",
+      itens: [
+        "Novo botão <b>🪪 Perfil</b>: seu cartão de progresso com bio, localização e links (GitHub/LinkedIn) editáveis, métricas, conquistas, trilhas e um <b>mapa de atividade</b> das últimas 20 semanas — cada dia estudado acende um quadradinho.",
+        "<b>🔥 Streak diário</b>: conclua ao menos 1 atividade por dia e construa sua sequência de dias (chip <b>📅</b> no topo). Marcos de 3, 7, 14, 30, 50 e 100 dias têm comemoração especial.",
+        "O <b>🎲 Treino aleatório</b> ficou inteligente: quando você termina o banco, ele vira <b>revisão espaçada</b> — prioriza o que você fez com ajuda e o que fez há mais tempo, pra memória não enferrujar (revisão não repete XP).",
+        "A home do <b>Console</b> ganhou os widgets <b>Visitados recentemente</b> e <b>Integridade do serviço</b>, como na página inicial do console real da AWS.",
+      ],
+    },
+    {
       versao: "2026-06-28h",
       data: "28 jun 2026",
       titulo: "🐧 +12 desafios de Linux",
