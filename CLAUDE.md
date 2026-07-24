@@ -103,8 +103,40 @@ faixa (ex.: dyn-2 120xp) — é proposital, comemore o marco.
    sem id duplicado, sem "solução falhou").
 3. Desafios shell/Linux (solução não começa com "aws") não rodam no fumaça —
    teste no preview manualmente.
-4. Entrada no `changelog.js` (NOVIDADES) se for conteúdo visível.
-5. Commit em português no padrão `feat(escopo): resumo`.
+4. **Serviço novo? Escreva a lição** (`LICOES` + `PORQUE` em `licoes.js`) —
+   ver seção "Parte didática". Não é opcional.
+5. Entrada no `changelog.js` (NOVIDADES) se for conteúdo visível.
+6. Commit em português no padrão `feat(escopo): resumo`.
+
+## Parte didática — OBRIGATÓRIA ao implementar serviço novo (`js/licoes.js`)
+
+Todo serviço com **trilha própria** tem que ganhar a explicação didática junto
+com as atividades — não é opcional, é o que faz o CLImb ser um curso e não uma
+lista de exercícios. Ao criar uma trilha de serviço novo:
+
+1. **Lição do serviço** em `LICOES[<id-da-trilha>]` com TODOS os campos:
+   `{ emoji, titulo, oque, serve, casos: [3 casos reais], vocab: [[termo, def]],
+   cobra }`. Tom PT-BR, você/seu, mesma pegada das existentes (analogia no
+   `oque`, casos concretos do mundo real, comparação quando ajuda a fixar —
+   ex.: "RDS x DynamoDB", "ECS x EKS"). Serviços que rodam sob o motor de
+   outro reaproveitam via `LICAO_ALIAS` (ex.: `ebs: "ec2"`).
+2. **Porquê de cada comando** em `PORQUE["<servico>.<sub>"]` — uma linha curta
+   explicando por que o comando EXISTE (não como digitá-lo; isso a descrição da
+   atividade e o `aws <cmd> help` já fazem). É reusado entre todas as atividades
+   que usam o mesmo comando.
+3. Trilhas de **exercício/reforço** (extras-*, mundo-real, adv-*, projetos,
+   diagnóstico) NÃO têm lição de serviço — mas os comandos que elas usam devem
+   ter o `PORQUE`. É intencional: exercício não abre com introdução.
+4. Confira que ninguém ficou de fora: um serviço com trilha em `SERVICOS_META`
+   sem entrada em `LICOES` (e sem alias) é um furo. Nenhum serviço com trilha
+   própria pode ficar sem lição.
+
+`licoes.js` é UI pura (wrap idempotente de `renderCard`, injeta via DOM) — não
+mexe em validador, então não muda o resultado do fumaça/análise.
+
+O botão **📖 Conceitos** (glossário em modal, `glossario.js`) **FICA** —
+decisão do Gabriel (2026-07-23). Ele e as lições coexistem: o glossário é
+consulta rápida por termo, as lições são a introdução no fluxo. Não aposentar.
 
 ## Simulados (banco de questões)
 
