@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-07-24",
+      data: "24 jul 2026",
+      titulo: "🗺️ Diagrama da sua arquitetura",
+      itens: [
+        "Novo botão <b>🗺️ Diagrama</b> no rodapé: ele <b>desenha os recursos da sua conta</b> como um diagrama de arquitetura, agrupados por categoria (rede, computação, dados, integração, identidade e operações) — com a <b>VPC</b> englobando as sub-redes, igual aos diagramas da AWS.",
+        "As linhas mostram as <b>relações</b> que dá pra ler da sua conta: <i>fan-out</i> (SNS → SQS), <i>usa</i> (Lambda → role) e <i>protege</i> (Security Group → EC2). Combina com o 🤖 Arquiteto IA e o CloudFormation — você monta a infra e vê ela desenhada.",
+        "Dá pra <b>baixar o diagrama</b> como imagem (SVG) pra pôr num documento ou apresentação.",
+        "De quebra, aqui nas <b>Novidades</b>: as atualizações de dias anteriores agora vêm <b>recolhidas</b> — clique numa data pra expandir e ver o que mudou.",
+      ],
+    },
+    {
       versao: "2026-07-23",
       data: "23 jul 2026",
       titulo: "🚀 Dia grande: 19 serviços novos, lições, laboratório de diagnóstico e perfil público",
@@ -144,11 +155,6 @@
       desc: "A trilha 🔧 Diagnóstico estreou com o caso da rede quebrada. Vêm mais plantões: permissão negada no IAM, bucket que não vira site, Lambda que não executa e conta com custo escondido. Tem um problema que te pegou no trabalho? Fale com o responsável pelo app — vira laboratório.",
     },
     {
-      icone: "🗺️",
-      titulo: "Diagrama da sua arquitetura",
-      desc: "Veja os recursos da sua conta desenhados como um diagrama — combina com o Arquiteto IA e o CloudFormation.",
-    },
-    {
       icone: "🏁",
       titulo: "Eventos com prazo",
       desc: "Competições cronometradas dentro das turmas (com início e fim), além do ranking contínuo.",
@@ -183,14 +189,16 @@
   }
 
   function html() {
+    // A entrada mais recente (idx 0) fica aberta; as anteriores colapsadas,
+    // clicáveis pra expandir. <details> nativo — não precisa de JS.
     const itensNov = NOVIDADES.map((v, idx) => `
-      <div class="cl-versao">
-        <div class="cl-versao-cab">
+      <details class="cl-versao"${idx === 0 ? " open" : ""}>
+        <summary class="cl-versao-cab">
           <h3>${esc(v.titulo)}</h3>
           <span class="cl-data">${esc(v.data)}${idx === 0 ? ' <em class="cl-atual">novo</em>' : ""}</span>
-        </div>
+        </summary>
         <ul>${v.itens.map((it) => `<li>${it}</li>`).join("")}</ul>
-      </div>`).join("");
+      </details>`).join("");
 
     const itensBreve = EM_BREVE.map((e) => `
       <div class="cl-breve-item">

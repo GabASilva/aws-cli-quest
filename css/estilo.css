@@ -1045,8 +1045,21 @@ body.console-aberto { overflow: hidden; }
 
 .cl-versao { padding: 12px 0; border-bottom: 1px solid var(--borda); }
 .cl-versao:last-child { border-bottom: none; }
-.cl-versao-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.cl-versao h3 { margin: 0; font-size: 1rem; color: var(--texto); }
+.cl-versao-cab {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; list-style: none; user-select: none;
+}
+.cl-versao-cab::-webkit-details-marker { display: none; }
+/* seta que gira ao abrir (as entradas antigas começam fechadas) */
+.cl-versao-cab::after {
+  content: "▾"; flex: 0 0 auto; font-size: 0.75rem;
+  color: var(--texto-fraco); transition: transform 0.15s;
+}
+.cl-versao[open] > .cl-versao-cab::after { transform: rotate(180deg); }
+.cl-versao-cab:hover h3 { color: var(--laranja); }
+/* entrada fechada: título em cinza pra deixar claro que está minimizada */
+.cl-versao:not([open]) > .cl-versao-cab h3 { color: var(--texto-fraco); font-weight: 600; }
+.cl-versao h3 { margin: 0; font-size: 1rem; color: var(--texto); flex: 1; min-width: 0; }
 .cl-data { font-size: 0.78rem; color: var(--texto-fraco); white-space: nowrap; }
 .cl-atual {
   font-style: normal; background: var(--laranja); color: #16191f;
