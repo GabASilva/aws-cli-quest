@@ -6,398 +6,76 @@
 // deixá-los soltos pela interface. Botão "✨ Novidades" no rodapé com um
 // selo de "novo" quando há atualização que a pessoa ainda não viu.
 // ADITIVO: não toca o core. window.abrirChangelog('novidades'|'breve').
+//
+// REGRA DE PADRONIZAÇÃO (decisão do Gabriel, 2026-07-23): UMA ENTRADA POR DIA.
+// Não crie entradas novas pra cada mudancinha — parece chat. Ao mexer no
+// changelog no MESMO dia de uma entrada que já existe: COMPLEMENTE a entrada
+// daquele dia (adicione/edite um item), NÃO crie outra. Mudanças relacionadas
+// (ex.: várias levas de serviços novos) viram UM item guarda-chuva com
+// sub-bullets "• ", não vários itens soltos. `versao` = a data pura
+// ("2026-07-23"), sem sufixo a/b/c. Só há entrada nova quando vira o dia.
 // ============================================================
 (function () {
   if (typeof window === "undefined") return;
 
   const CHAVE_VISTO = "climb.changelog.visto"; // guarda a última versão vista
 
-  // Histórico de mudanças — mais recente primeiro. `versao` é o id usado pra
-  // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
+  // Histórico de mudanças — mais recente primeiro. UMA entrada por dia (ver a
+  // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
-      versao: "2026-07-23m",
+      versao: "2026-07-23",
       data: "23 jul 2026",
-      titulo: "📚 Explicação em TODOS os serviços",
+      titulo: "🚀 Dia grande: 19 serviços novos, lições, laboratório de diagnóstico e perfil público",
       itens: [
-        "Completamos a 2ª onda das lições: agora <b>todos os 27 serviços</b> têm o bloco <b>📚 Entenda o serviço</b> — RDS, CloudWatch, SQS, SNS, API Gateway, Route 53, CloudFront, ECR, ECS, Secrets Manager, Step Functions, EventBridge, EKS, Glue, Athena, KMS, CloudTrail, Systems Manager, Cognito, Auto Scaling e CloudFormation.",
-        "E o <b>💡 Por que este comando</b> passou a cobrir mais de <b>170 comandos</b> — inclusive os de rede que aparecem no laboratório de Diagnóstico.",
-        "Cada lição continua no mesmo formato: o que é, pra que serve, casos reais, vocabulário e como cobra — do jeito de um bom curso, explicando antes de mandar praticar.",
+        "<b>19 serviços AWS novos</b> na linha de comando — o CLImb saltou de 272 para <b>430 atividades</b> em <b>40 trilhas</b>, todos com comandos de verdade no terminal e espelhados no Console:",
+        "• <b>Mensageria e web</b> — SQS (filas), SNS (notificações com <i>fan-out</i> real), EBS (discos), API Gateway, Route 53 (DNS) e CloudFront (CDN).",
+        "• <b>Contêineres e automação</b> — ECR, ECS, Secrets Manager, Step Functions e EventBridge, respeitando os limites reais da AWS (o ECS recusa apagar serviço no ar, o EventBridge recusa apagar regra com alvo).",
+        "• <b>Kubernetes e dados</b> — EKS, Glue e Athena (SQL direto no S3, lendo o catálogo do Glue) e KMS (que cifra e decifra de verdade).",
+        "• <b>Operações</b> — CloudTrail (que grava tudo o que você roda no terminal), Systems Manager (Parameter Store), Cognito (login pronto) e Auto Scaling (que sobe máquinas de verdade).",
+        "<b>📚 O CLImb agora explica antes de mandar fazer:</b> cada trilha abre com um bloco <b>Entenda o serviço</b> (o que é, pra que serve, casos reais, vocabulário e como cobra) e cada atividade ganhou um <b>💡 Por que este comando</b>. Cobrimos os 27 serviços e mais de 170 comandos.",
+        "<b>🔧 Nova trilha Diagnóstico:</b> em vez de \"crie X\", você recebe um chamado — a infra já existe e está quebrada, com defeitos plantados, e você investiga e conserta. A rede funciona de verdade: consertou, o site volta na hora. E você comprova a falha nos <b>VPC Flow Logs</b> com <code>grep REJECT</code>.",
+        "<b>🪪 Perfil, streak e link público:</b> cartão de progresso com bio e links, mapa de atividade de 20 semanas, <b>streak diário</b> (🔥) e um <b>link público</b> (<code>climb/u/seu-usuario</code>) pra colar no LinkedIn. Dá pra editar o e-mail da conta por ali.",
+        "<b>🖥️ Console completo:</b> todas as seções da navegação lateral agora abrem telas fiéis ao AWS real, mostrando os dados da sua conta simulada (volumes, security groups, subnets, parameter groups…).",
+        "<b>🎓 Simulados:</b> agora pedem conta (grátis) e são <b>1 por dia</b> no plano gratuito (ilimitado no Pro), com o contador zerando à meia-noite de Brasília.",
+        "<b>🔧 Auditoria das atividades:</b> um pente-fino corrigiu 9 desafios que se completavam sozinhos e a ordem de uma trilha, com um teste automático pra manter a coerência daqui pra frente.",
       ],
     },
     {
-      versao: "2026-07-23l",
-      data: "23 jul 2026",
-      titulo: "📚 Agora o CLImb explica antes de mandar fazer",
-      itens: [
-        "Cada trilha ganhou um bloco <b>📚 Entenda o serviço</b> no topo da atividade: o que é, <b>pra que serve</b>, <b>onde se usa no mundo real</b>, o vocabulário e como aquilo cobra. Ele abre sozinho na primeira atividade de cada trilha e fica a um clique nas outras.",
-        "E cada atividade agora tem um <b>💡 Por que este comando</b> logo abaixo do enunciado — explicando pra que aquele comando existe, não só como digitá-lo.",
-        "A ideia é a de um bom curso: entender o conceito primeiro, praticar depois. Começamos pelos fundamentais (S3, EC2, IAM, Lambda, DynamoDB e VPC); os demais serviços chegam nas próximas atualizações.",
-      ],
-    },
-    {
-      versao: "2026-07-23k",
-      data: "23 jul 2026",
-      titulo: "🔧 Nova trilha: Diagnóstico — conserte uma infra quebrada",
-      itens: [
-        "Um <b>formato novo de atividade</b>: em vez de \"crie um bucket\", você recebe um <b>chamado</b>. O site da loja não abre, o SSH não conecta, e a infra já existe na sua conta — <b>com dois defeitos plantados</b>. Seu trabalho é investigar, achar e consertar.",
-        "E a rede <b>funciona de verdade</b>: o <code>curl</code> só responde se a rota pro internet gateway existir, a network ACL deixar passar e o security group liberar a porta. Consertou? O site volta na hora. Ainda falta algo? Continua dando timeout.",
-        "Você também aprende a <b>investigar com evidência</b>: ative os <b>VPC Flow Logs</b>, gere o tráfego, baixe o arquivo do S3 e rode <code>grep REJECT</code> — as rejeições estão lá, no formato oficial da AWS, apontando exatamente a porta bloqueada.",
-        "Comandos novos de rede: <b>route tables</b> (create-route, describe-route-tables), <b>network ACLs</b> (o firewall da sub-rede, onde a regra de menor número vence), <b>flow logs</b>, <b>internet gateways</b> e <b>network interfaces</b>. Mais <code>curl</code>, <code>ssh</code> e <code>nmap</code> no terminal.",
-        "São <b>13 atividades</b> encadeadas como um plantão de verdade: reproduzir o erro, ligar o monitoramento, descartar hipóteses, seguir o caminho do pacote, consertar e comprovar.",
-      ],
-    },
-    {
-      versao: "2026-07-23j",
-      data: "23 jul 2026",
-      titulo: "🕵️ Auditoria, configuração, login e elasticidade",
-      itens: [
-        "<b>+26 atividades</b> em 4 trilhas novas — o CLImb chegou a <b>430 atividades</b> e <b>39 trilhas</b>.",
-        "<b>🕵️ CloudTrail</b> — a câmera de segurança da conta. E ela grava de verdade: o <code>lookup-events</code> mostra <b>tudo o que você já rodou neste terminal</b>. Inclui a pegadinha clássica (criar a trilha não liga a gravação) e o detalhe de que o CloudTrail registra o nome da <b>API</b> — por isso <code>aws s3 mb</code> aparece como <code>CreateBucket</code>.",
-        "<b>🎛️ Systems Manager</b> — Parameter Store: tire configuração do código, use caminhos hierárquicos pra puxar tudo de uma vez e guarde valores sensíveis como <code>SecureString</code> (que só abre com <code>--with-decryption</code>).",
-        "<b>🎫 Cognito</b> — login pronto sem escrever autenticação: user pool, app client e usuários com senha temporária.",
-        "<b>📶 Auto Scaling</b> — e este <b>sobe máquinas de verdade</b>: crie o grupo e veja as instâncias aparecerem no <code>aws ec2 describe-instances</code>. Escale pra Black Friday, desça depois (as sobrando são encerradas) e configure a política que faz tudo isso sozinho.",
-      ],
-    },
-    {
-      versao: "2026-07-23i",
-      data: "23 jul 2026",
-      titulo: "☸️ Kubernetes, dados e criptografia: EKS, Glue, Athena e KMS",
-      itens: [
-        "<b>+26 atividades</b> em 4 trilhas novas — o CLImb chegou a <b>404 atividades</b>.",
-        "<b>☸️ EKS</b> — Kubernetes gerenciado: subir o cluster (que exige 2 zonas, como na AWS de verdade), criar o nodegroup e ligar o <code>kubectl</code> com <code>update-kubeconfig</code>.",
-        "<b>🧬 Glue</b> — o catálogo: banco, tabela apontando pros arquivos no S3 e o <b>crawler</b> que descobre as colunas sozinho.",
-        "<b>🔎 Athena</b> — SQL direto no S3, no fluxo assíncrono real: dispara a consulta, pergunta se terminou, busca as linhas. E ela <b>lê o catálogo do Glue</b>: se a tabela não estiver lá, a consulta falha — igualzinho à AWS.",
-        "<b>🗝️ KMS</b> — chaves de criptografia: criar, apelidar com alias, <b>cifrar e decifrar de verdade</b> (o texto volta!), ligar rotação anual e agendar a destruição — com o aviso de que apagar chave é irreversível, e o resgate com <code>cancel-key-deletion</code>.",
-        "Detalhe que vale ver: no <code>decrypt</code> você não informa a chave — ela vem identificada dentro do próprio blob, como no KMS real.",
-      ],
-    },
-    {
-      versao: "2026-07-23h",
-      data: "23 jul 2026",
-      titulo: "📦 Contêineres, segredos, fluxos e agendamentos",
-      itens: [
-        "<b>+31 atividades</b> em 5 trilhas novas — o CLImb chegou a <b>344 atividades</b> no catálogo de comandos.",
-        "<b>🐳 ECR</b> — o armário das imagens de contêiner: criar repositório, pegar a senha temporária do <code>docker login</code> e listar imagens.",
-        "<b>🚢 ECS</b> — rodar contêineres de verdade: cluster, <i>task definition</i> (com revisões), serviço mantendo N cópias no ar, escalar pra Black Friday e desligar na ordem certa.",
-        "<b>🔐 Secrets Manager</b> — pare de deixar senha no código: guardar, ler, trocar sem novo deploy, e a exclusão com <b>janela de recuperação</b> (dá pra desfazer com <code>restore-secret</code>).",
-        "<b>🔀 Step Functions</b> — orquestre processos de vários passos e veja o histórico de execuções.",
-        "<b>⏰ EventBridge</b> — o despertador da nuvem: agende com <code>rate(1 day)</code>, ligue a regra a um alvo, pause sem apagar.",
-        "As trilhas respeitam os limites reais da AWS: o ECS recusa apagar serviço com cópias no ar, o EventBridge recusa apagar regra que ainda tem alvo e o ECR pede <code>--force</code> pra repositório com imagens.",
-        "Novos arquivos prontos no lab pra você espiar com <code>cat</code>: <b>tarefa-web.json</b> e <b>maquina-estados.json</b>.",
-      ],
-    },
-    {
-      versao: "2026-07-23g",
-      data: "23 jul 2026",
-      titulo: "🧩 6 serviços novos: SQS, SNS, EBS, API Gateway, Route 53 e CloudFront",
-      itens: [
-        "<b>+41 atividades</b> em 6 trilhas novas, todas com comandos de verdade no terminal (o CLImb passou de 272 para <b>313 atividades</b>).",
-        "<b>📨 SQS</b> — filas de mensagens: criar, enviar, receber, confirmar o processamento com o <code>ReceiptHandle</code> (o jeito que a AWS garante que nenhuma tarefa se perde) e filas FIFO.",
-        "<b>📣 SNS</b> — notificações: tópicos, assinaturas por e-mail e o padrão <b>fan-out</b> de verdade — publique no tópico e veja a mensagem <b>cair na sua fila SQS</b>.",
-        "<b>💽 EBS</b> — os discos das máquinas: criar volume, anexar na instância, tirar snapshot de backup, desanexar e apagar (incluindo o erro real de quem tenta apagar disco ainda encaixado).",
-        "<b>🚪 API Gateway</b> — monte uma API HTTP na ordem real: criar a API, achar a raiz, criar o caminho <code>/pedidos</code>, definir o método GET e publicar no estágio <code>prod</code>.",
-        "<b>🌐 Route 53</b> — DNS: criar a zona do domínio, listar registros e apontar o <code>www</code> pro servidor com um change-batch (tem um <code>registro-dns.json</code> pronto no lab).",
-        "<b>🚀 CloudFront</b> — CDN: colocar o site na borda e invalidar o cache quando publicou versão nova e todo mundo ainda vê a antiga.",
-        "Tudo espelhado no <b>Console</b>: fila criada pelo terminal aparece na tela de SQS (com a contagem real de mensagens), e volumes/snapshots aparecem no EC2.",
-      ],
-    },
-    {
-      versao: "2026-07-23f",
-      data: "23 jul 2026",
-      titulo: "🔗 Perfil público com link pra compartilhar",
-      itens: [
-        "Seu perfil agora tem um <b>link próprio</b> (<code>climb/u/seu-usuario</code>) que abre uma página com seu nível, XP, atividades concluídas, sequência de dias e mapa de atividade — <b>sem precisar de login pra ver</b>. Cole no LinkedIn, no currículo ou mande pra quem quiser.",
-        "No seu perfil tem um card novo pra <b>copiar o link</b> com um clique e outro pra <b>copiar um resumo pronto</b> do seu desempenho, formatado pra colar num post.",
-        "Dá pra <b>fechar o perfil</b> quando quiser (✏️ Editar → Perfil público): aí o link para de abrir pra todo mundo. Seu e-mail <b>nunca</b> aparece na página.",
-        "Também dá pra <b>trocar o e-mail da conta</b> direto na edição do perfil — o novo endereço recebe um link de confirmação.",
-        "Corrigimos de quebra um problema que fazia bio, sequência de dias e mapa de atividade ficarem só no navegador: agora vão pra sua conta e acompanham você em qualquer dispositivo.",
-      ],
-    },
-    {
-      versao: "2026-07-23e",
-      data: "23 jul 2026",
-      titulo: "🎓 Simulados: 1 por dia no plano gratuito",
-      itens: [
-        "Os simulados agora pedem <b>conta</b> (criar é grátis e leva 10 segundos) — assim suas notas e tentativas ficam salvas na sua conta, e não presas a um navegador.",
-        "No <b>plano gratuito</b> agora é <b>1 simulado por dia</b> — tempo de sobra pra revisar o gabarito comentado e treinar os pontos fracos antes da próxima tentativa. No <b>Pro</b>, simulados <b>ilimitados</b>.",
-        "A vez do dia só é usada quando você <b>entrega</b> a prova: se fechar a aba sem querer ou desistir no meio, não perde o dia.",
-        "O contador zera à <b>meia-noite de Brasília</b>, e a tela dos simulados mostra quanto falta pra liberar.",
-      ],
-    },
-    {
-      versao: "2026-07-23c",
-      data: "23 jul 2026",
-      titulo: "🔧 Auditoria das atividades",
-      itens: [
-        "Passamos um pente-fino nas <b>272 atividades</b>: 9 desafios de \"criar e apagar\" completavam sozinhos sem você fazer nada (o validador só olhava se o recurso não existia) — agora exigem o comando de verdade.",
-        "O desafio <b>Cluster de processamento</b> (nível 3) aparecia cedo demais na trilha de EC2 e travava iniciantes — foi movido pra depois de \"Suba uma frota\", onde o <code>--count</code> é ensinado.",
-        "Títulos duplicados renomeados e um novo teste automático de coerência didática garante que atividades futuras mantenham a ordem lógica.",
-      ],
-    },
-    {
-      versao: "2026-07-23b",
-      data: "23 jul 2026",
-      titulo: "🖥️ Console completo: todas as seções da nav agora abrem",
-      itens: [
-        "Todos os itens da navegação lateral do Console que eram \"em branco\" agora abrem <b>telas fiéis ao AWS real</b> (capturadas do console ao vivo): EC2 (Instance Types, Volumes, Snapshots, Security Groups, Key Pairs, AMI Catalog, Spot, Reserved, Dedicated Hosts…), VPC (Subnets, Route tables, Internet gateways, NACLs…), S3, IAM, RDS, CloudWatch, Lambda, DynamoDB e SNS.",
-        "Onde a sua conta simulada tem recursos, as listas mostram os <b>dados de verdade</b>: security groups e key pairs criados na CLI, volumes e interfaces de rede das suas instâncias, log groups, subnets, roles/policies e até parameter groups derivados dos seus bancos RDS.",
-        "É tudo <b>simulação visual</b> (nada gera custo nem cria recurso novo) — os controles decorativos avisam quando clicados, e as ações de verdade continuam nas telas em destaque e na CLI.",
-      ],
-    },
-    {
-      versao: "2026-07-23a",
-      data: "23 jul 2026",
-      titulo: "🪪 Perfil, streak diário e revisão inteligente",
-      itens: [
-        "Novo botão <b>🪪 Perfil</b>: seu cartão de progresso com bio, localização e links (GitHub/LinkedIn) editáveis, métricas, conquistas, trilhas e um <b>mapa de atividade</b> das últimas 20 semanas — cada dia estudado acende um quadradinho.",
-        "<b>🔥 Streak diário</b>: conclua ao menos 1 atividade por dia e construa sua sequência de dias (chip <b>📅</b> no topo). Marcos de 3, 7, 14, 30, 50 e 100 dias têm comemoração especial.",
-        "O <b>🎲 Treino aleatório</b> ficou inteligente: quando você termina o banco, ele vira <b>revisão espaçada</b> — prioriza o que você fez com ajuda e o que fez há mais tempo, pra memória não enferrujar (revisão não repete XP).",
-        "A home do <b>Console</b> ganhou os widgets <b>Visitados recentemente</b> e <b>Integridade do serviço</b>, como na página inicial do console real da AWS.",
-      ],
-    },
-    {
-      versao: "2026-06-28h",
+      versao: "2026-06-28",
       data: "28 jun 2026",
-      titulo: "🐧 +12 desafios de Linux",
+      titulo: "🖥️ Console fiel à AWS, simulados de certificação e app no celular",
       itens: [
-        "A trilha <b>Linux essencial</b> ganhou <b>12 desafios novos</b> com o que mais aparece no dia a dia de cloud: ler permissões com <code>ls -l</code>, criar árvore de pastas com <code>mkdir -p</code>, anexar com <code>&gt;&gt;</code>, ver o começo de um log com <code>head</code>, filtrar com <code>grep</code>, ajustar permissões (<code>chmod</code>), preparar o <code>.ssh</code> e um projeto final juntando tudo.",
-        "De quebra, o <code>mkdir -p</code> do laboratório agora cria os diretórios pais que faltam, igual ao Linux de verdade.",
+        "<b>🎓 Simulados de certificação:</b> nova aba com provas no estilo do <b>AWS Cloud Practitioner (CLF-C02)</b> — banco de <b>+300 questões</b>, 60 sorteadas por prova, <b>gabarito comentado</b> e análise dos erros por domínio.",
+        "<b>🖥️ Console com cara de AWS de verdade:</b> agora em <b>dark mode</b>, com a navegação lateral, os dashboards e as telas (títulos, colunas, listas vazias) padronizados conforme o console real — de EC2 e S3 a IAM, Lambda, DynamoDB, VPC, RDS e CloudWatch. <b>SNS e SQS</b> também entraram no Console.",
+        "<b>📱 App melhor no celular:</b> os botões do topo viraram um menu ☰, a tela rola normalmente (o rodapé não invade mais o meio) e as tabelas do Console rolam na horizontal.",
+        "<b>🐧 +12 desafios de Linux:</b> <code>ls -l</code>, <code>mkdir -p</code>, <code>&gt;&gt;</code>, <code>head</code>, <code>grep</code>, <code>chmod</code>, preparar o <code>.ssh</code> e um projeto final — com o <code>mkdir -p</code> do lab criando os diretórios pais que faltam.",
       ],
     },
     {
-      versao: "2026-06-28g",
-      data: "28 jun 2026",
-      titulo: "📱 App melhor no celular",
-      itens: [
-        "No celular, os botões do topo (Conceitos, Conquistas, Turmas, Simulados, Console, Ranking…) agora ficam num <b>menu ☰</b> — o cabeçalho parou de ocupar meia tela.",
-        "A tela agora <b>rola normalmente</b> no celular: o rodapé não invade mais o meio e o terminal ganhou espaço de verdade (o topo fica fixo ao rolar).",
-        "As tabelas do Console <b>rolam na horizontal</b> em vez de ficarem espremidas.",
-      ],
-    },
-    {
-      versao: "2026-06-28f",
-      data: "28 jun 2026",
-      titulo: "📋 Telas do Console iguais às da AWS",
-      itens: [
-        "Padronizamos as telas de <b>IAM, Lambda, DynamoDB, VPC, RDS, CloudWatch</b> (e refinamos EC2/S3/SNS/SQS) com os <b>mesmos títulos e colunas do console real</b> — ex.: DynamoDB agora mostra Status, Partition key, Sort key e capacity mode; RDS mostra Status, Role, Region &amp; AZ.",
-        "As mensagens de lista vazia também ficaram iguais às da AWS.",
-      ],
-    },
-    {
-      versao: "2026-06-28e",
-      data: "28 jun 2026",
-      titulo: "🖥️ Dashboard do EC2 igual ao real",
-      itens: [
-        "O painel do EC2 agora tem o <b>layout de 3 colunas</b> do console real, com os painéis <b>Launch instance</b>, <b>Service health</b> (com a tabela de <b>Zonas</b>), <b>Scheduled events</b>, <b>Account attributes</b>, <b>Explore AWS</b> e <b>Additional information</b> — além do Resources que já existia.",
-      ],
-    },
-    {
-      versao: "2026-06-28d",
-      data: "28 jun 2026",
-      titulo: "📣📨 SNS e SQS no Console + telas mais fiéis",
-      itens: [
-        "Dois serviços novos no Console: <b>SNS</b> (tópicos/pub-sub) e <b>SQS</b> (filas) — crie, liste e exclua, com Standard e FIFO.",
-        "Telas de <b>EC2</b> e <b>S3</b> agora com as <b>colunas iguais às da AWS</b> (ex.: instâncias mostram Nome, ID, Estado, Tipo, Zona de disponibilidade) e as mesmas mensagens de lista vazia.",
-      ],
-    },
-    {
-      versao: "2026-06-28c",
-      data: "28 jun 2026",
-      titulo: "🌙 Console em dark mode, igual ao AWS real",
-      itens: [
-        "O Console agora é <b>escuro, igual ao console da AWS de verdade</b> (dark mode), e combina com o resto do app.",
-        "A <b>navegação lateral</b> de cada serviço foi refeita item por item conforme o console real (EC2, S3, IAM, VPC, RDS) — mesma ordem, grupos e nomes.",
-        "Os <b>painéis</b> ganharam o bloco <b>Resources</b> em duas colunas e o <b>Service health</b>, no mesmo formato do AWS.",
-      ],
-    },
-    {
-      versao: "2026-06-28b",
-      data: "28 jun 2026",
-      titulo: "🖥️ Console mais fiel à AWS",
-      itens: [
-        "Cada serviço agora tem a <b>barra de navegação lateral</b> igual à do console da AWS de verdade (ex.: no EC2 — Instances, Images, Elastic Block Store, Network & Security, Load Balancing, Auto Scaling).",
-        "Novo <b>painel (dashboard)</b> por serviço com o resumo de recursos e o status do serviço, no mesmo estilo do console real.",
-        "As seções que ainda não fazem parte do CLImb aparecem com o <b>estado-vazio</b> fiel à AWS — você reconhece o layout na hora.",
-      ],
-    },
-    {
-      versao: "2026-06-28a",
-      data: "28 jun 2026",
-      titulo: "🎓 Simulados de certificação (Cloud Practitioner)",
-      itens: [
-        "Nova aba <b>🎓 Simulados</b> no topo: provas no estilo da certificação <b>AWS Cloud Practitioner (CLF-C02)</b>, com banco de <b>+300 questões</b> — cada simulado sorteia <b>60 aleatórias</b>, então toda tentativa é diferente.",
-        "No fim você vê o <b>gabarito comentado</b> (o que você marcou × a resposta certa, com explicação) e uma <b>análise dos erros por domínio</b> dizendo o que reforçar.",
-        "Mais certificações (Solutions Architect, SysOps, Developer) vêm na sequência.",
-      ],
-    },
-    {
-      versao: "2026-06-21j",
+      versao: "2026-06-21",
       data: "21 jun 2026",
-      titulo: "🏅 Níveis recalibrados (e mais títulos)",
+      titulo: "🛜 VPC/RDS/CloudWatch, turmas, Arquiteto IA e ~300 atividades",
       itens: [
-        "Com tanto conteúdo novo, o XP do jogo cresceu muito — então refizemos a <b>curva de níveis</b>: agora são <b>10 títulos</b>, do Estagiário de Cloud até a <b>Lenda do CLI</b> (que vale por completar quase tudo).",
-        "Novos postos no caminho: Aprendiz de CLI 🐣, Especialista em AWS 🧠, Mestre da Nuvem 🥷 e Guru do CLI 🧙.",
-      ],
-    },
-    {
-      versao: "2026-06-21i",
-      data: "21 jun 2026",
-      titulo: "🔁 Prática de verdade — quase 300 atividades",
-      itens: [
-        "Cada comando agora aparece em <b>várias atividades</b>, com cenários reais do dia a dia (site da pizzaria, backups, servidor de jogo, banco do e-commerce...). Repetir em contextos diferentes é o que faz fixar.",
-        "Os reforços vêm <b>logo depois</b> de cada comando ser ensinado, na própria trilha. São <b>294 atividades</b> no total.",
-      ],
-    },
-    {
-      versao: "2026-06-21h",
-      data: "21 jun 2026",
-      titulo: "🎯 250 atividades!",
-      itens: [
-        "Chegamos a <b>250 atividades</b> pra praticar — reforçamos todas as trilhas, com bastante coisa nova de <b>VPC, RDS, CloudWatch</b> e mais cenários do <b>Mundo real</b>.",
-        "Mais prática de ponta a ponta, do básico ao avançado, em todos os serviços.",
-      ],
-    },
-    {
-      versao: "2026-06-21g",
-      data: "21 jun 2026",
-      titulo: "🖥️ VPC, RDS e CloudWatch no Console",
-      itens: [
-        "Os três serviços novos agora também na <b>interface visual</b>: crie VPCs/sub-redes/gateway, suba bancos RDS (parar/iniciar/excluir) e configure alarmes + grupos de logs — tudo no clique.",
-        "Como sempre, <b>espelha o CLI</b>: o que você faz aqui aparece no <code>aws ec2 describe-vpcs</code>, <code>aws rds describe-db-instances</code> e companhia.",
-      ],
-    },
-    {
-      versao: "2026-06-21f",
-      data: "21 jun 2026",
-      titulo: "🛜🛢️📈 VPC, RDS e CloudWatch",
-      itens: [
-        "Três trilhas novas, do que mais cai nas certificações: <b>VPC</b> (rede — <code>aws ec2 create-vpc</code>, subnets, internet gateway), <b>RDS</b> (banco relacional) e <b>CloudWatch</b> (alarmes + Logs).",
-        "São <b>11 desafios novos</b> — agora dá pra praticar quase todo o núcleo do Cloud Practitioner e do Solutions Architect.",
-      ],
-    },
-    {
-      versao: "2026-06-21e",
-      data: "21 jun 2026",
-      titulo: "👥 Turmas e competições",
-      itens: [
-        "Crie uma <b>turma</b>, compartilhe o código e a galera entra — cada turma tem seu <b>ranking próprio</b>.",
-        "É competição <b>assíncrona</b>: todo mundo joga no seu tempo e o placar da turma compara o XP. Botão <b>👥 Turmas</b> no topo.",
-      ],
-    },
-    {
-      versao: "2026-06-21d",
-      data: "21 jun 2026",
-      titulo: "📧 Confirmação de e-mail",
-      itens: [
-        "Cadastrou com e-mail? Agora a gente manda um link de confirmação. E-mail confirmado deixa a conta mais segura e habilita a entrada em competições.",
-        "Entrou com o <b>Google</b>? Seu e-mail já vem confirmado automaticamente.",
-      ],
-    },
-    {
-      versao: "2026-06-21c",
-      data: "21 jun 2026",
-      titulo: "🤖 Arquiteto IA (gera infra a partir de texto)",
-      itens: [
-        "Descreva em português o que você quer (\"um site com banco de dados e uma função\") e o <b>Arquiteto IA</b> monta um <b>template de CloudFormation</b> pra você.",
-        "Dá pra <b>criar o stack na hora</b> — os recursos passam a existir de verdade na sua conta. Botão <b>🤖 Arquiteto IA</b> no rodapé.",
-      ],
-    },
-    {
-      versao: "2026-06-21b",
-      data: "21 jun 2026",
-      titulo: "🛡️ Ranking mais justo e seguro",
-      itens: [
-        "Reforçamos as validações do servidor pra manter o <b>ranking justo</b> — pontuação e progresso agora passam por checagens de sanidade antes de serem salvos. Obrigado a quem reportou! 🙌",
-      ],
-    },
-    {
-      versao: "2026-06-21a",
-      data: "21 jun 2026",
-      titulo: "🔬 Saídas ainda mais fiéis à AWS de verdade",
-      itens: [
-        "Varredura de fidelidade comparando o CLImb com uma AWS real rodando na bancada: o <code>describe-instances</code> agora traz o JSON completo (IP privado/público, VPC, sub-rede, AZ, monitoramento...) e agrupa por reserva igual à AWS.",
-        "<b>IAM</b> mais completo: grupos, roles e políticas agora mostram <code>GroupId</code>/<code>RoleId</code>/<code>PolicyId</code>, <code>Path</code>, contagem de anexos e o documento de confiança da role — tudo no mesmo formato da AWS.",
-        "Ajustes finos: <code>dynamodb create-table</code> recusa nome com menos de 3 letras, <code>s3 rm</code> de objeto inexistente é idempotente (não dá erro), e a Lambda só mostra <code>Environment</code> quando há variáveis.",
-      ],
-    },
-    {
-      versao: "2026-06-20i",
-      data: "20 jun 2026",
-      titulo: "📄 CloudFormation (infra como código)",
-      itens: [
-        "Nova trilha <b>CloudFormation</b>: descreva seus recursos num template (<b>YAML</b> ou JSON) e o <code>create-stack</code> cria tudo de uma vez.",
-        "Os recursos são <b>de verdade</b>: um bucket no template aparece no <code>aws s3 ls</code>; um <code>delete-stack</code> apaga tudo junto. Tem template pronto pra começar.",
-      ],
-    },
-    {
-      versao: "2026-06-20h",
-      data: "20 jun 2026",
-      titulo: "🎯 Missões guiadas no Console",
-      itens: [
-        "Um <b>passeio guiado</b> dentro do Console: 8 missões que você cumpre <b>fazendo</b> (criar bucket, subir instância, dar permissão...) — com XP e progresso, igual aos desafios do terminal.",
-        "Abra o Console e clique em <b>🎯 Missões</b> no topo pra começar.",
-      ],
-    },
-    {
-      versao: "2026-06-20g",
-      data: "20 jun 2026",
-      titulo: "⚡🗄️ Lambda e DynamoDB no Console",
-      itens: [
-        "Chegaram <b>Lambda</b> (criar/testar/excluir função) e <b>DynamoDB</b> (criar tabela, adicionar itens, excluir) ao Console.",
-        "Com isso o Console já tem os <b>5 serviços</b>: S3, EC2, IAM, Lambda e DynamoDB — todos espelhando a linha de comando.",
-      ],
-    },
-    {
-      versao: "2026-06-20f",
-      data: "20 jun 2026",
-      titulo: "🔑 IAM no Console",
-      itens: [
-        "O Console agora tem <b>IAM</b>: crie e exclua usuários, anexe políticas e adicione a grupos — pelo clique.",
-        "Espelha o CLI: aparece no <code>aws iam list-users</code> e companhia, e vice-versa.",
-      ],
-    },
-    {
-      versao: "2026-06-20e",
-      data: "20 jun 2026",
-      titulo: "🖥️ EC2 no Console",
-      itens: [
-        "O Console agora também tem <b>EC2</b>: execute instâncias, pare, inicie e encerre — tudo no clique.",
-        "Igual ao S3, <b>espelha a linha de comando</b>: o que você faz aqui aparece no <code>aws ec2 describe-instances</code>, e vice-versa.",
-      ],
-    },
-    {
-      versao: "2026-06-20d",
-      data: "20 jun 2026",
-      titulo: "🎯 Saídas mais fiéis à AWS",
-      itens: [
-        "Afinamos as saídas e mensagens de erro dos comandos (EC2 e S3) pra ficarem <b>idênticas às da AWS de verdade</b> — assim o que você aprende aqui é exatamente o que vai ver lá.",
-        "Quando a AWS não mostra nada (ex.: <code>aws s3 ls</code> sem buckets), agora o terminal também não mostra — mas aparece um <b>aviso do CLImb</b> (⚡) explicando o que aconteceu, separado da saída do comando.",
-      ],
-    },
-    {
-      versao: "2026-06-20c",
-      data: "20 jun 2026",
-      titulo: "✉️ Entre com usuário ou e-mail",
-      itens: [
-        "Agora dá pra fazer login usando o <b>e-mail</b> cadastrado, não só o nome de usuário — o que for mais fácil de lembrar.",
-      ],
-    },
-    {
-      versao: "2026-06-20b",
-      data: "20 jun 2026",
-      titulo: "🔑 Primeiro lab (SSH) mais fiel",
-      itens: [
-        "O lab de conexão agora <b>ensina o SSH de verdade</b>: o que é a chave <code>.pem</code>, o usuário <b>ec2-user</b> e o passo do <code>chmod 400</code> — que na AWS real é obrigatório (sem ele o SSH recusa a chave).",
+        "<b>🛜🛢️📈 Três serviços novos:</b> VPC (rede), RDS (banco relacional) e CloudWatch (alarmes + Logs) — nas trilhas do terminal <b>e</b> no Console visual, sempre espelhando um ao outro.",
+        "<b>🔁 Muito mais prática:</b> chegamos a <b>quase 300 atividades</b>, com cada comando reaparecendo em vários cenários reais (pizzaria, backups, e-commerce…) e os reforços vindo logo depois de cada comando ser ensinado.",
+        "<b>👥 Turmas e competições:</b> crie uma turma, compartilhe o código e a galera entra — cada turma tem <b>ranking próprio</b>, em competição assíncrona.",
+        "<b>🤖 Arquiteto IA:</b> descreva em português o que você quer e ele monta um <b>template de CloudFormation</b> — dá pra criar o stack na hora.",
+        "<b>📧 Confirmação de e-mail</b> (com o Google já vindo confirmado) e o <b>ranking mais seguro</b>, com checagens de sanidade no servidor.",
+        "<b>🔬 Saídas mais fiéis à AWS:</b> <code>describe-instances</code> com o JSON completo, IAM com ids e paths, e ajustes finos (nome de tabela do DynamoDB, <code>s3 rm</code> idempotente).",
+        "<b>🏅 Níveis recalibrados:</b> 10 títulos, do Estagiário de Cloud à Lenda do CLI.",
       ],
     },
     {
       versao: "2026-06-20",
       data: "20 jun 2026",
-      titulo: "🖥️ Console de gerenciamento (S3)",
+      titulo: "🖥️ Console visual (5 serviços) e CloudFormation",
       itens: [
-        "Novo <b>Console visual</b> no estilo AWS: crie buckets, envie arquivos, crie pastas e apague — tudo no clique, sem decorar comando.",
-        "Ele <b>espelha a linha de comando</b>: o que você faz no Console aparece no <code>aws s3 ls</code>, e cada ação mostra o comando equivalente. Aprenda dos dois jeitos ao mesmo tempo.",
+        "<b>🖥️ Console de gerenciamento visual</b> no estilo AWS, cobrindo 5 serviços: <b>S3, EC2, IAM, Lambda e DynamoDB</b> — crie recursos no clique, sem decorar comando. Ele <b>espelha a linha de comando</b>: o que você faz aparece no <code>aws … describe</code>, e vice-versa.",
+        "<b>🎯 Missões guiadas no Console:</b> 8 missões que você cumpre <b>fazendo</b> (criar bucket, subir instância, dar permissão…), com XP como os desafios do terminal.",
+        "<b>📄 CloudFormation:</b> descreva os recursos num template (YAML/JSON) e o <code>create-stack</code> cria tudo — recursos de verdade, e o <code>delete-stack</code> apaga junto.",
+        "<b>✉️ Login por usuário ou e-mail</b> e o primeiro lab de <b>SSH</b> mais fiel (a chave <code>.pem</code>, o <code>ec2-user</code> e o <code>chmod 400</code> obrigatório).",
+        "<b>🎯 Saídas e erros mais fiéis à AWS</b> (EC2 e S3), com o aviso do CLImb (⚡) separado da saída do comando quando a AWS não mostra nada.",
       ],
     },
     {

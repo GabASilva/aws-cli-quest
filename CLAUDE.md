@@ -20,8 +20,22 @@
   falha sem). O tokenizer remove aspas; validadores de `--query` recebem o valor
   sem aspas.
 - Deploy: `flyctl deploy -a aws-cli-quest --yes` (app de infra continua
-  `aws-cli-quest`; a marca é CLImb). Feature visível ao aluno = entrada nova em
+  `aws-cli-quest`; a marca é CLImb). Feature visível ao aluno vai pro
   `NOVIDADES` no `js/changelog.js` (nunca anúncio solto na UI).
+
+## Changelog — UMA ENTRADA POR DIA (regra de padronização)
+
+O `NOVIDADES` (`js/changelog.js`) tem **uma entrada por dia**, não uma por
+mudança — senão vira chat. Ao publicar algo:
+
+- **Já existe entrada do dia de hoje?** COMPLEMENTE ela (adicione ou edite um
+  `item`), NÃO crie outra. Só há entrada nova quando vira o dia.
+- Mudanças **relacionadas** (ex.: várias levas de serviços novos) viram **um
+  item guarda-chuva** com sub-bullets `"• …"`, não vários itens soltos.
+- `versao` = a **data pura** (`"2026-07-23"`), sem sufixo a/b/c. É o id que o
+  selo "novo" compara com o localStorage.
+- Mesmo tom das entradas existentes: PT-BR, você/seu, `<b>`/`<code>` pra
+  destaque, foco no que MUDA pro aluno (não no detalhe técnico).
 
 ## Regras de ATIVIDADES (siga TODAS ao criar/alterar desafios)
 
