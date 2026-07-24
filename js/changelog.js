@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23m",
+      data: "23 jul 2026",
+      titulo: "📚 Explicação em TODOS os serviços",
+      itens: [
+        "Completamos a 2ª onda das lições: agora <b>todos os 27 serviços</b> têm o bloco <b>📚 Entenda o serviço</b> — RDS, CloudWatch, SQS, SNS, API Gateway, Route 53, CloudFront, ECR, ECS, Secrets Manager, Step Functions, EventBridge, EKS, Glue, Athena, KMS, CloudTrail, Systems Manager, Cognito, Auto Scaling e CloudFormation.",
+        "E o <b>💡 Por que este comando</b> passou a cobrir mais de <b>170 comandos</b> — inclusive os de rede que aparecem no laboratório de Diagnóstico.",
+        "Cada lição continua no mesmo formato: o que é, pra que serve, casos reais, vocabulário e como cobra — do jeito de um bom curso, explicando antes de mandar praticar.",
+      ],
+    },
+    {
       versao: "2026-07-23l",
       data: "23 jul 2026",
       titulo: "📚 Agora o CLImb explica antes de mandar fazer",
