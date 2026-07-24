@@ -16,6 +16,16 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23l",
+      data: "23 jul 2026",
+      titulo: "📚 Agora o CLImb explica antes de mandar fazer",
+      itens: [
+        "Cada trilha ganhou um bloco <b>📚 Entenda o serviço</b> no topo da atividade: o que é, <b>pra que serve</b>, <b>onde se usa no mundo real</b>, o vocabulário e como aquilo cobra. Ele abre sozinho na primeira atividade de cada trilha e fica a um clique nas outras.",
+        "E cada atividade agora tem um <b>💡 Por que este comando</b> logo abaixo do enunciado — explicando pra que aquele comando existe, não só como digitá-lo.",
+        "A ideia é a de um bom curso: entender o conceito primeiro, praticar depois. Começamos pelos fundamentais (S3, EC2, IAM, Lambda, DynamoDB e VPC); os demais serviços chegam nas próximas atualizações.",
+      ],
+    },
+    {
       versao: "2026-07-23k",
       data: "23 jul 2026",
       titulo: "🔧 Nova trilha: Diagnóstico — conserte uma infra quebrada",
