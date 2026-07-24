@@ -204,6 +204,8 @@ const FLAGS_MULTI_VALOR = new Set([
   "security-group-ids",
   "attribute-definitions",
   "key-schema",
+  "subnets", // ELB precisa de 2+ sub-redes; EKS/Glue passam valor único ou JSON (seguem funcionando)
+  "targets", // ELB register-targets aceita vários "Id=..."; usos JSON continuam sendo 1 token só
 ]);
 
 function parsearArgs(tokens) {

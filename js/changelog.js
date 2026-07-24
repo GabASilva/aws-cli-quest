@@ -26,8 +26,13 @@
     {
       versao: "2026-07-24",
       data: "24 jul 2026",
-      titulo: "🗺️ Diagrama da sua arquitetura",
+      titulo: "🧱 22 serviços novos (arquitetura, custos, segurança e IA) + 🗺️ Diagrama",
       itens: [
+        "<b>🧱 22 serviços AWS novos</b> — o CLImb passou de 430 para <b>473 atividades</b>, cada uma com comando de verdade no terminal, <b>manual</b> (<code>aws … help</code>) e a parte didática (<b>Entenda o serviço</b> + <b>Por que este comando</b>):",
+        "• <b>Núcleo de arquitetura</b> — Load Balancer (ELB), Elastic Beanstalk, EFS (disco compartilhado), ElastiCache (cache) e ACM (certificados HTTPS). O load balancer registra <b>instâncias EC2 de verdade</b> no target group.",
+        "• <b>Custos e governança</b> — Budgets (alertas de gasto), Cost Explorer (para onde vai o dinheiro), Organizations (várias contas, uma fatura) e Trusted Advisor.",
+        "• <b>Segurança</b> — GuardDuty (detecção de ameaças), Inspector (vulnerabilidades), Macie (dado sensível no S3), WAF (firewall de aplicação), Shield (anti-DDoS) e AWS Config (auditoria de configuração).",
+        "• <b>IA e dados</b> — Rekognition (visão), Translate, Polly (voz), Comprehend (NLP), Bedrock (IA generativa), Kinesis (streaming) e Redshift (data warehouse).",
         "Novo botão <b>🗺️ Diagrama</b> no rodapé: ele <b>desenha os recursos da sua conta</b> como um diagrama de arquitetura, agrupados por categoria (rede, computação, dados, integração, identidade e operações) — com a <b>VPC</b> englobando as sub-redes, igual aos diagramas da AWS.",
         "As linhas mostram as <b>relações</b> que dá pra ler da sua conta: <i>fan-out</i> (SNS → SQS), <i>usa</i> (Lambda → role) e <i>protege</i> (Security Group → EC2). Combina com o 🤖 Arquiteto IA e o CloudFormation — você monta a infra e vê ela desenhada.",
         "Dá pra <b>baixar o diagrama</b> como imagem (SVG) pra pôr num documento ou apresentação.",

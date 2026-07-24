@@ -111,6 +111,13 @@ function resolver(linha) {
     }
     linha = linha.replace(/<receipt-handle>/g, handle);
   }
+  // fases 6-9
+  if (linha.includes("<lb-arn>") && conta.elb) { const _l = Object.values(conta.elb.lbs); if (_l.length) linha = linha.replace(/<lb-arn>/g, _l[_l.length - 1].arn); }
+  if (linha.includes("<tg-arn>") && conta.elb) { const _t = Object.values(conta.elb.tgs); if (_t.length) linha = linha.replace(/<tg-arn>/g, _t[_t.length - 1].arn); }
+  if (linha.includes("<fs-id>") && conta.efs) linha = linha.replace(/<fs-id>/g, ult(conta.efs.sistemas));
+  if (linha.includes("<mt-id>") && conta.efs) linha = linha.replace(/<mt-id>/g, ult(conta.efs.alvos));
+  if (linha.includes("<cert-arn>") && conta.acm) linha = linha.replace(/<cert-arn>/g, ult(conta.acm.certificados));
+  if (linha.includes("<detector-id>") && conta.guardduty) linha = linha.replace(/<detector-id>/g, ult(conta.guardduty.detectores));
   return linha;
 }
 const autopass = [];
