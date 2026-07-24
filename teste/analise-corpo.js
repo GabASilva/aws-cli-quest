@@ -70,6 +70,20 @@ let ultimoCmd = null;
 // Cópia da mesma função do teste/fumaca.js — mexeu num, mexa no outro.
 function resolver(linha) {
   const ult = (obj) => { const k = Object.keys(obj || {}); return k[k.length - 1]; };
+  const lab = (conta.vpc || {}).labIds;
+  if (lab) {
+  if (linha.includes("<rtb-id>")) linha = linha.replace(/<rtb-id>/g, lab.rtb);
+  if (linha.includes("<acl-id>")) linha = linha.replace(/<acl-id>/g, lab.acl);
+  if (linha.includes("<igw-id>")) linha = linha.replace(/<igw-id>/g, lab.igw);
+  }
+  if (linha.includes("<caminho-flowlog>")) {
+  let chave = "";
+  for (const b of Object.values(conta.s3.buckets || {})) {
+  const k = Object.keys(b.objetos || {}).find((x) => /flowlog/i.test(x));
+  if (k) { chave = k; break; }
+  }
+  linha = linha.replace(/<caminho-flowlog>/g, chave);
+  }
   if (linha.includes("<id-da-inst")) linha = linha.replace(/<id-da-inst[^>]*>/, ult(conta.ec2.instancias));
   if (linha.includes("<vpc-id>") && conta.vpc) linha = linha.replace(/<vpc-id>/g, ult(conta.vpc.vpcs));
   if (linha.includes("<igw-id>") && conta.vpc) linha = linha.replace(/<igw-id>/g, ult(conta.vpc.igws));
@@ -102,13 +116,17 @@ function resolver(linha) {
 const autopass = [];
 for (const d of DESAFIOS) {
   if (d.tipo === "projeto") continue;
-  if ((d.solucao || []).some((s) => !s.trim().startsWith("aws"))) continue; // shell: fora deste harness
+  const ehLab = d.servico === "diagnostico"; // lab: monta o ambiente quebrado
+  if (ehLab && typeof montarLabVpc === "function") montarLabVpc(conta);
+  if (!ehLab && (d.solucao || []).some((s) => !s.trim().startsWith("aws"))) continue; // shell: fora deste harness
   // já satisfeito antes de rodar a solução? (validador de ESTADO ganho de graça)
   let antes = false;
   try { antes = !!d.validar(conta, null, false); } catch (e) { antes = false; }
   if (antes) autopass.push(`${d.id} (${d.servico}) — "${d.titulo}"`);
   for (const sol of d.solucao) {
-    const r = executarComandoAws(conta, resolver(sol));
+    const linhaSol = resolver(sol);
+    if (!linhaSol.trim().startsWith("aws")) { if (typeof labShell === "function") labShell(conta, linhaSol); continue; }
+    const r = executarComandoAws(conta, linhaSol);
     if (r) ultimoCmd = r.cmd;
     if (r && !r.ok && d.id !== "ec2-3") avisos.push(`solução falhou: ${d.id}: ${sol} -> ${String(r.saida).split("\n")[0]}`);
   }

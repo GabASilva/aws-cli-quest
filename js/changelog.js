@@ -16,6 +16,18 @@
   // marcar o que a pessoa já viu (a 1ª da lista é sempre a "atual").
   const NOVIDADES = [
     {
+      versao: "2026-07-23k",
+      data: "23 jul 2026",
+      titulo: "🔧 Nova trilha: Diagnóstico — conserte uma infra quebrada",
+      itens: [
+        "Um <b>formato novo de atividade</b>: em vez de \"crie um bucket\", você recebe um <b>chamado</b>. O site da loja não abre, o SSH não conecta, e a infra já existe na sua conta — <b>com dois defeitos plantados</b>. Seu trabalho é investigar, achar e consertar.",
+        "E a rede <b>funciona de verdade</b>: o <code>curl</code> só responde se a rota pro internet gateway existir, a network ACL deixar passar e o security group liberar a porta. Consertou? O site volta na hora. Ainda falta algo? Continua dando timeout.",
+        "Você também aprende a <b>investigar com evidência</b>: ative os <b>VPC Flow Logs</b>, gere o tráfego, baixe o arquivo do S3 e rode <code>grep REJECT</code> — as rejeições estão lá, no formato oficial da AWS, apontando exatamente a porta bloqueada.",
+        "Comandos novos de rede: <b>route tables</b> (create-route, describe-route-tables), <b>network ACLs</b> (o firewall da sub-rede, onde a regra de menor número vence), <b>flow logs</b>, <b>internet gateways</b> e <b>network interfaces</b>. Mais <code>curl</code>, <code>ssh</code> e <code>nmap</code> no terminal.",
+        "São <b>13 atividades</b> encadeadas como um plantão de verdade: reproduzir o erro, ligar o monitoramento, descartar hipóteses, seguir o caminho do pacote, consertar e comprovar.",
+      ],
+    },
+    {
       versao: "2026-07-23j",
       data: "23 jul 2026",
       titulo: "🕵️ Auditoria, configuração, login e elasticidade",
@@ -430,8 +442,8 @@
     },
     {
       icone: "🧩",
-      titulo: "Mais serviços AWS",
-      desc: "Já são 39 trilhas e 29 serviços na linha de comando. Daqui pra frente o foco muda: em vez de mais serviços soltos, vêm projetos que juntam vários deles numa arquitetura completa. Tem um serviço que faz falta no seu dia a dia? Fale com o responsável pelo app.",
+      titulo: "Mais laboratórios de diagnóstico",
+      desc: "A trilha 🔧 Diagnóstico estreou com o caso da rede quebrada. Vêm mais plantões: permissão negada no IAM, bucket que não vira site, Lambda que não executa e conta com custo escondido. Tem um problema que te pegou no trabalho? Fale com o responsável pelo app — vira laboratório.",
     },
     {
       icone: "🗺️",

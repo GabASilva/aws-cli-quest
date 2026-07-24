@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
-const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "desafios-extra.js", "desafios-pratica.js"]
+const codigo = ["simulador.js", "manuais.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "lab-vpc.js", "desafios-extra.js", "desafios-pratica.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -33,6 +33,20 @@ const teste = `
   // mexa lá também (os dois harnesses executam as mesmas soluções).
   function resolver(linha) {
     const ult = (obj) => { const k = Object.keys(obj || {}); return k[k.length - 1]; };
+    const lab = (conta.vpc || {}).labIds;
+    if (lab) {
+    if (linha.includes("<rtb-id>")) linha = linha.replace(/<rtb-id>/g, lab.rtb);
+    if (linha.includes("<acl-id>")) linha = linha.replace(/<acl-id>/g, lab.acl);
+    if (linha.includes("<igw-id>")) linha = linha.replace(/<igw-id>/g, lab.igw);
+    }
+    if (linha.includes("<caminho-flowlog>")) {
+    let chave = "";
+    for (const b of Object.values(conta.s3.buckets || {})) {
+    const k = Object.keys(b.objetos || {}).find((x) => /flowlog/i.test(x));
+    if (k) { chave = k; break; }
+    }
+    linha = linha.replace(/<caminho-flowlog>/g, chave);
+    }
     if (linha.includes("<id-da-inst")) {
       linha = linha.replace(/<id-da-inst[^>]*>/, ult(conta.ec2.instancias));
     }
@@ -68,15 +82,25 @@ const teste = `
   }
 
   for (const d of DESAFIOS) {
+    // Laboratório de diagnóstico: o ambiente quebrado é montado aqui (no app
+    // isso acontece quando o aluno abre a atividade), e curl/ssh/nmap rodam
+    // pelo labShell — é o que gera o tráfego que vira flow log.
+    const ehLab = d.servico === "diagnostico";
+    if (ehLab && typeof montarLabVpc === "function") montarLabVpc(conta);
     // desafios de shell/Linux (solução não começa com 'aws') são testados no
     // navegador, não aqui — o executarComandoAws só roda comandos aws.
-    if (d.solucao.some((s) => !s.trim().startsWith("aws"))) {
+    if (!ehLab && d.solucao.some((s) => !s.trim().startsWith("aws"))) {
       console.log("· (pulado no node — shell) " + d.id + " — " + d.titulo);
       continue;
     }
     for (const sol of d.solucao) {
       if (sol.startsWith("aws ec2 describe-instances") && d.id === "ec2-3") { rodar(sol); continue; }
-      rodar(resolver(sol));
+      const linha = resolver(sol);
+      if (!linha.trim().startsWith("aws")) {
+        if (typeof labShell === "function") labShell(conta, linha);
+        continue;
+      }
+      rodar(linha);
     }
     let passou;
     if (d.tipo === "projeto") {
