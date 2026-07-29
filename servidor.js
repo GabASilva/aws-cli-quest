@@ -14,6 +14,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
@@ -1059,6 +1060,44 @@ const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|lib\/|node_modules\/|\.g
 
 const PROD = !!process.env.DADOS_DIR; // no Fly o Dockerfile define DADOS_DIR
 
+// ---------- Compressão (gzip/brotli) ----------
+// O app manda ~1,5 MB de JS no primeiro acesso. Comprimido isso cai pra ~350 KB
+// — diferença enorme pra quem entra pelo 4G. Comprimimos UMA vez por arquivo e
+// guardamos em memória (os assets são estáticos e o total comprimido é pequeno;
+// a VM é de 256MB, então recomprimir a cada request seria desperdício de CPU).
+const COMPRIMIVEL = new Set([".html", ".js", ".css", ".svg", ".json"]);
+const MIN_COMPRIMIR = 1024; // abaixo disso o cabeçalho custa mais que a economia
+const _cacheComprimido = new Map(); // "chave:codificacao" -> Buffer
+
+// Qual codificação o navegador aceita (br é melhor, gzip é universal).
+function escolherCodificacao(req) {
+  const aceita = String(req.headers["accept-encoding"] || "").toLowerCase();
+  if (/\bbr\b/.test(aceita)) return "br";
+  if (/\bgzip\b/.test(aceita)) return "gzip";
+  return null;
+}
+
+// Comprime e memoriza. `chave` identifica o conteúdo (caminho + versão) pra o
+// cache não servir a versão velha depois de um deploy.
+function comprimir(chave, codificacao, corpo) {
+  const cacheKey = chave + ":" + codificacao;
+  // has() e não get(): `null` é resposta válida ("não compensa comprimir") e
+  // precisa ser distinguida de "ainda não tentei", senão recomprime sempre.
+  if (_cacheComprimido.has(cacheKey)) return _cacheComprimido.get(cacheKey);
+  const saida = codificacao === "br"
+    ? zlib.brotliCompressSync(corpo, {
+        params: {
+          [zlib.constants.BROTLI_PARAM_QUALITY]: 5, // 5 = bom equilíbrio; 11 trava a VM
+          [zlib.constants.BROTLI_PARAM_SIZE_HINT]: corpo.length,
+        },
+      })
+    : zlib.gzipSync(corpo, { level: 6 });
+  // se não compensou (arquivo já compacto), guarda o original pra não tentar de novo
+  const melhor = saida.length < corpo.length ? saida : null;
+  _cacheComprimido.set(cacheKey, melhor);
+  return melhor;
+}
+
 // ---------- Versão dos assets (cache-busting por conteúdo) ----------
 // Hash de tudo que o cliente baixa. Muda só quando algum arquivo muda, então:
 //  - index.html (sempre no-store) referencia js/css com ?v=VERSAO
@@ -1146,11 +1185,30 @@ function servirEstatico(req, res, rota) {
       // sem versão (ou em dev): revalida sempre, nunca serve velho
       cache = rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store";
     }
-    res.writeHead(200, {
+    const cabecalhos = {
       "Content-Type": MIMES[ext] || "application/octet-stream",
       "Cache-Control": cache,
       ...HEADERS_SEG,
-    });
+    };
+
+    // Comprime se o tipo compensa e o navegador aceita. O Vary é obrigatório:
+    // sem ele, um cache intermediário pode entregar o corpo comprimido pra um
+    // cliente que não aceita (ou vice-versa).
+    if (COMPRIMIVEL.has(ext) && corpo.length >= MIN_COMPRIMIR) {
+      cabecalhos.Vary = "Accept-Encoding";
+      const codificacao = escolherCodificacao(req);
+      if (codificacao) {
+        // a chave inclui a VERSAO: depois de um deploy o conteúdo muda e o
+        // cache em memória precisa ser invalidado junto.
+        const comprimido = comprimir(relativo + "@" + VERSAO, codificacao, corpo);
+        if (comprimido) {
+          cabecalhos["Content-Encoding"] = codificacao;
+          corpo = comprimido;
+        }
+      }
+    }
+
+    res.writeHead(200, cabecalhos);
     res.end(corpo);
   });
 }

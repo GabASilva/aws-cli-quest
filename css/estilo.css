@@ -285,6 +285,28 @@ pre.linha { font-family: var(--fonte-mono); }
   font-size: 0.74rem;
   margin-bottom: 2px;
 }
+/* "Quase lá": tutoria sobre a ATIVIDADE (não é saída do CLI nem erro).
+   Cor própria (azul) pra não se confundir com o aviso laranja do CLImb
+   nem com o vermelho de erro. */
+#saidaTerminal .linha.quase-la {
+  color: var(--texto);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: rgba(88, 166, 255, 0.10);
+  border-left: 3px solid #58a6ff;
+  border-radius: 0 6px 6px 0;
+  padding: 7px 11px;
+  margin: 6px 0 4px;
+  font-size: 0.86rem;
+}
+#saidaTerminal .linha.quase-la::before {
+  content: "🎯 Quase lá";
+  display: block;
+  color: #58a6ff;
+  font-weight: 700;
+  font-size: 0.74rem;
+  margin-bottom: 2px;
+}
+
 .prompt { color: var(--laranja); font-weight: 700; }
 
 .linha-entrada { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
