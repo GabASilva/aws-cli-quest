@@ -376,7 +376,7 @@ const DESAFIOS_LINUX = [
     validar: (c) => !noRelHome(c, "tarefas.txt") && !!noRelHome(c, "todo.txt") },
   { id: "lnx-11", servico: "linux", nivel: 2, xp: 60, titulo: "Faxina",
     descricao: "Apague o arquivo <b>todo.txt</b> com <b>rm</b>.",
-    dicas: ["rm todo.txt", "Pra apagar pasta, seria 'rm -r <pasta>'."], solucao: ["rm todo.txt"],
+    dicas: ["`rm` é de \"remove\". A forma é: rm <arquivo>", "Pra apagar pasta, seria 'rm -r <pasta>'."], solucao: ["rm todo.txt"],
     validar: (c) => !noRelHome(c, "todo.txt") },
   { id: "lnx-12", servico: "linux", nivel: 3, xp: 90, titulo: "Proteja a chave (chmod 400)",
     descricao: "Igual no lab de SSH: a chave <b>labsuser.pem</b> precisa ficar <b>só com leitura pro dono</b>. Aplique <b>chmod 400</b> nela. (É o que destrava o ssh!)",
@@ -392,7 +392,7 @@ const DESAFIOS_LINUX = [
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "wc" },
   { id: "lnx-15", servico: "linux", nivel: 2, xp: 70, titulo: "Leia o manual",
     descricao: "A habilidade mais importante: ler a documentação. Abra o manual do comando <b>ls</b> com <b>man</b>.",
-    dicas: ["man <comando>", "man ls"], solucao: ["man ls"],
+    dicas: ["`man` abre o manual de um comando. A forma é: man <comando>"], solucao: ["man ls"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "man" },
 
   // --- Nível 2: fundamentos que faltavam (inspirado no "Learn Linux") ---
@@ -402,7 +402,7 @@ const DESAFIOS_LINUX = [
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "whoami" },
   { id: "lnx-17", servico: "linux", nivel: 2, xp: 50, titulo: "Veja as permissões (ls -l)",
     descricao: "Liste com detalhes (permissões, dono, tamanho) usando <b>ls -l</b>. Repare na 1ª coluna, tipo <code>-rw-r--r--</code>: são as permissões de <b>dono</b>, <b>grupo</b> e <b>outros</b>.",
-    dicas: ["ls -l", "d no começo = diretório; rwx = ler/escrever/executar."], solucao: ["ls -l"],
+    dicas: ["É o mesmo `ls` de sempre, com a opção que pede a listagem \"longa\" (de \"long\").", "d no começo = diretório; rwx = ler/escrever/executar."], solucao: ["ls -l"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "ls" && (cmd.args || []).some((a) => a === "-l" || a === "-la" || a === "-al") },
   { id: "lnx-18", servico: "linux", nivel: 2, xp: 70, titulo: "Estrutura de uma vez (mkdir -p)",
     descricao: "Crie de uma tacada só a estrutura <b>deploy/artefatos</b> com <b>mkdir -p</b> — o <code>-p</code> cria os diretórios pais que faltam.",
