@@ -1356,6 +1356,17 @@ body.console-aberto { overflow: hidden; }
 }
 .licao[open] > summary::after { transform: rotate(180deg); }
 .licao > summary:hover { background: rgba(88,166,255,0.08); }
+/* Lição ainda não lida e fechada (caso do celular): um selo convida a abrir,
+   já que ela não se abre sozinha lá pra não empurrar o terminal pra longe. */
+.licao-nova > summary::before {
+  content: "leia antes";
+  order: 2; margin-left: auto;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--fundo); background: var(--azul);
+  padding: 2px 7px; border-radius: 999px;
+}
+.licao-nova > summary::after { margin-left: 8px; }
 .licao-emoji { font-size: 1.1rem; }
 .licao-corpo { padding: 4px 16px 16px; font-size: 0.9rem; line-height: 1.55; }
 .licao-oque { margin: 0 0 12px; color: var(--texto); }
@@ -1385,4 +1396,57 @@ body.console-aberto { overflow: hidden; }
 @media (max-width: 600px) {
   .licao-vocab { grid-template-columns: 1fr; gap: 2px 0; }
   .licao-vocab dd { margin: 0 0 6px; }
+}
+
+/* ============================================================
+   ACESSIBILIDADE
+   Três lacunas que a auditoria de 2026-07-29 apontou:
+   1) só existiam 3 regras de :focus — e todas eram "outline: none",
+      ou seja, APAGAVAM o indicador de foco sem repor nada. Quem navega
+      por teclado ficava sem saber onde estava.
+   2) nenhuma regra de prefers-reduced-motion.
+   3) textos corridos abaixo de 12px.
+   ============================================================ */
+
+/* Anel de foco visível em tudo que é interativo. :focus-visible só aparece
+   pra navegação por teclado — quem usa mouse não vê o anel. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--azul);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Os campos que zeravam o outline agora repõem o anel no lugar dele. */
+#formConta input:focus-visible,
+.busca-conceito:focus-visible,
+.linha-codigo input:focus-visible {
+  outline: 3px solid var(--azul);
+  outline-offset: 1px;
+}
+/* O input do terminal é a área principal: foco marcado pela borda do bloco,
+   pra não desenhar um anel no meio da "tela preta". */
+#terminal:focus-within { box-shadow: 0 0 0 2px var(--azul); }
+
+/* Respeita quem pediu menos movimento no sistema. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Texto corrido nunca abaixo de 12px (0.75rem). O aviso de marca estava em
+   9,92px — é um parágrafo inteiro, não dava pra ler. Selos e etiquetas curtas
+   (".cl-selo" e afins) continuam menores de propósito: são decorativos, não
+   texto de leitura. */
+.aviso-marca { font-size: 0.75rem; line-height: 1.5; }
+@media (max-width: 760px) {
+  .aviso-marca { font-size: 0.75rem; }
 }

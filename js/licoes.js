@@ -734,10 +734,18 @@ const PORQUE = {
     catch (e) { return false; }
   }
 
-  function htmlLicao(sid, licao, aberta) {
+  // Tela estreita: a lição tem ~1100px de altura e, aberta, empurra o terminal
+  // pra 2 telas de distância — a pessoa teria que rolar muito pra digitar o
+  // comando, que é a ação principal. No celular ela nasce FECHADA (e ganha um
+  // selo "novo" pra continuar convidando a leitura).
+  function telaEstreita() {
+    return !!(window.matchMedia && window.matchMedia("(max-width: 760px)").matches);
+  }
+
+  function htmlLicao(sid, licao, aberta, naoVista) {
     const casos = (licao.casos || []).map((c) => `<li>${ricoSeguro(c)}</li>`).join("");
     const vocab = (licao.vocab || []).map(([t, x]) => `<dt>${esc(t)}</dt><dd>${ricoSeguro(x)}</dd>`).join("");
-    return `<details class="licao"${aberta ? " open" : ""} data-sid="${esc(sid)}">
+    return `<details class="licao${naoVista && !aberta ? " licao-nova" : ""}"${aberta ? " open" : ""} data-sid="${esc(sid)}">
       <summary><span class="licao-emoji">${licao.emoji || "📚"}</span> Entenda o ${esc(licao.titulo)}</summary>
       <div class="licao-corpo">
         <p class="licao-oque">${ricoSeguro(licao.oque)}</p>
@@ -772,9 +780,11 @@ const PORQUE = {
     const info = licaoDoDesafio(d);
     if (info && !card.querySelector(".licao")) {
       const vistas = lerVistas();
-      const abrir = !vistas.has(info.sid) || primeiraDaTrilha(d);
+      const naoVista = !vistas.has(info.sid);
+      // no celular nunca abre sozinha (ver telaEstreita): o custo de scroll é alto demais
+      const abrir = (naoVista || primeiraDaTrilha(d)) && !telaEstreita();
       const wrap = document.createElement("div");
-      wrap.innerHTML = htmlLicao(info.sid, info.licao, abrir);
+      wrap.innerHTML = htmlLicao(info.sid, info.licao, abrir, naoVista);
       const bloco = wrap.firstElementChild;
       const titulo = card.querySelector("h2");
       if (titulo) titulo.insertAdjacentElement("afterend", bloco);

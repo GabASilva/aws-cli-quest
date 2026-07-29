@@ -85,4 +85,35 @@
   window.addEventListener("load", () => { setTimeout(aplicar, 300); setTimeout(aplicar, 1200); });
   let t;
   window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(aplicar, 150); });
+
+  // ---------- levar a pessoa até a atividade ao escolher uma ----------
+  // No celular a lista de trilhas fica EMPILHADA em cima do conteúdo, então
+  // escolher uma atividade não movia a tela: o enunciado e o terminal ficavam
+  // ~1100px abaixo e parecia que nada tinha acontecido. Aqui a gente rola até
+  // o card. O foco no input é DESLIGADO no celular de propósito: abrir o
+  // teclado por cima do enunciado, antes de a pessoa ler, atrapalha mais do
+  // que ajuda (no desktop o foco continua igual).
+  const selecionarOriginal = window.selecionarDesafio;
+  if (typeof selecionarOriginal === "function") {
+    window.selecionarDesafio = function (id) {
+      const r = selecionarOriginal.apply(this, arguments);
+      if (ehMobile()) {
+        const card = document.querySelector("#cardDesafio");
+        const inp = document.querySelector("#entradaTerminal");
+        if (inp && document.activeElement === inp) inp.blur(); // não abrir o teclado ainda
+        if (card) {
+          // scrollIntoView puro esconderia o topo do card atrás do header, que
+          // é sticky — some justamente o bloco da lição. Descontamos a altura
+          // dele. requestAnimationFrame: a lição é injetada depois do render.
+          requestAnimationFrame(() => {
+            const h = document.querySelector("header");
+            const recuo = (h ? h.getBoundingClientRect().height : 0) + 8;
+            const alvo = card.getBoundingClientRect().top + window.scrollY - recuo;
+            window.scrollTo({ top: Math.max(0, alvo), behavior: "smooth" });
+          });
+        }
+      }
+      return r;
+    };
+  }
 })();

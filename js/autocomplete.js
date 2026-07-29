@@ -114,6 +114,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const input = document.querySelector("#entradaTerminal");
   if (!input) return;
   input.addEventListener("keydown", (ev) => {
-    if (ev.key === "Tab") aoApertarTab(ev, input);
+    // Shift+Tab NÃO completa: é a saída do terminal pra quem navega por
+    // teclado. Como o Tab normal é sempre capturado pelo autocomplete, sem
+    // isso o foco entrava aqui e nunca mais saía (armadilha de teclado).
+    if (ev.key === "Tab" && !ev.shiftKey) aoApertarTab(ev, input);
   });
 });
