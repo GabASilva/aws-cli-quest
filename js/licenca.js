@@ -2,16 +2,21 @@
 // ============================================================
 // AWS CLI Quest — licenca.js
 // Freemium: trava o conteúdo Pro pra quem não tem licença.
-//   Grátis: Primeiros passos, Linux essencial, trilha S3 e o Desafio do dia.
-//   Pro: EC2, IAM, Lambda, DynamoDB, Projetos, seções avançadas, missões
-//        relâmpago e o Treino aleatório.
+//   Grátis: Primeiros passos, Linux essencial, S3, EC2, IAM e o Desafio do dia.
+//   Pro: Lambda, DynamoDB e os outros ~55 serviços, Projetos, seções
+//        avançadas, missões relâmpago e o Treino aleatório.
 //
 // ADITIVO: faz wrap de selecionarDesafio (bloqueia Pro) e de renderSidebar
 // (cadeados), injeta o botão/painel de planos e trata o retorno do checkout.
 // Não toca app.js/jogo.js.
 // ============================================================
 
-const SERVICOS_GRATIS = ["setup", "linux", "s3"];
+// EC2 e IAM entraram no grátis em 2026-07-29 (decisão do Gabriel): antes só
+// 28 das 473 atividades eram abertas (6%), e as duas trilhas onde o simulador
+// mais se prova — ligar/parar uma máquina de verdade e uma política que
+// realmente nega acesso — ficavam atrás do muro. A pessoa decidia assinar sem
+// ter experimentado o que o produto tem de melhor.
+const SERVICOS_GRATIS = ["setup", "linux", "s3", "ec2", "iam"];
 
 // um desafio é grátis se for de uma trilha grátis OU se for o Desafio do dia
 function desafioEhGratis(d) {
@@ -83,7 +88,7 @@ function podeAcessar(d) {
     } else {
       btn.textContent = "⭐ Assinar Pro";
       btn.classList.add("secundario");
-      btn.title = "Desbloqueie EC2, IAM, Lambda, DynamoDB, projetos e simulados ilimitados";
+      btn.title = "Desbloqueie Lambda, DynamoDB, VPC, RDS e mais 50 serviços, projetos e simulados ilimitados";
     }
   }
 
@@ -94,7 +99,7 @@ function podeAcessar(d) {
     const aviso = document.querySelector("#planosAviso");
     aviso.textContent = desafioBloqueado
       ? `"${desafioBloqueado.titulo}" faz parte do plano Pro. Desbloqueie tudo:`
-      : "Desbloqueie todo o conteúdo do AWS CLI Quest:";
+      : "Desbloqueie todo o conteúdo do CLImb:";
     const planos = await apiPlanos();
     const checkoutAtivo = planos && planos.checkoutAtivo;
     const p = (planos && planos.precos) || { mensal: 19.9, semestral: 89.9, anual: 149.9 };

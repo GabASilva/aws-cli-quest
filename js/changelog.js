@@ -24,6 +24,19 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-07-29",
+      data: "29 jul 2026",
+      titulo: "🔓 EC2 e IAM liberados no grátis + as dicas agora ensinam (não entregam)",
+      itens: [
+        "<b>🔓 As trilhas de EC2 e IAM ficaram grátis</b> — mais <b>37 atividades</b> abertas pra todo mundo. São justamente as duas em que o simulador mais se prova: você liga e para uma máquina de verdade, e escreve uma política que <b>realmente</b> nega acesso. Agora dá pra experimentar isso antes de decidir assinar.",
+        "<b>💡 As dicas foram reescritas — 292 atividades.</b> Antes muitas dicas eram o comando pronto, então clicar em \"Dica\" era o mesmo que ver a resposta. Agora cada uma tem <b>dois níveis</b>: a primeira explica o <b>conceito</b> (o que significa <code>create-</code>, <code>describe-</code>, <code>list-</code>… e onde procurar no <code>help</code>) e a segunda mostra a <b>forma do comando</b>, com as opções à mostra e os valores escondidos — ex.: <code>aws kinesis create-stream --stream-name &lt;nome&gt; --shard-count &lt;número&gt;</code>. O comando completo continua só na revelação, que custa XP.",
+        "<b>🎯 Novo aviso \"Quase lá\".</b> Quando o comando roda certo mas não completa a atividade, o CLImb <b>não fica mais em silêncio</b>: ele diz onde está o problema — se é outro serviço, se o comando não é esse, se falta uma opção (e qual) ou se algum nome não bate com o enunciado. Sem entregar a resposta.",
+        "<b>⚡ O app ficou 73% mais leve</b> — a primeira abertura baixava 1,4 MB e agora baixa 389 KB. Diferença grande pra quem entra pelo celular pelo 4G.",
+        "<b>📱 Muito melhor no celular:</b> abrir uma atividade exigia rolar quase 3 telas até o campo de digitar. Agora o bloco <b>Entenda o serviço</b> começa recolhido (com um selo <b>leia antes</b>, é só tocar pra abrir) e a tela já vai direto pro enunciado — com o terminal logo abaixo.",
+        "<b>♿ Acessibilidade:</b> quem navega por <b>teclado</b> agora enxerga onde está (indicador de foco em tudo) e consegue sair do terminal com <b>Shift+Tab</b>; as janelas anunciam-se corretamente pra <b>leitores de tela</b>, prendem o Tab enquanto abertas, fecham com <b>Esc</b> e devolvem o foco pro lugar. O app também respeita quem pediu <b>menos animação</b> no sistema.",
+      ],
+    },
+    {
       versao: "2026-07-24",
       data: "24 jul 2026",
       titulo: "🧱 22 serviços novos (arquitetura, custos, segurança e IA) + 🗺️ Diagrama",
