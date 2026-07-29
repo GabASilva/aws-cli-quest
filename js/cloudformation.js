@@ -288,7 +288,7 @@
       id: "cfn-2", servico: "cloudformation", nivel: 1, xp: 40,
       titulo: "O bucket apareceu?",
       descricao: "O stack criou um bucket de verdade. Liste seus <b>buckets do S3</b> e confirme que o <b>meu-site-cfn</b> está lá — criado pelo CloudFormation.",
-      dicas: ["É o mesmo S3 de sempre: aws s3 ls", "O CloudFormation provisiona recursos reais na conta."],
+      dicas: ["É o mesmo comando de listar bucket que você já usou na trilha do S3.", "O CloudFormation provisiona recursos reais na conta."],
       solucao: ["aws s3 ls"],
       validar: (conta, cmd, ok) => ok && ehCmd(cmd, "s3", "ls") && !!conta.s3.buckets["meu-site-cfn"],
     },
