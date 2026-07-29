@@ -120,7 +120,7 @@ const DESAFIOS_AVANCADOS = [
     id: "qry-5", servico: "adv-query", nivel: 3, xp: 100,
     titulo: "Quem sou eu, em arquivo",
     descricao: "Salve a sua identidade (o \"whoami\" da AWS) no arquivo <b>conta.json</b>.",
-    dicas: ["aws sts get-caller-identity > conta.json"],
+    dicas: ["`get-…` busca um item específico (você diz qual) — veja a lista de comandos com: aws sts help", "A forma do comando é: aws sts get-caller-identity > <arquivo>"],
     solucao: ["aws sts get-caller-identity > conta.json"],
     validar: (conta) => {
       const s = (conta.arquivosSalvos || {})["conta.json"];

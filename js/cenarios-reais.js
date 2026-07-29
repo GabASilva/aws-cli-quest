@@ -18,7 +18,7 @@
     {
       nivel: 2, xp: 90, titulo: "Landing page no ar",
       descricao: "O time de marketing quer publicar uma landing page. Crie o bucket <b>site-lancamento</b>, sincronize a pasta <b>./site</b> nele e configure a hospedagem com <b>index.html</b> de página inicial.",
-      dicas: ["3 comandos: mb, sync e website.", "aws s3 website s3://site-lancamento --index-document index.html"],
+      dicas: ["3 comandos: mb, sync e website.", "aws s3 website s3://<nome-do-bucket> --index-document <valor>"],
       solucao: ["aws s3 mb s3://site-lancamento", "aws s3 sync ./site s3://site-lancamento", "aws s3 website s3://site-lancamento --index-document index.html"],
       validar: (c) => { const b = bkt(c, "site-lancamento"); return !!b && !!b.objetos["index.html"] && b.website && b.website.indice === "index.html"; },
     },

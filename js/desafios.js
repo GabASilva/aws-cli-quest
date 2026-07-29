@@ -359,7 +359,7 @@ const DESAFIOS = [
     id: "dyn-5", servico: "dynamodb", nivel: 3, xp: 70,
     titulo: "Varra a tabela",
     descricao: "Liste <b>todos os itens</b> da tabela clientes com um scan.",
-    dicas: ["aws dynamodb scan --table-name clientes"],
+    dicas: ["Veja os comandos disponíveis com: aws dynamodb help", "A forma do comando é: aws dynamodb scan --table-name <nome>"],
     solucao: ["aws dynamodb scan --table-name clientes"],
     validar: (conta, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "scan") && cmd.flags["table-name"] === "clientes",
   },
