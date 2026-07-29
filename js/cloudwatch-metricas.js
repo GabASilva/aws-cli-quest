@@ -1,16 +1,18 @@
 "use strict";
 // ============================================================
 // CLImb — cloudwatch-metricas.js
-// MÉTRICA PERSONALIZADA (custom metric) — faltava no CLImb.
+// O que faltava do CloudWatch, fechando a história completa de observabilidade:
+// MEÇO (métrica personalizada) → ALARMO (já existia) → VISUALIZO (painel).
 //
-// O CloudWatch já tinha alarme (put-metric-alarm) e listagem, mas só sabia
-// falar das métricas que a AWS coleta sozinha (CPU, invocações...). O que não
-// existia era o outro lado: **você publicar a SUA métrica** com
-// `put-metric-data` e depois lê-la com `get-metric-statistics`.
+// 1) MÉTRICA PERSONALIZADA — o CloudWatch já tinha alarme e listagem, mas só
+//    sabia falar das métricas que a AWS coleta sozinha (CPU, invocações...).
+//    Faltava o outro lado: **você publicar a SUA métrica** com
+//    `put-metric-data` e lê-la com `get-metric-statistics`. As métricas que
+//    decidem negócio a AWS não tem como saber (pedidos por minuto, carrinhos
+//    abandonados, fila interna) — elas só existem se a aplicação publicar.
 //
-// Isso importa porque as métricas que decidem negócio a AWS não tem como
-// saber: pedidos por minuto, carrinhos abandonados, fila de pedidos pendentes.
-// Elas só existem se a sua aplicação publicar.
+// 2) PAINEL (dashboard) — o passo natural depois de ter métrica própria: juntar
+//    os gráficos numa tela que alguém olha de manhã. `put-dashboard` e amigos.
 //
 // ADITIVO: acrescenta comandos em SERVICOS.cloudwatch (que já existe, criado
 // em servicos-fase1.js) e empurra atividades novas na trilha do CloudWatch.
@@ -23,6 +25,7 @@
     conta.cloudwatch = conta.cloudwatch || { alarmes: {} };
     // cada métrica personalizada: "namespace|nome" -> { pontos: [...] }
     conta.cloudwatch.metricas = conta.cloudwatch.metricas || {};
+    conta.cloudwatch.paineis = conta.cloudwatch.paineis || {};
     return conta;
   }
 
@@ -128,6 +131,98 @@
   };
 
   // ============================================================
+  // PAINEL (dashboard) — juntar os gráficos numa tela só
+  // ============================================================
+  const NOME_PAINEL_OK = /^[a-zA-Z0-9_-]+$/;
+
+  // Varre os widgets e devolve as métricas citadas: [[ns, nome], ...].
+  // O formato real do widget é properties.metrics = [[ns, nome, dimNome, dimValor], ...]
+  function metricasDoCorpo(corpo) {
+    const achadas = [];
+    for (const w of corpo.widgets || []) {
+      const ms = w && w.properties && w.properties.metrics;
+      if (!Array.isArray(ms)) continue;
+      for (const m of ms) if (Array.isArray(m) && m.length >= 2) achadas.push([String(m[0]), String(m[1])]);
+    }
+    return achadas;
+  }
+
+  Object.assign(SERVICOS.cloudwatch, {
+    "put-dashboard": (conta, pos, flags) => {
+      estado(conta);
+      const nome = String(exigirFlag(flags, "dashboard-name"));
+      if (!NOME_PAINEL_OK.test(nome)) {
+        throw new ErroCli(`An error occurred (InvalidParameterInput) when calling the PutDashboard operation: The dashboard name is invalid: ${nome}\nUse só letras, números, "-" e "_" (sem espaço e sem barra).`);
+      }
+      const bruto = exigirFlag(flags, "dashboard-body");
+      let corpo;
+      try { corpo = typeof bruto === "string" ? JSON.parse(bruto) : bruto; }
+      catch (e) {
+        throw new ErroCli("An error occurred (InvalidParameterInput) when calling the PutDashboard operation: --dashboard-body precisa ser um JSON válido.\nEle descreve os WIDGETS do painel. O mínimo é:\n  '{\"widgets\":[{\"type\":\"metric\",\"properties\":{\"metrics\":[[\"Loja/Pedidos\",\"PedidosPorMinuto\"]],\"title\":\"Pedidos\"}}]}'");
+      }
+      if (!Array.isArray(corpo.widgets)) {
+        throw new ErroCli("An error occurred (InvalidParameterInput) when calling the PutDashboard operation: o JSON precisa ter a lista \"widgets\".\nCada widget é um quadro do painel: type \"metric\" (gráfico), \"text\" (recado em markdown) ou \"log\".");
+      }
+
+      const jaExistia = !!conta.cloudwatch.paineis[nome];
+      conta.cloudwatch.paineis[nome] = { nome, corpo, atualizadoEm: agoraIso() };
+
+      // Pegadinha real: o painel aceita QUALQUER métrica, mesmo uma que nunca
+      // foi publicada — e aí o gráfico aparece vazio, sem erro nenhum.
+      const citadas = metricasDoCorpo(corpo);
+      const fantasmas = citadas.filter(([ns, mn]) => !/^AWS\//i.test(ns) && !conta.cloudwatch.metricas[chave(ns, mn)]);
+      const tipos = [...new Set((corpo.widgets || []).map((w) => (w && w.type) || "metric"))];
+
+      if (fantasmas.length) {
+        avisarClimb(`Painel "${nome}" salvo — mas atenção: ${fantasmas.map(([a, b]) => a + "/" + b).join(", ")} não tem nenhum dado publicado. O CloudWatch NÃO reclama disso: ele aceita o painel e o gráfico simplesmente aparece vazio. É a causa nº 1 de "meu dashboard não mostra nada" — quase sempre é nome ou namespace escrito diferente do que a aplicação publica.`);
+      } else {
+        avisarClimb(`Painel "${nome}" ${jaExistia ? "atualizado" : "criado"} com ${corpo.widgets.length} widget(s) (${tipos.join(", ")}). O put-dashboard SUBSTITUI o painel inteiro — não existe "adicionar um widget": você manda o JSON completo sempre. Por isso o normal é guardar esse JSON no repositório, como código.`);
+      }
+      return js({ DashboardValidationMessages: [] });
+    },
+
+    "list-dashboards": (conta) => {
+      estado(conta);
+      const l = Object.values(conta.cloudwatch.paineis);
+      if (!l.length) {
+        avisarClimb("Nenhum painel ainda. Os 3 primeiros são de graça — a partir do 4º a AWS cobra por painel/mês, então costuma-se ter um painel por time ou por sistema, não um por pessoa.");
+        return js({ DashboardEntries: [] });
+      }
+      return js({ DashboardEntries: l.map((p) => ({
+        DashboardName: p.nome,
+        DashboardArn: `arn:aws:cloudwatch::${conta.contaId || "123456789012"}:dashboard/${p.nome}`,
+        LastModified: p.atualizadoEm,
+        Size: JSON.stringify(p.corpo).length,
+      })) });
+    },
+
+    "get-dashboard": (conta, pos, flags) => {
+      estado(conta);
+      const nome = String(exigirFlag(flags, "dashboard-name"));
+      const p = conta.cloudwatch.paineis[nome];
+      if (!p) throw new ErroCli(`An error occurred (ResourceNotFound) when calling the GetDashboard operation: Dashboard ${nome} does not exist.`);
+      avisarClimb("Repare que o DashboardBody volta como TEXTO (uma string com JSON dentro), não como objeto. É assim na AWS de verdade — pra editar, você lê essa string, altera e manda de volta no put-dashboard.");
+      return js({
+        DashboardName: p.nome,
+        DashboardArn: `arn:aws:cloudwatch::${conta.contaId || "123456789012"}:dashboard/${p.nome}`,
+        DashboardBody: JSON.stringify(p.corpo),
+      });
+    },
+
+    "delete-dashboards": (conta, pos, flags) => {
+      estado(conta);
+      const nomes = [].concat(exigirFlag(flags, "dashboard-names")).map(String);
+      const faltando = nomes.filter((n) => !conta.cloudwatch.paineis[n]);
+      if (faltando.length) {
+        throw new ErroCli(`An error occurred (ResourceNotFound) when calling the DeleteDashboards operation: Dashboard ${faltando[0]} does not exist.\nDica: o parâmetro é PLURAL (--dashboard-names) e aceita vários nomes separados por espaço — se um só não existir, nenhum é apagado.`);
+      }
+      for (const n of nomes) delete conta.cloudwatch.paineis[n];
+      avisarClimb(`${nomes.length} painel(is) apagado(s). Apagar painel não apaga métrica nem alarme — o painel é só a "vitrine". Os dados continuam no CloudWatch, e você pode montar outra visualização deles quando quiser.`);
+      return okSilencioso("Painel apagado.");
+    },
+  });
+
+  // ============================================================
   // Atividades — entram na trilha do CloudWatch (ids cw-10+ estão livres)
   // ============================================================
   const NOVAS = [
@@ -166,6 +261,41 @@
         const a = c.cloudwatch && c.cloudwatch.alarmes && c.cloudwatch.alarmes["pedidos-caindo"];
         return !!a && a.namespace === "Loja/Pedidos" && a.metrica === "PedidosPorMinuto";
       } },
+
+    // ---------- painel: o "visualizo" do arco ----------
+    { id: "cw-15", servico: "cloudwatch", nivel: 3, xp: 120, titulo: "Um painel pra ver de longe",
+      descricao: "Alarme avisa quando quebra; <b>painel</b> é o que alguém olha de manhã pra ver se está tudo bem. Crie um painel <b>loja-visao-geral</b> com um widget de gráfico da métrica <b>PedidosPorMinuto</b> (namespace <b>Loja/Pedidos</b>). <small>(o corpo é um JSON com a lista <b>widgets</b>)</small>",
+      dicas: ["`put-…` grava o painel. O corpo descreve os quadros: cada widget tem um `type` e as `properties` (onde entra a lista de métricas).", "A forma do comando é: aws cloudwatch put-dashboard --dashboard-name <nome> --dashboard-body '<json com widgets>'"],
+      solucao: [`aws cloudwatch put-dashboard --dashboard-name loja-visao-geral --dashboard-body '{"widgets":[{"type":"metric","properties":{"metrics":[["Loja/Pedidos","PedidosPorMinuto"]],"title":"Pedidos por minuto"}}]}'`],
+      validar: (c) => !!(c.cloudwatch && c.cloudwatch.paineis && c.cloudwatch.paineis["loja-visao-geral"]) },
+
+    { id: "cw-16", servico: "cloudwatch", nivel: 3, xp: 70, titulo: "Quais painéis eu tenho?",
+      descricao: "Liste os <b>painéis</b> da conta. <small>(repare no tamanho de cada um — os 3 primeiros painéis são grátis, depois a AWS cobra por painel)</small>",
+      dicas: ["Pra ver o que já existe, o verbo costuma ser `list-…` — veja a lista de comandos com: aws cloudwatch help"],
+      solucao: ["aws cloudwatch list-dashboards"],
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "cloudwatch", "list-dashboards") },
+
+    { id: "cw-17", servico: "cloudwatch", nivel: 3, xp: 90, titulo: "Edite o painel: um recado nele",
+      descricao: "Não existe \"adicionar um widget\": o <b>put-dashboard substitui o painel inteiro</b>. Reenvie o <b>loja-visao-geral</b> com <b>dois</b> widgets — o gráfico que já tinha e um novo do tipo <b>text</b> com um recado em markdown.",
+      dicas: ["É o mesmo comando de criar — mandar de novo sobrescreve. O widget de recado é `{\"type\":\"text\",\"properties\":{\"markdown\":\"...\"}}`.", "A forma do comando é: aws cloudwatch put-dashboard --dashboard-name <nome> --dashboard-body '<json com os DOIS widgets>'"],
+      solucao: [`aws cloudwatch put-dashboard --dashboard-name loja-visao-geral --dashboard-body '{"widgets":[{"type":"metric","properties":{"metrics":[["Loja/Pedidos","PedidosPorMinuto"]],"title":"Pedidos por minuto"}},{"type":"text","properties":{"markdown":"## Plantao\\nDuvida? chama o time de dados."}}]}'`],
+      validar: (c) => {
+        const p = c.cloudwatch && c.cloudwatch.paineis && c.cloudwatch.paineis["loja-visao-geral"];
+        return !!p && (p.corpo.widgets || []).length >= 2 && p.corpo.widgets.some((w) => w && w.type === "text");
+      } },
+
+    { id: "cw-18", servico: "cloudwatch", nivel: 3, xp: 90, titulo: "Veja o painel por dentro",
+      descricao: "Busque o painel <b>loja-visao-geral</b> e repare como o corpo dele volta: é <b>uma string</b> com JSON dentro, não um objeto. É assim que se edita painel por script — lê, altera, manda de volta.",
+      dicas: ["`get-…` busca um item específico (você diz qual) — veja a lista de comandos com: aws cloudwatch help", "A forma do comando é: aws cloudwatch get-dashboard --dashboard-name <nome>"],
+      solucao: ["aws cloudwatch get-dashboard --dashboard-name loja-visao-geral"],
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "cloudwatch", "get-dashboard") },
+
+    { id: "cw-19", servico: "cloudwatch", nivel: 3, xp: 80, titulo: "Desmonte a vitrine",
+      descricao: "<b>Apague</b> o painel <b>loja-visao-geral</b>. <small>(o parâmetro é plural — aceita vários nomes de uma vez)</small>",
+      dicas: ["Apagar é sempre `delete-…`. Repare no plural do parâmetro.", "A forma do comando é: aws cloudwatch delete-dashboards --dashboard-names <nome>"],
+      solucao: ["aws cloudwatch delete-dashboards --dashboard-names loja-visao-geral"],
+      validar: (c, cmd, ok) => ok && ehCmd(cmd, "cloudwatch", "delete-dashboards") && !(c.cloudwatch && c.cloudwatch.paineis["loja-visao-geral"]) },
+
   ];
 
   if (typeof DESAFIOS !== "undefined" && !DESAFIOS.some((d) => d.id === "cw-10")) {
@@ -181,6 +311,11 @@
     Object.assign(MANUAIS, {
       "cloudwatch.put-metric-data": `aws cloudwatch put-metric-data\n\nUSO\n    aws cloudwatch put-metric-data --namespace Loja/Pedidos \\\n        --metric-name PedidosPorMinuto --value 42 [--unit Count] \\\n        [--dimensions Name=Produto,Value=Camiseta]\n\nPublica uma MÉTRICA PERSONALIZADA (custom metric): um número que a AWS não\ntem como coletar sozinha, porque é do seu negócio (pedidos, cadastros,\ncarrinhos abandonados, tamanho de fila interna).\n\nO namespace é o "sobrenome" que agrupa as suas métricas. NÃO pode começar\ncom "AWS/" — esse prefixo é reservado pros serviços da Amazon.\n\nAs dimensões são recortes da mesma métrica (por produto, por região, por\nservidor). Cada combinação de dimensões conta como uma métrica à parte —\ne é por métrica que se cobra, então cuidado com dimensão de alta variedade\n(id de usuário, por exemplo, criaria milhares).\n\nNa vida real esta chamada fica DENTRO da aplicação (a cada pedido), ou num\nagente como o CloudWatch Agent.`,
       "cloudwatch.get-metric-statistics": `aws cloudwatch get-metric-statistics\n\nUSO\n    aws cloudwatch get-metric-statistics --namespace Loja/Pedidos \\\n        --metric-name PedidosPorMinuto \\\n        --start-time 2026-07-29T00:00:00Z --end-time 2026-07-30T00:00:00Z \\\n        --period 3600 --statistics Sum\n\nLê a métrica de volta. O CloudWatch não devolve cada ponto cru: ele AGREGA\npor janela de tempo (--period, em segundos) e você escolhe a estatística:\n    Sum          soma dos valores da janela\n    Average      média\n    Maximum      maior valor\n    Minimum      menor valor\n    SampleCount  quantos pontos entraram\n\nSem dado no período, a AWS devolve "Datapoints": [] — lista vazia, sem erro.\nNamespace e nome são sensíveis a maiúscula/minúscula.`,
+
+      "cloudwatch.put-dashboard": `aws cloudwatch put-dashboard\n\nUSO\n    aws cloudwatch put-dashboard --dashboard-name loja-visao-geral \\\n        --dashboard-body '{"widgets":[\n            {"type":"metric","properties":{\n               "metrics":[["Loja/Pedidos","PedidosPorMinuto"]],\n               "title":"Pedidos por minuto"}},\n            {"type":"text","properties":{"markdown":"## Plantao"}}\n        ]}'\n\nCria ou ATUALIZA um painel. O corpo é um JSON com a lista "widgets" — cada\nwidget é um quadro:\n    metric   gráfico de uma ou mais métricas\n    text     recado em markdown (título de seção, link de runbook, aviso)\n    log      resultado de uma consulta no CloudWatch Logs\n\nDentro de properties.metrics cada métrica é uma LISTA:\n    ["namespace", "NomeDaMetrica", "NomeDaDimensao", "valor"]\n\nDUAS COISAS QUE PEGAM:\n  - Não existe "adicionar um widget": o put SUBSTITUI o painel inteiro. Você\n    manda sempre o JSON completo — por isso o normal é versionar esse JSON.\n  - O painel aceita métrica que nunca foi publicada. A AWS não reclama: o\n    gráfico só aparece vazio. É a causa nº 1 de "meu dashboard não mostra\n    nada" (quase sempre namespace ou nome escrito diferente).\n\nNome do painel: só letras, números, "-" e "_".`,
+      "cloudwatch.list-dashboards": `aws cloudwatch list-dashboards\n\nUSO\n    aws cloudwatch list-dashboards\n\nLista os painéis da conta, com data da última alteração e o tamanho do JSON.\nOs 3 primeiros painéis são gratuitos; a partir daí a AWS cobra por painel/mês\n— por isso costuma-se ter um painel por time ou por sistema, não um por pessoa.`,
+      "cloudwatch.get-dashboard": `aws cloudwatch get-dashboard\n\nUSO\n    aws cloudwatch get-dashboard --dashboard-name loja-visao-geral\n\nDevolve o painel. Atenção ao formato: o DashboardBody volta como TEXTO (uma\nstring com JSON dentro), não como objeto — é assim na AWS de verdade. Pra\neditar por script: leia essa string, altere e mande de volta no put-dashboard.`,
+      "cloudwatch.delete-dashboards": `aws cloudwatch delete-dashboards\n\nUSO\n    aws cloudwatch delete-dashboards --dashboard-names loja-visao-geral\n    aws cloudwatch delete-dashboards --dashboard-names painel-a painel-b\n\nApaga um ou mais painéis (o parâmetro é PLURAL). Se um dos nomes não existir,\na operação falha e nenhum é apagado.\n\nApagar painel NÃO apaga métrica nem alarme — o painel é só a vitrine. Os\ndados continuam no CloudWatch.`,
     });
   }
 
@@ -189,6 +324,10 @@
     Object.assign(PORQUE, {
       "cloudwatch.put-metric-data": "publica um número SEU no CloudWatch — pedidos, cadastros, tamanho de fila. A AWS mede a máquina; só a sua aplicação sabe medir o negócio. É o comando que faz a métrica passar a existir.",
       "cloudwatch.get-metric-statistics": "lê a métrica de volta já agregada: você diz o intervalo, o tamanho da janela (--period) e a estatística (Sum, Average, Maximum). O CloudWatch não guarda ponto cru pra sempre — ele resume.",
+      "cloudwatch.put-dashboard": "monta a tela que alguém olha de manhã. Alarme te acorda quando quebra; painel mostra se está tudo bem. Cuidado: ele SUBSTITUI o painel inteiro — não dá pra adicionar um widget, você manda o JSON completo sempre.",
+      "cloudwatch.list-dashboards": "mostra os painéis que existem, com data de alteração e tamanho. Serve pra saber quantos você tem — os 3 primeiros são grátis, do 4º em diante a AWS cobra por painel.",
+      "cloudwatch.get-dashboard": "baixa o painel pra você editar. O corpo vem como TEXTO com JSON dentro: é assim que se edita painel por script — lê, altera, manda de volta.",
+      "cloudwatch.delete-dashboards": "apaga painel (o parâmetro é plural, aceita vários). Não mexe em métrica nem alarme — o painel é só a vitrine, os dados continuam lá.",
     });
   }
 })();

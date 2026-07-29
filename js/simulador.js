@@ -214,6 +214,11 @@ const FLAGS_MULTI_VALOR = new Set([
   "subnets", // ELB precisa de 2+ sub-redes; EKS/Glue passam valor único ou JSON (seguem funcionando)
   "targets", // ELB register-targets aceita vários "Id=..."; usos JSON continuam sendo 1 token só
   "statistics", // get-metric-statistics aceita "--statistics Sum Average Maximum"
+  // Estes dois já eram tratados como lista pelo handler (e o manual documenta
+  // "[<nome2> ...]"), mas o parser entregava só o 1º nome — apagava um alarme
+  // só quando você pedia dois.
+  "alarm-names",
+  "dashboard-names",
 ]);
 
 function parsearArgs(tokens) {
