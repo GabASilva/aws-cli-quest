@@ -16,8 +16,15 @@ let _avisoClimb = null;
 function avisarClimb(texto) { _avisoClimb = texto; }
 // Sucesso "silencioso": muitos delete/put da AWS não respondem nada quando dão
 // certo. Mantemos isso (saída vazia, fiel) e explicamos no aviso do CLImb.
+//
+// CUIDADO (bug corrigido em 2026-07-29): como isto chama avisarClimb, o padrão
+// `avisarClimb("explicação didática"); return okSilencioso("ok");` — usado em 19
+// handlers — DESCARTAVA a explicação, porque o segundo aviso sobrescrevia o
+// primeiro. Agora, se o handler já explicou algo, a explicação é preservada e a
+// nota do silêncio vem depois dela.
+const NOTA_SILENCIO = "A AWS não imprime nada quando uma operação dessas dá certo — por isso o terminal fica em branco.";
 function okSilencioso(oque) {
-  avisarClimb(`${oque} A AWS não imprime nada quando uma operação dessas dá certo — por isso o terminal fica em branco.`);
+  avisarClimb(_avisoClimb ? `${_avisoClimb} ${NOTA_SILENCIO}` : `${oque} ${NOTA_SILENCIO}`);
   return "";
 }
 
@@ -206,6 +213,7 @@ const FLAGS_MULTI_VALOR = new Set([
   "key-schema",
   "subnets", // ELB precisa de 2+ sub-redes; EKS/Glue passam valor único ou JSON (seguem funcionando)
   "targets", // ELB register-targets aceita vários "Id=..."; usos JSON continuam sendo 1 token só
+  "statistics", // get-metric-statistics aceita "--statistics Sum Average Maximum"
 ]);
 
 function parsearArgs(tokens) {

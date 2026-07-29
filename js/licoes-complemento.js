@@ -40,6 +40,36 @@
       cobra: "A CLI é <b>gratuita</b> — é só um programa. Você paga pelos recursos que ela cria (uma instância, um bucket). Rodar um <b>describe</b> pra ver o que existe não custa nada.",
     },
 
+    // Trilha de EXERCÍCIO: não ensina serviço novo, ensina um MÉTODO. Por isso
+    // troca os rótulos (ver ROTULOS_PADRAO em licoes.js) — "Pra que serve" e
+    // "Onde se usa no mundo real" não fazem sentido aqui.
+    diagnostico: {
+      emoji: "🔧", titulo: "esta trilha funciona",
+      rotulos: {
+        abertura: "Como",
+        serve: "O que você vai treinar",
+        casos: "O método, passo a passo",
+        vocab: "Onde o problema costuma estar",
+      },
+      oque: "Aqui o jogo <b>vira do avesso</b>: em vez de \"crie o recurso X\", você recebe um <b>chamado</b> — a infraestrutura já existe, já está no ar e está <b>quebrada</b>. Ninguém te diz qual é o defeito. Seu trabalho é investigar e consertar. E a rede funciona de verdade: quando você acerta o conserto, o site volta na hora.",
+      serve: "A habilidade que separa quem decorou comandos de quem <b>opera</b> nuvem: diagnosticar sob incerteza. É o que você faz num plantão de verdade, e é o que uma entrevista técnica pergunta — não \"qual o comando pra criar uma VPC\", mas \"o site caiu, e agora?\".",
+      casos: [
+        "<b>Reproduza o erro primeiro.</b> Antes de mexer em nada, confirme com seus olhos que está quebrado (um curl). É o passo que mais gente pula — e sem ele você não sabe se consertou.",
+        "<b>Ligue as câmeras.</b> Os VPC Flow Logs registram cada tentativa de conexão, com ACCEPT ou REJECT. Sem eles você adivinha; com eles você tem prova.",
+        "<b>Descarte a hipótese óbvia.</b> Todo mundo culpa o security group. Confira e elimine — assim você para de girar em falso na primeira suspeita.",
+        "<b>Siga o caminho do pacote</b>, camada por camada: tabela de rotas → internet gateway → network ACL → security group. O pacote passa por todas, em ordem; o defeito está numa delas.",
+        "<b>Conserte UMA coisa e teste.</b> Se mudar três de uma vez e voltar a funcionar, você não aprendeu qual era o problema — e no próximo plantão vai adivinhar de novo.",
+        "<b>Comprove nos logs.</b> No fim, o <b>grep REJECT</b> mostra exatamente as conexões que estavam sendo barradas, na porta certa. É assim que se fecha um incidente: com evidência, não com \"acho que resolveu\".",
+      ],
+      vocab: [
+        ["Tabela de rotas", "diz pra onde o tráfego vai. Sub-rede pública precisa de uma rota <b>0.0.0.0/0</b> apontando pro internet gateway — a falta dela é clássica."],
+        ["Network ACL", "firewall da SUB-REDE. Duas pegadinhas: vale a regra de <b>menor número</b> que casar, e ela <b>não tem estado</b> (precisa liberar entrada E saída)."],
+        ["Security group", "firewall da INSTÂNCIA. Esse tem estado: se a entrada é permitida, a resposta volta sozinha. É o suspeito mais acusado e muitas vezes inocente."],
+        ["ACCEPT / REJECT", "o veredito de cada linha do flow log. REJECT numa porta específica aponta o dedo pra quem bloqueou."],
+        ["Interface de rede (eni-)", "o \"cabo\" da instância. O id dela nos logs é o que liga uma linha de log à máquina certa."],
+      ],
+    },
+
     linux: {
       emoji: "🐧", titulo: "Linux e o terminal",
       oque: "A <b>maioria dos servidores da nuvem roda Linux</b>, e a forma de operá-los é pelo <b>terminal</b> — aquela tela preta onde você digita. Não tem mouse dentro de um servidor: você entra por SSH e resolve tudo com comandos.",

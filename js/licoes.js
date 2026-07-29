@@ -742,16 +742,26 @@ const PORQUE = {
     return !!(window.matchMedia && window.matchMedia("(max-width: 760px)").matches);
   }
 
+  // Rótulos padrão (aula de um SERVIÇO). Trilhas de EXERCÍCIO — que não
+  // ensinam serviço novo, e sim um método de trabalho — podem trocá-los pelo
+  // campo `rotulos`, e o cabeçalho pelo `abertura`. Ex.: o Diagnóstico usa
+  // "Como esta trilha funciona" + "O método, passo a passo".
+  const ROTULOS_PADRAO = {
+    abertura: "Entenda o", serve: "Pra que serve",
+    casos: "Onde se usa no mundo real", vocab: "Vocabulário",
+  };
+
   function htmlLicao(sid, licao, aberta, naoVista) {
+    const r = Object.assign({}, ROTULOS_PADRAO, licao.rotulos || {});
     const casos = (licao.casos || []).map((c) => `<li>${ricoSeguro(c)}</li>`).join("");
     const vocab = (licao.vocab || []).map(([t, x]) => `<dt>${esc(t)}</dt><dd>${ricoSeguro(x)}</dd>`).join("");
     return `<details class="licao${naoVista && !aberta ? " licao-nova" : ""}"${aberta ? " open" : ""} data-sid="${esc(sid)}">
-      <summary><span class="licao-emoji">${licao.emoji || "📚"}</span> Entenda o ${esc(licao.titulo)}</summary>
+      <summary><span class="licao-emoji">${licao.emoji || "📚"}</span> ${esc(r.abertura)} ${esc(licao.titulo)}</summary>
       <div class="licao-corpo">
         <p class="licao-oque">${ricoSeguro(licao.oque)}</p>
-        ${licao.serve ? `<div class="licao-sec"><h4>Pra que serve</h4><p>${ricoSeguro(licao.serve)}</p></div>` : ""}
-        ${casos ? `<div class="licao-sec"><h4>Onde se usa no mundo real</h4><ul class="licao-casos">${casos}</ul></div>` : ""}
-        ${vocab ? `<div class="licao-sec"><h4>Vocabulário</h4><dl class="licao-vocab">${vocab}</dl></div>` : ""}
+        ${licao.serve ? `<div class="licao-sec"><h4>${esc(r.serve)}</h4><p>${ricoSeguro(licao.serve)}</p></div>` : ""}
+        ${casos ? `<div class="licao-sec"><h4>${esc(r.casos)}</h4><ul class="licao-casos">${casos}</ul></div>` : ""}
+        ${vocab ? `<div class="licao-sec"><h4>${esc(r.vocab)}</h4><dl class="licao-vocab">${vocab}</dl></div>` : ""}
         ${licao.cobra ? `<p class="licao-cobra">💰 <strong>Como cobra:</strong> ${ricoSeguro(licao.cobra)}</p>` : ""}
       </div>
     </details>`;
