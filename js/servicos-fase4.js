@@ -480,7 +480,7 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "glue", "get-tables") },
     { id: "glue-5", servico: "glue", nivel: 3, xp: 100, titulo: "O robô que descobre sozinho",
       descricao: "Em vez de escrever a tabela na mão, o <b>crawler</b> varre o S3 e descobre as colunas. Crie o crawler <b>crawler-vendas</b> apontando pro banco.",
-      dicas: [`aws glue create-crawler --name crawler-vendas --role arn:aws:iam::123456789012:role/papel-glue --database-name dados_loja --targets '{"S3Targets":[{"Path":"s3://dados-loja-climb/vendas/"}]}'`],
+      dicas: ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws glue help", "A forma do comando é: aws glue create-crawler --name <nome> --role <valor> --database-name <nome> --targets <Id=…>"],
       solucao: [`aws glue create-crawler --name crawler-vendas --role arn:aws:iam::123456789012:role/papel-glue --database-name dados_loja --targets '{"S3Targets":[{"Path":"s3://dados-loja-climb/vendas/"}]}'`],
       validar: (c) => !!(c.glue && c.glue.crawlers["crawler-vendas"]) },
     { id: "glue-6", servico: "glue", nivel: 3, xp: 80, titulo: "Solte o robô",

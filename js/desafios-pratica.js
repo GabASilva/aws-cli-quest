@@ -27,30 +27,30 @@
   // mb — criar bucket (vários cenários)
   at("s3-1", [
     d("ps3-mb1", "s3", 1, 40, "Site da pizzaria", "Seu tio abriu uma pizzaria e quer um site. O primeiro passo é o lugar pros arquivos: crie o bucket <b>pizzaria-do-tio</b>.",
-      ["aws s3 mb s3://pizzaria-do-tio"], ["aws s3 mb s3://pizzaria-do-tio"], (c) => temBucket(c, "pizzaria-do-tio")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>"], ["aws s3 mb s3://pizzaria-do-tio"], (c) => temBucket(c, "pizzaria-do-tio")),
     d("ps3-mb2", "s3", 1, 40, "Fotos do casamento", "A galera vai subir as fotos do casamento num lugar só. Crie o bucket <b>fotos-casamento</b>.",
-      ["aws s3 mb s3://fotos-casamento"], ["aws s3 mb s3://fotos-casamento"], (c) => temBucket(c, "fotos-casamento")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>"], ["aws s3 mb s3://fotos-casamento"], (c) => temBucket(c, "fotos-casamento")),
     d("ps3-mb3", "s3", 1, 50, "Cofre de backups", "Os backups do banco precisam de um lugar seguro e separado. Crie o bucket <b>backups-producao</b>.",
-      ["aws s3 mb s3://backups-producao"], ["aws s3 mb s3://backups-producao"], (c) => temBucket(c, "backups-producao")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>"], ["aws s3 mb s3://backups-producao"], (c) => temBucket(c, "backups-producao")),
     d("ps3-mb4", "s3", 1, 40, "Seu portfólio", "Você vai publicar seu portfólio de dev. Crie o bucket <b>portfolio-2026</b>.",
-      ["aws s3 mb s3://portfolio-2026"], ["aws s3 mb s3://portfolio-2026"], (c) => temBucket(c, "portfolio-2026")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>"], ["aws s3 mb s3://portfolio-2026"], (c) => temBucket(c, "portfolio-2026")),
   ]);
   // ls — listar
   at("s3-4", [
     d("ps3-ls1", "s3", 1, 40, "Quantos buckets já tenho?", "Antes de criar mais um, dê uma olhada em <b>todos os seus buckets</b>.",
-      ["aws s3 ls"], ["aws s3 ls"], (c, cmd, ok) => ok && ehCmd(cmd, "s3", "ls") && cmd.posicionais.length === 0),
+      ["`ls` lista o que existe: sem argumento mostra os buckets; com s3://bucket mostra o conteúdo — veja a lista de comandos com: aws s3 help"], ["aws s3 ls"], (c, cmd, ok) => ok && ehCmd(cmd, "s3", "ls") && cmd.posicionais.length === 0),
     d("ps3-ls2", "s3", 1, 50, "O que tem no cofre?", "Crie o bucket <b>docs-fiscais</b>, jogue o relatorio.csv nele e <b>liste o conteúdo</b> dele.",
-      ["aws s3 ls s3://docs-fiscais"], ["aws s3 mb s3://docs-fiscais", "aws s3 cp relatorio.csv s3://docs-fiscais/", "aws s3 ls s3://docs-fiscais"],
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 cp <arquivo> s3://<bucket>/<arquivo>  →  aws s3 ls s3://<nome-do-bucket>"], ["aws s3 mb s3://docs-fiscais", "aws s3 cp relatorio.csv s3://docs-fiscais/", "aws s3 ls s3://docs-fiscais"],
       (c, cmd, ok) => ok && ehCmd(cmd, "s3", "ls") && String(cmd.posicionais[0] || "").includes("docs-fiscais")),
   ]);
   // cp upload
   at("s3-3", [
     d("ps3-cp1", "s3", 1, 60, "Suba o logo", "O designer mandou o <b>logo.png</b>. Crie o bucket <b>assets-loja</b> e envie o logo pra lá.",
-      ["aws s3 cp logo.png s3://assets-loja/"], ["aws s3 mb s3://assets-loja", "aws s3 cp logo.png s3://assets-loja/"], (c) => temObj(c, "assets-loja", "logo.png")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 cp <arquivo> s3://<bucket>/<arquivo>"], ["aws s3 mb s3://assets-loja", "aws s3 cp logo.png s3://assets-loja/"], (c) => temObj(c, "assets-loja", "logo.png")),
     d("ps3-cp2", "s3", 1, 60, "Relatório do mês", "Hora de arquivar o <b>relatorio.csv</b> do mês. Crie <b>relatorios-mensais</b> e suba o arquivo.",
-      ["aws s3 cp relatorio.csv s3://relatorios-mensais/"], ["aws s3 mb s3://relatorios-mensais", "aws s3 cp relatorio.csv s3://relatorios-mensais/"], (c) => temObj(c, "relatorios-mensais", "relatorio.csv")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 cp <arquivo> s3://<bucket>/<arquivo>"], ["aws s3 mb s3://relatorios-mensais", "aws s3 cp relatorio.csv s3://relatorios-mensais/"], (c) => temObj(c, "relatorios-mensais", "relatorio.csv")),
     d("ps3-cp3", "s3", 1, 60, "Publique a home", "Publique o <b>index.html</b> no site. Crie <b>landing-page</b> e envie o arquivo.",
-      ["aws s3 cp index.html s3://landing-page/"], ["aws s3 mb s3://landing-page", "aws s3 cp index.html s3://landing-page/"], (c) => temObj(c, "landing-page", "index.html")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 cp <arquivo> s3://<bucket>/<arquivo>"], ["aws s3 mb s3://landing-page", "aws s3 cp index.html s3://landing-page/"], (c) => temObj(c, "landing-page", "index.html")),
   ]);
   // cp download
   at("s3-5", [
@@ -61,18 +61,18 @@
   // rm
   at("s3-6", [
     d("ps3-rm1", "s3", 2, 60, "Subiu errado", "Um arquivo subiu por engano. Crie <b>uploads-temp</b>, suba o relatorio.csv e <b>apague</b> ele de dentro do bucket.",
-      ["aws s3 rm s3://uploads-temp/relatorio.csv"], ["aws s3 mb s3://uploads-temp", "aws s3 cp relatorio.csv s3://uploads-temp/", "aws s3 rm s3://uploads-temp/relatorio.csv"],
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 cp <arquivo> s3://<bucket>/<arquivo>  →  aws s3 rm s3://<bucket>/<arquivo>"], ["aws s3 mb s3://uploads-temp", "aws s3 cp relatorio.csv s3://uploads-temp/", "aws s3 rm s3://uploads-temp/relatorio.csv"],
       (c) => temBucket(c, "uploads-temp") && !temObj(c, "uploads-temp", "relatorio.csv")),
   ]);
   // sync
   at("s3-7", [
     d("ps3-sync1", "s3", 2, 80, "Deploy do site da empresa", "Saiu uma versão nova do site (pasta <b>./site</b>). Crie <b>site-empresa</b> e sincronize tudo de uma vez.",
-      ["aws s3 sync ./site s3://site-empresa"], ["aws s3 mb s3://site-empresa", "aws s3 sync ./site s3://site-empresa"], (c) => temObj(c, "site-empresa", "index.html")),
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 sync <site> s3://<nome-do-bucket>"], ["aws s3 mb s3://site-empresa", "aws s3 sync ./site s3://site-empresa"], (c) => temObj(c, "site-empresa", "index.html")),
   ]);
   // rb
   at("s3-8", [
     d("ps3-rb1", "s3", 2, 60, "Projeto cancelado", "O projeto foi cancelado. Crie <b>projeto-piloto</b> (vazio) e <b>remova</b> ele.",
-      ["aws s3 rb s3://projeto-piloto"], ["aws s3 mb s3://projeto-piloto", "aws s3 rb s3://projeto-piloto"],
+      ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 rb s3://<nome-do-bucket>"], ["aws s3 mb s3://projeto-piloto", "aws s3 rb s3://projeto-piloto"],
       (c, cmd, ok) => ok && ehCmd(cmd, "s3", "rb") && !temBucket(c, "projeto-piloto")),
     d("ps3-rb2", "s3", 3, 70, "Limpe o ambiente de testes", "Crie <b>lab-testes</b>, jogue um arquivo dentro e <b>remova o bucket com tudo</b> de uma vez.",
       ["Bucket com conteúdo precisa de --force."], ["aws s3 mb s3://lab-testes", "aws s3 cp relatorio.csv s3://lab-testes/", "aws s3 rb s3://lab-testes --force"],
@@ -83,10 +83,10 @@
   // run-instances
   at("ec2-2", [
     d("pec2-run1", "ec2", 2, 70, "Servidor de jogo", "A galera quer um servidor de Minecraft. Suba uma instância <b>t3.small</b> (a t2.micro não aguenta).",
-      ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.small"], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.small"],
+      ["`run-…` cria e já põe pra rodar — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 run-instances --image-id <id> --instance-type <tipo>"], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.small"],
       (c) => Object.values(c.ec2.instancias).some((i) => i.tipo === "t3.small" && i.estado === "running")),
     d("pec2-run3", "ec2", 2, 80, "Banco de dados próprio", "Vão rodar um banco numa VM robusta. Suba uma <b>m5.large</b>.",
-      ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type m5.large"], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type m5.large"],
+      ["`run-…` cria e já põe pra rodar — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 run-instances --image-id <id> --instance-type <tipo>"], ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type m5.large"],
       (c) => Object.values(c.ec2.instancias).some((i) => i.tipo === "m5.large")),
   ]);
   // --count é ensinado no ec2-8 ("Suba uma frota") — o reforço vem DEPOIS dele
@@ -107,7 +107,7 @@
   // key-pair
   at("ec2-5", [
     d("pec2-key1", "ec2", 2, 50, "Chave de backup", "Pra acessar as máquinas de backup você precisa de uma chave. Crie o par <b>chave-backup</b>.",
-      ["aws ec2 create-key-pair --key-name chave-backup"], ["aws ec2 create-key-pair --key-name chave-backup"], (c) => !!c.ec2.keyPairs["chave-backup"]),
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 create-key-pair --key-name <nome>"], ["aws ec2 create-key-pair --key-name chave-backup"], (c) => !!c.ec2.keyPairs["chave-backup"]),
   ]);
   // security group + authorize
   at("ec2-7", [
@@ -123,9 +123,9 @@
   // create-user
   at("iam-1", [
     d("piam-u1", "iam", 1, 50, "Chegou o Pedro", "Um dev novo entrou no time: o Pedro. Crie o usuário <b>pedro</b>.",
-      ["aws iam create-user --user-name pedro"], ["aws iam create-user --user-name pedro"], (c) => !!c.iam.usuarios["pedro"]),
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-user --user-name <nome>"], ["aws iam create-user --user-name pedro"], (c) => !!c.iam.usuarios["pedro"]),
     d("piam-u2", "iam", 1, 50, "Estagiária nova", "A Júlia começou o estágio hoje. Crie o usuário <b>julia</b>.",
-      ["aws iam create-user --user-name julia"], ["aws iam create-user --user-name julia"], (c) => !!c.iam.usuarios["julia"]),
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-user --user-name <nome>"], ["aws iam create-user --user-name julia"], (c) => !!c.iam.usuarios["julia"]),
     d("piam-u3", "iam", 2, 60, "Conta do robô de deploy", "O CI/CD precisa de uma identidade própria (não use a sua!). Crie o usuário <b>ci-deploy</b>.",
       ["Contas de serviço são usuários normais, só que pra automação."], ["aws iam create-user --user-name ci-deploy"], (c) => !!c.iam.usuarios["ci-deploy"]),
   ]);
@@ -141,7 +141,7 @@
   // role
   at("iam-6", [
     d("piam-r1", "iam", 3, 80, "Role pra uma Lambda", "Uma função Lambda vai precisar de permissões. Crie a role <b>role-lambda-logs</b> com o <b>trust.json</b>.",
-      ["aws iam create-role --role-name role-lambda-logs --assume-role-policy-document file://trust.json"], ["aws iam create-role --role-name role-lambda-logs --assume-role-policy-document file://trust.json"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-role --role-name <nome> --assume-role-policy-document <json de confiança>"], ["aws iam create-role --role-name role-lambda-logs --assume-role-policy-document file://trust.json"],
       (c) => !!c.iam.roles["role-lambda-logs"]),
   ]);
 
@@ -157,7 +157,7 @@
   ]);
   at("lam-3", [
     d("plam-inv1", "lambda", 2, 60, "Teste rápido", "Acabou de subir a função <b>checa-saude</b> e quer testar. Crie ela e <b>invoque</b> (saída em saida.json).",
-      ["aws lambda invoke --function-name checa-saude saida.json"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws lambda help", "A forma do comando é: aws lambda create-function --function-name <nome> --runtime <linguagem> --role <valor> --handler <arquivo.função> --zip-file <fileb://arquivo.zip>  →  aws lambda invoke --function-name <nome> <arquivo>"],
       ["aws lambda create-function --function-name checa-saude --runtime python3.12 --role arn:aws:iam::123456789012:role/lambda-exec --handler index.handler --zip-file fileb://app.zip", "aws lambda invoke --function-name checa-saude saida.json"],
       (c) => { const f = c.lambda.funcoes["checa-saude"]; return !!f && f.invocada; }),
   ]);
@@ -174,7 +174,7 @@
   ]);
   at("dyn-3", [
     d("pdyn-pi1", "dynamodb", 2, 70, "Cadastre o primeiro produto", "Crie a tabela <b>Itens</b> (chave id) e grave o primeiro item nela.",
-      ["aws dynamodb put-item --table-name Itens --item '{\"id\":{\"S\":\"1\"}}'"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws dynamodb help", "A forma do comando é: aws dynamodb create-table --table-name <nome> --attribute-definitions <colunas-chave> --key-schema <chave primária> --billing-mode <tipo>  →  aws dynamodb put-item --table-name <nome> --item <json do item>"],
       ["aws dynamodb create-table --table-name Itens --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST", "aws dynamodb put-item --table-name Itens --item '{\"id\":{\"S\":\"1\"}}'"],
       (c) => { const t = c.dynamodb.tabelas["Itens"]; return !!t && t.itens.length > 0; }),
   ]);
@@ -182,10 +182,10 @@
   // ===================== VPC =====================
   at("vpc-1", [
     d("pvpc-1", "vpc", 1, 50, "Rede de homologação", "Antes de ir pra produção, monte a rede de homologação: VPC <b>10.40.0.0/16</b>.",
-      ["aws ec2 create-vpc --cidr-block 10.40.0.0/16"], ["aws ec2 create-vpc --cidr-block 10.40.0.0/16"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 create-vpc --cidr-block <faixa de ips>"], ["aws ec2 create-vpc --cidr-block 10.40.0.0/16"],
       (c) => !!(c.vpc && Object.values(c.vpc.vpcs).some((v) => v.cidr === "10.40.0.0/16"))),
     d("pvpc-2", "vpc", 1, 50, "Rede isolada de dados", "Dados sensíveis ficam numa rede só pra eles. Crie a VPC <b>10.99.0.0/16</b>.",
-      ["aws ec2 create-vpc --cidr-block 10.99.0.0/16"], ["aws ec2 create-vpc --cidr-block 10.99.0.0/16"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 create-vpc --cidr-block <faixa de ips>"], ["aws ec2 create-vpc --cidr-block 10.99.0.0/16"],
       (c) => !!(c.vpc && Object.values(c.vpc.vpcs).some((v) => v.cidr === "10.99.0.0/16"))),
   ]);
   at("vpc-2", [
@@ -205,17 +205,17 @@
   ]);
   at("rds-3", [
     d("prds-stop1", "rds", 2, 60, "Banco de dev fora do horário", "O banco de desenvolvimento não precisa rodar de madrugada. Crie <b>dev-db</b> e <b>pare</b> ele.",
-      ["aws rds stop-db-instance --db-instance-identifier dev-db"], ["aws rds create-db-instance --db-instance-identifier dev-db --db-instance-class db.t3.micro --engine mysql --master-username admin --allocated-storage 20", "aws rds stop-db-instance --db-instance-identifier dev-db"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws rds help", "A forma do comando é: aws rds create-db-instance --db-instance-identifier <identificador> --db-instance-class <valor> --engine <tipo> --master-username <valor> --allocated-storage <valor>  →  aws rds stop-db-instance --db-instance-identifier <identificador>"], ["aws rds create-db-instance --db-instance-identifier dev-db --db-instance-class db.t3.micro --engine mysql --master-username admin --allocated-storage 20", "aws rds stop-db-instance --db-instance-identifier dev-db"],
       (c) => { const x = c.rds && c.rds.instancias["dev-db"]; return !!x && x.status === "stopped"; }),
   ]);
 
   // ===================== CloudWatch =====================
   at("cw-1", [
     d("pcw-log1", "cloudwatch", 1, 50, "Logs do servidor web", "O nginx vai mandar logs pra um grupo. Crie o grupo <b>/nginx/acessos</b>.",
-      ["aws logs create-log-group --log-group-name /nginx/acessos"], ["aws logs create-log-group --log-group-name /nginx/acessos"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws logs help", "A forma do comando é: aws logs create-log-group --log-group-name <nome>"], ["aws logs create-log-group --log-group-name /nginx/acessos"],
       (c) => !!(c.logs && c.logs.grupos["/nginx/acessos"])),
     d("pcw-log2", "cloudwatch", 1, 50, "Logs de erro da API", "Separe os erros da API num grupo próprio. Crie <b>/api/erros</b>.",
-      ["aws logs create-log-group --log-group-name /api/erros"], ["aws logs create-log-group --log-group-name /api/erros"],
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws logs help", "A forma do comando é: aws logs create-log-group --log-group-name <nome>"], ["aws logs create-log-group --log-group-name /api/erros"],
       (c) => !!(c.logs && c.logs.grupos["/api/erros"])),
   ]);
   at("cw-2", [

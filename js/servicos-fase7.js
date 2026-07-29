@@ -230,7 +230,7 @@
       validar: (c) => !!(c.budgets && c.budgets.orcamentos["orcamento-mensal"]) },
     { id: "bud-3", servico: "budgets", nivel: 2, xp: 90, titulo: "Ligue o alerta por e-mail",
       descricao: "Um orçamento sem alerta não serve pra nada. Crie uma <b>notificação</b> pra avisar quando passar de <b>80%</b> do orçamento <b>orcamento-mensal</b>.",
-      dicas: [`aws budgets create-notification --account-id 123456789012 --budget-name orcamento-mensal --notification '{"NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","Threshold":80,"ThresholdType":"PERCENTAGE"}' --subscribers '[{"SubscriptionType":"EMAIL","Address":"voce@exemplo.com"}]'`],
+      dicas: ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws budgets help", "A forma do comando é: aws budgets create-notification --account-id <sua-conta> --budget-name <nome-do-orçamento> --notification <json do alerta> --subscribers <json de quem recebe>"],
       solucao: [`aws budgets create-notification --account-id 123456789012 --budget-name orcamento-mensal --notification '{"NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","Threshold":80,"ThresholdType":"PERCENTAGE"}' --subscribers '[{"SubscriptionType":"EMAIL","Address":"voce@exemplo.com"}]'`],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "budgets", "create-notification") },
     { id: "bud-4", servico: "budgets", nivel: 3, xp: 70, titulo: "Remova o orçamento",

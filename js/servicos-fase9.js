@@ -298,7 +298,7 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "bedrock", "list-foundation-models") },
     { id: "bed-2", servico: "bedrock-runtime", nivel: 2, xp: 100, titulo: "Chame o modelo",
       descricao: "Invoque um modelo passando um <b>prompt</b> no corpo. <small>(o --body é o payload no formato do modelo; a resposta vai pro arquivo de saída)</small>",
-      dicas: [`aws bedrock-runtime invoke-model --model-id anthropic.claude-3-5-sonnet-20240620-v1:0 --body '{"anthropic_version":"bedrock-2023-05-31","max_tokens":100,"messages":[{"role":"user","content":"Explique EC2 em 1 frase"}]}' resposta.json`],
+      dicas: ["`invoke-…` chama/executa — veja a lista de comandos com: aws bedrock-runtime help", "A forma do comando é: aws bedrock-runtime invoke-model --model-id <id> --body <json do prompt> <arquivo>"],
       solucao: [`aws bedrock-runtime invoke-model --model-id anthropic.claude-3-5-sonnet-20240620-v1:0 --body '{"anthropic_version":"bedrock-2023-05-31","max_tokens":100,"messages":[{"role":"user","content":"Explique EC2 em 1 frase"}]}' resposta.json`],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "bedrock-runtime", "invoke-model") },
 

@@ -288,7 +288,7 @@
       validar: (c) => !!(c.macie && c.macie.ligado) },
     { id: "macie-2", servico: "macie2", nivel: 2, xp: 100, titulo: "Mande vasculhar o bucket",
       descricao: "Crie um <b>job de classificação</b> chamado <b>varredura-loja</b> pra escanear seus buckets.",
-      dicas: [`aws macie2 create-classification-job --name varredura-loja --job-type ONE_TIME --s3-job-definition '{"bucketDefinitions":[{"accountId":"123456789012","buckets":["meu-bucket"]}]}'`],
+      dicas: ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws macie2 help", "A forma do comando é: aws macie2 create-classification-job --name <nome> --job-type <tipo> --s3-job-definition <json com os buckets>"],
       solucao: [`aws macie2 create-classification-job --name varredura-loja --job-type ONE_TIME --s3-job-definition '{"bucketDefinitions":[{"accountId":"123456789012","buckets":["meu-bucket"]}]}'`],
       validar: (c) => !!(c.macie && Object.values(c.macie.jobs).some((j) => j.nome === "varredura-loja")) },
 
