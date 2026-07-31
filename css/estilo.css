@@ -1450,3 +1450,126 @@ summary:focus-visible,
 @media (max-width: 760px) {
   .aviso-marca { font-size: 0.75rem; }
 }
+
+/* ============================================================
+   GRUPOS DA LISTA LATERAL (sidebar-grupos.js)
+   62 trilhas soltas viravam uma rolagem sem fim. Agora ficam em ~10 grupos
+   colapsáveis por tema — as trilhas continuam as mesmas, só organizadas.
+   ============================================================ */
+.grupo { margin-bottom: 6px; }
+.grupo-cab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 8px;
+  cursor: pointer;
+  color: var(--texto);
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.grupo-cab:hover { background: var(--painel-2); }
+.grupo-seta {
+  color: var(--texto-fraco);
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.grupo.aberto .grupo-seta { transform: rotate(90deg); }
+.grupo-emoji { font-size: 0.95rem; text-transform: none; }
+.grupo-nome { flex: 1; }
+/* quantas trilhas o grupo tem — some quando o grupo está aberto (a lista já mostra) */
+.grupo-cont {
+  font-family: var(--fonte-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--texto-fraco);
+  background: var(--fundo);
+  padding: 1px 6px;
+  border-radius: 999px;
+  text-transform: none;
+}
+.grupo.aberto .grupo-cont { display: none; }
+.grupo-prog {
+  font-family: var(--fonte-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--texto-fraco);
+  text-transform: none;
+}
+.grupo-prog.completo { color: var(--verde); }
+
+/* o corpo só existe quando aberto — assim a lista fica realmente curta */
+.grupo-corpo { display: none; padding: 2px 0 6px 6px; }
+.grupo.aberto .grupo-corpo { display: block; }
+
+/* ============================================================
+   TRILHAS DE CARREIRA (carreiras.js)
+   Caminhos curados pelas trilhas que já existem — a mesma atividade conta
+   em mais de um caminho.
+   ============================================================ */
+.carreiras-caixa { max-width: 720px; }
+.carreiras-intro { color: var(--texto-fraco); font-size: 0.88rem; margin: 0 0 14px; line-height: 1.5; }
+
+.carr {
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--painel-2);
+  overflow: hidden;
+}
+.carr > summary {
+  cursor: pointer;
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+  user-select: none;
+}
+.carr > summary::-webkit-details-marker { display: none; }
+.carr > summary:hover { background: rgba(88,166,255,0.06); }
+.carr-emoji { font-size: 1.15rem; }
+.carr-nome { font-weight: 700; flex: 1; }
+.carr-barra {
+  width: 90px; height: 6px; border-radius: 999px;
+  background: var(--fundo); overflow: hidden; flex: 0 0 90px;
+}
+.carr-barra > span { display: block; height: 100%; background: var(--laranja); border-radius: 999px; }
+.carr-pct { font-family: var(--fonte-mono); font-size: 0.75rem; color: var(--texto-fraco); min-width: 52px; text-align: right; }
+
+.carr-resumo { margin: 0 13px 10px; color: var(--texto-fraco); font-size: 0.85rem; line-height: 1.5; }
+.carr-passos { list-style: none; margin: 0; padding: 0 13px 6px; counter-reset: passo; }
+.carr-passo {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 7px 0; border-top: 1px solid var(--borda);
+}
+.carr-passo-ic { width: 20px; text-align: center; flex: 0 0 20px; font-size: 0.95rem; }
+.carr-passo-txt { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.carr-passo-txt small { color: var(--texto-fraco); font-size: 0.78rem; line-height: 1.45; }
+.carr-ir {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--azul); font-weight: 600; font-size: 0.88rem; text-align: left;
+}
+.carr-ir:hover { text-decoration: underline; }
+.carr-linha { display: flex; align-items: center; gap: 2px; }
+.carr-pro {
+  font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+  color: var(--laranja); border: 1px solid var(--laranja);
+  padding: 0 5px; border-radius: 999px; margin-left: 6px; vertical-align: middle;
+}
+.carr-passo-prog { font-family: var(--fonte-mono); font-size: 0.72rem; color: var(--texto-fraco); }
+.carr-passo.ok .carr-ir { color: var(--verde); }
+.carr-passo.andando .carr-ir { color: var(--laranja); }
+.carr-continuar { margin: 4px 13px 13px; }
+
+@media (max-width: 600px) {
+  .carr-barra { display: none; }
+  .carr-passo-prog { display: none; }
+}
