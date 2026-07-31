@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
-const codigo = ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "lab-vpc.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js"]
+const codigo = ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "missoes.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "lab-vpc.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js", "logs-insights.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -78,6 +78,9 @@ const teste = `
       }
       linha = linha.replace(/<receipt-handle>/g, handle);
     }
+    // consulta de log (Insights): pega o id da ultima consulta iniciada
+    if (linha.includes("<consulta-id>") && conta.logs) { const _q = Object.keys(conta.logs.consultas || {}); if (_q.length) linha = linha.replace(/<consulta-id>/g, _q[_q.length - 1]); }
+
     // fases 6-9
     if (linha.includes("<lb-arn>") && conta.elb) { const _l = Object.values(conta.elb.lbs); if (_l.length) linha = linha.replace(/<lb-arn>/g, _l[_l.length - 1].arn); }
     if (linha.includes("<tg-arn>") && conta.elb) { const _t = Object.values(conta.elb.tgs); if (_t.length) linha = linha.replace(/<tg-arn>/g, _t[_t.length - 1].arn); }

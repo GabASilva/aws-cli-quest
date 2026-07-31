@@ -1311,15 +1311,35 @@ function aplicarQueryEOutput(saida, flags) {
 }
 
 // ---------- Dispatcher principal ----------
+// Acha o ">" de redirecionamento IGNORANDO o que está entre aspas.
+// (Antes isto era um regex simples e qualquer ">" no fim da linha virava
+// redirecionamento — inclusive dentro de uma string, como em
+// --query-string 'fields @message | filter latencia > 2000', que ficava
+// quebrada. O ">" só é redirecionamento quando está fora de aspas.)
+function acharRedirecionamento(linha) {
+  let aspas = null, pos = -1;
+  for (let i = 0; i < linha.length; i++) {
+    const ch = linha[i];
+    if (aspas) { if (ch === aspas) aspas = null; continue; }
+    if (ch === '"' || ch === "'") { aspas = ch; continue; }
+    if (ch === ">") pos = i;
+  }
+  if (pos < 0) return null;
+  const destino = linha.slice(pos + 1).trim();
+  // precisa sobrar exatamente um nome de arquivo depois do ">"
+  if (!destino || /[\s>|]/.test(destino)) return null;
+  return { alvo: destino, corte: pos };
+}
+
 // Wrapper: trata o redirecionamento ">" (salva a saída num arquivo virtual)
 // e delega a execução do comando AWS pro executarComandoAwsBase.
 function executarComandoAws(conta, linha) {
   normalizarConta(conta); // blinda contra contas antigas sem algum campo
   let alvo = null;
-  const m = /\s>\s*([^\s>|]+)\s*$/.exec(linha);
-  if (m) {
-    alvo = m[1];
-    linha = linha.slice(0, m.index);
+  const red = acharRedirecionamento(linha);
+  if (red) {
+    alvo = red.alvo;
+    linha = linha.slice(0, red.corte);
   }
   const r = executarComandoAwsBase(conta, linha);
   if (alvo && r.ok) {
