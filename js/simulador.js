@@ -1138,6 +1138,20 @@ function chaveHash(tabela) {
   return tabela.esquema.find((k) => k.KeyType === "HASH").AttributeName;
 }
 
+// Chave de ordenação (sort key), quando a tabela tem chave COMPOSTA.
+function chaveRange(tabela) {
+  const k = tabela.esquema.find((x) => x.KeyType === "RANGE");
+  return k ? k.AttributeName : null;
+}
+// Identidade de um item: só a partição, ou partição + ordenação.
+// (Antes o put-item comparava só a HASH, então numa tabela de chave composta
+// o 2º item da mesma partição SOBRESCREVIA o 1º — e aí não dava pra ensinar
+// query, que existe justamente pra trazer vários itens da mesma partição.)
+function chaveDoItem(tabela, item) {
+  const h = chaveHash(tabela), r = chaveRange(tabela);
+  return JSON.stringify(item[h]) + (r ? "|" + JSON.stringify(item[r]) : "");
+}
+
 function tabelaJson(conta, nome, t, status) {
   return {
     TableName: nome,
@@ -1202,8 +1216,10 @@ const cmdDynamo = {
     const item = parsearJsonFlag(flags, "item");
     const hash = chaveHash(t);
     if (!item[hash]) throw new ErroCli(`An error occurred (ValidationException) when calling the PutItem operation: One or more parameter values were invalid: Missing the key ${hash} in the item`);
-    const chave = JSON.stringify(item[hash]);
-    t.itens = t.itens.filter((i) => JSON.stringify(i[hash]) !== chave);
+    const range = chaveRange(t);
+    if (range && !item[range]) throw new ErroCli(`An error occurred (ValidationException) when calling the PutItem operation: One or more parameter values were invalid: Missing the key ${range} in the item`);
+    const chave = chaveDoItem(t, item);
+    t.itens = t.itens.filter((i) => chaveDoItem(t, i) !== chave);
     t.itens.push(item);
     return okSilencioso(`Item gravado na tabela. Confira com: aws dynamodb scan --table-name ${nomeTabela}.`);
   },
