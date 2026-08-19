@@ -167,3 +167,44 @@ consulta rápida por termo, as lições são a introdução no fluxo. Não apose
   NUNCA `git add -A` cego neste repo).
 - XP é calculado no cliente: qualquer endpoint novo que receba progresso passa
   por `sanearProgresso` (servidor.js) — não afrouxe os limites.
+
+---
+
+## Regra nº 0 — NUNCA CHUTAR (não pule esta de jeito nenhum)
+
+Se você não tem a informação, **encontre antes de prosseguir**. Não escreva
+"provavelmente é assim", não invente nome de recurso, não suponha parâmetro,
+não deduza data. Um `grep` de 5 segundos evita meia hora de retrabalho.
+
+Isto não é teoria — foi assim que quebrou:
+
+| O que chutei | O que era de verdade | Como custou |
+|---|---|---|
+| tabela `Pedidos` | já existia noutra atividade | smoke test quebrou (conta compartilhada) |
+| regra `limpeza-diaria` | `limpeza-noturna` | 2 atividades falharam |
+| trilha `trilha-principal` | `trilha-auditoria` | 1 atividade falhou |
+| parâmetro `/loja/api-url` | `/loja/url-api` | 1 atividade falhou |
+| bucket `site-publico` | não existia | 1 atividade falhou |
+| usuário `renata` | `helena` (essa tem política) | 1 atividade falhou |
+| data "29 jul" no changelog | era 31 jul | entrada publicada com data errada |
+
+**Antes de escrever, verifique com o comando certo:**
+
+```bash
+# nome de recurso já usado? (a conta do smoke test é COMPARTILHADA)
+grep -rho 'table-name [A-Za-z][A-Za-z0-9_-]*' js/*.js | sort -u
+grep -rho '<comando> --name [a-z0-9-]*' js/*.js | sort -u
+
+# o parâmetro existe mesmo? veja a solução de uma atividade que JÁ funciona
+grep -o 'solucao: \["aws <servico> <sub>[^]]*\]' js/*.js | head
+
+# a trilha APAGA o recurso no fim? (se sim, sua atividade tem que criá-lo)
+node teste/analise.js 2>&1 | grep -A 20 "^--- <trilha>"
+
+# a data de hoje (nunca deduza do contexto)
+date "+%Y-%m-%d"
+git log --format="%ad %s" --date=format:"%Y-%m-%d" -5
+```
+
+Vale também pra: estado que o handler guarda (leia o código, não suponha o
+shape), formato de saída da AWS, e o que já existe em `PORQUE`/`MANUAIS`.

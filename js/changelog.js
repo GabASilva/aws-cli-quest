@@ -24,6 +24,18 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-08-19",
+      data: "19 ago 2026",
+      titulo: "🧩 Cobertura completa: todo comando do simulador agora tem atividade",
+      itens: [
+        "<b>🧩 Fizemos um pente-fino comando a comando.</b> De <b>351 comandos</b> que o simulador entende, <b>67 nunca apareciam em atividade nenhuma</b> — dava pra rodar no terminal, mas ninguém era ensinado a usar. Agora a cobertura é de <b>100%</b>, com <b>66 atividades novas</b> (o app passou de 533 para <b>599</b>).",
+        "<b>🌐 Rede e roteamento (VPC):</b> a trilha ensinava a criar rede e nunca a fazer o pacote <b>sair</b> dela. Entraram tabela de rotas, associação com a sub-rede, remoção de rota, conferência do internet gateway e as <b>interfaces de rede</b> — que é como se liga uma linha de log à máquina certa.",
+        "<b>🔑 Auditoria de IAM:</b> a trilha ensinava a <b>conceder</b> permissão e nunca a <b>conferir</b> quem tem o quê — que é metade do trabalho de segurança. Agora dá pra ver quem está num grupo, o que uma pessoa pode fazer, o histórico de versões de uma política e como revogar acesso de grupo e de role.",
+        "<b>🔐 As trilhas curtas ficaram completas:</b> Shield, Macie, Inspector, WAF, GuardDuty e Config tinham 1 ou 2 atividades — várias ensinavam a <b>ligar</b> o serviço e nunca a <b>ver o que ele achou</b>. Agora fecham o ciclo: ligar, consultar o resultado e desligar (com a nota de quanto cada um cobra).",
+        "<b>⚙️ E o resto:</b> versões e apelidos do Lambda, chaves do KMS (rotação e desabilitar), o S3 pela API crua (<code>s3api</code>), esvaziar fila do SQS, cancelar inscrição no SNS, religar regra do EventBridge, publicar API com stage, e a limpeza que ninguém lembra — como o <b>target group que não some junto com o load balancer</b> e continua na fatura.",
+      ],
+    },
+    {
       versao: "2026-07-31",
       data: "31 jul 2026",
       titulo: "🧭 A lista virou grupos, chegaram as trilhas de carreira e o CloudWatch fechou o ciclo",

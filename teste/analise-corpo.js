@@ -118,6 +118,15 @@ function resolver(linha) {
   if (linha.includes("<mt-id>") && conta.efs) linha = linha.replace(/<mt-id>/g, ult(conta.efs.alvos));
   if (linha.includes("<cert-arn>") && conta.acm) linha = linha.replace(/<cert-arn>/g, ult(conta.acm.certificados));
   if (linha.includes("<detector-id>") && conta.guardduty) linha = linha.replace(/<detector-id>/g, ult(conta.guardduty.detectores));
+  // consulta de log (Insights) e Web ACL do WAF — ids sorteados na criação
+  if (linha.includes("<consulta-id>") && conta.logs) { const _q = Object.keys(conta.logs.consultas || {}); if (_q.length) linha = linha.replace(/<consulta-id>/g, _q[_q.length - 1]); }
+  if (linha.includes("<waf-id>") && conta.waf) { const _w = Object.values(conta.waf.acls); if (_w.length) linha = linha.replace(/<waf-id>/g, _w[_w.length - 1].id); }
+  if (linha.includes("<sub-arn>") && conta.sns) { for (const t of Object.values(conta.sns.topicos || {})) { const a = (t.assinaturas || [])[(t.assinaturas || []).length - 1]; if (a) { linha = linha.replace(/<sub-arn>/g, a.arn); break; } } }
+  // cobertura: tabela de rotas, sub-rede e flow log criados nas proprias atividades
+  if (linha.includes("<rtb-novo>") && conta.vpc) { const _t = Object.keys(conta.vpc.tabelas || {}); if (_t.length) linha = linha.replace(/<rtb-novo>/g, _t[_t.length - 1]); }
+  if (linha.includes("<subnet-id>") && conta.vpc) { const _s = Object.keys(conta.vpc.subnets || {}); if (_s.length) linha = linha.replace(/<subnet-id>/g, _s[_s.length - 1]); }
+  if (linha.includes("<flowlog-id>") && conta.vpc) { const _f = Object.keys(conta.vpc.flowLogs || conta.vpc.flowlogs || {}); if (_f.length) linha = linha.replace(/<flowlog-id>/g, _f[_f.length - 1]); }
+
   return linha;
 }
 const autopass = [];
