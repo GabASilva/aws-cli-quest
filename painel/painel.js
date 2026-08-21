@@ -7,7 +7,7 @@
 //
 // Como rodar:
 //   ADMIN_TOKEN=seu-segredo  node painel/painel.js
-//   (ou crie painel/config.json: { "ADMIN_TOKEN": "...", "URL_BASE": "https://aws-cli-quest.fly.dev" })
+//   (ou crie painel/config.json: { "ADMIN_TOKEN": "...", "URL_BASE": "https://climb.dev.br" })
 // Depois abra http://localhost:7077 no navegador.
 // ============================================================
 const http = require("http");
@@ -19,7 +19,7 @@ function lerConfig() {
   try { cfg = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf8")); } catch (e) { /* sem arquivo, ok */ }
   return {
     ADMIN_TOKEN: process.env.ADMIN_TOKEN || cfg.ADMIN_TOKEN || "",
-    URL_BASE: (process.env.URL_BASE || cfg.URL_BASE || "https://aws-cli-quest.fly.dev").replace(/\/+$/, ""),
+    URL_BASE: (process.env.URL_BASE || cfg.URL_BASE || "https://climb.dev.br").replace(/\/+$/, ""),
     PORTA: Number(process.env.PAINEL_PORTA || cfg.PORTA || 7077),
   };
 }

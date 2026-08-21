@@ -74,7 +74,7 @@ function enviarVerificacao(usuario, email) {
   bd.verificacoes = bd.verificacoes || {};
   bd.verificacoes[token] = { usuario, email, expira: Date.now() + 24 * 3600000 };
   salvarBd();
-  const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+  const base = process.env.URL_BASE || "https://climb.dev.br";
   const link = `${base}/?verificar=${token}`;
   enviarEmail(
     email,
@@ -845,7 +845,7 @@ async function tratarApi(req, res, rota) {
       return responderJson(res, 503, { erro: "Checkout automático ainda não está ativo. Use um código de ativação.", fallback: "codigo" });
     }
     try {
-      const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+      const base = process.env.URL_BASE || "https://climb.dev.br";
       const pref = {
         items: [{ title: titulo, quantity: 1, unit_price: unitPrice, currency_id: "BRL" }],
         external_reference: externalRef,
@@ -924,7 +924,7 @@ async function tratarApi(req, res, rota) {
       const token = crypto.randomBytes(24).toString("hex");
       bd.resets[token] = { usuario: entrada[0], expira: Date.now() + 3600000 }; // 1h
       salvarBd();
-      const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+      const base = process.env.URL_BASE || "https://climb.dev.br";
       const link = `${base}/?reset=${token}`;
       await enviarEmail(
         email,
@@ -1332,7 +1332,7 @@ async function tratarAdmin(req, res, rota) {
     bd.resets = bd.resets || {};
     bd.resets[token] = { usuario: corpo.usuario, expira: Date.now() + 3600000 };
     registrarLogAdmin("reset-senha", String(corpo.usuario), ip); salvarBd();
-    const base = process.env.URL_BASE || "https://aws-cli-quest.fly.dev";
+    const base = process.env.URL_BASE || "https://climb.dev.br";
     const link = `${base}/?reset=${token}`;
     if (u.email) enviarEmail(u.email, "Redefinir sua senha — CLImb", `<p>Um administrador gerou um link pra redefinir sua senha (vale 1h):</p><p><a href="${link}">${link}</a></p>`);
     return responderJson(res, 200, { ok: true, link, enviadoPara: u.email || null });
