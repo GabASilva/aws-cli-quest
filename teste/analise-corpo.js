@@ -134,14 +134,34 @@ for (const d of DESAFIOS) {
   if (d.tipo === "projeto") continue;
   const ehLab = d.servico === "diagnostico"; // lab: monta o ambiente quebrado
   if (ehLab && typeof montarLabVpc === "function") montarLabVpc(conta);
-  if (!ehLab && (d.solucao || []).some((s) => !s.trim().startsWith("aws"))) continue; // shell: fora deste harness
+  // shell (cat/ls/grep) agora roda: linux-lab expoe executarShellPuro, sem DOM
+  if (!ehLab && (d.solucao || []).some((s) => {
+    const l = s.trim();
+    if (l.startsWith("aws")) return false;
+    return typeof executarShellPuro !== "function" || !executarShellPuro(criarContaAws(), l);
+  })) continue; // a trilha setup e tratada logo abaixo, pela cadeia completa
   // já satisfeito antes de rodar a solução? (validador de ESTADO ganho de graça)
   let antes = false;
   try { antes = !!d.validar(conta, null, false); } catch (e) { antes = false; }
   if (antes) autopass.push(`${d.id} (${d.servico}) — "${d.titulo}"`);
   for (const sol of d.solucao) {
     const linhaSol = resolver(sol);
-    if (!linhaSol.trim().startsWith("aws")) { if (typeof labShell === "function") labShell(conta, linhaSol); continue; }
+    // a trilha setup passa pela CADEIA (setup-lab intercepta ssh/curl/unzip,
+    // o 'aws --version' e o configure interativo antes do executor aws)
+    if (d.servico === "setup" && typeof rodarPelaCadeia === "function") {
+      window.jogo.conta = conta;
+      const rr = rodarPelaCadeia(linhaSol);
+      if (rr.cmd) ultimoCmd = rr.cmd;
+      continue;
+    }
+    if (!linhaSol.trim().startsWith("aws")) {
+      // o lab de diagnostico tem shell proprio e vem primeiro
+      if (ehLab && typeof labShell === "function") { labShell(conta, linhaSol); continue; }
+      const rsh = typeof executarShellPuro === "function" ? executarShellPuro(conta, linhaSol) : null;
+      if (rsh) { ultimoCmd = rsh.cmd; continue; }
+      if (typeof labShell === "function") labShell(conta, linhaSol);
+      continue;
+    }
     const r = executarComandoAws(conta, linhaSol);
     if (r) ultimoCmd = r.cmd;
     if (r && !r.ok && d.id !== "ec2-3") avisos.push(`solução falhou: ${d.id}: ${sol} -> ${String(r.saida).split("\n")[0]}`);
