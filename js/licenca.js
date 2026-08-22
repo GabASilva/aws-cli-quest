@@ -16,7 +16,10 @@
 // mais se prova — ligar/parar uma máquina de verdade e uma política que
 // realmente nega acesso — ficavam atrás do muro. A pessoa decidia assinar sem
 // ter experimentado o que o produto tem de melhor.
-const SERVICOS_GRATIS = ["setup", "linux", "s3", "ec2", "iam"];
+// "formatos" (JSON e YAML) entra aqui porque é Fundamentos e pré-requisito:
+// as 42 atividades com JSON na linha de comando e as 49 com file:// dependem
+// dela. Cobrar por ela seria cobrar pra entender o que já está sendo pedido.
+const SERVICOS_GRATIS = ["setup", "linux", "formatos", "s3", "ec2", "iam"];
 
 // um desafio é grátis se for de uma trilha grátis OU se for o Desafio do dia
 function desafioEhGratis(d) {

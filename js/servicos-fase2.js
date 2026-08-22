@@ -440,7 +440,7 @@
       let lote;
       if (String(bruto).startsWith("file://")) {
         const arq = String(bruto).slice(7);
-        if (!arquivoLocal(arq)) throw new ErroCli(`Error parsing parameter '--change-batch': Unable to load paramfile ${bruto}: arquivo não existe. Digite 'ls' (existe um registro-dns.json pronto).`);
+        if (!arquivoLocal(arq, conta)) throw new ErroCli(`Error parsing parameter '--change-batch': Unable to load paramfile ${bruto}: arquivo não existe. Digite 'ls' (existe um registro-dns.json pronto).`);
         lote = REGISTRO_DNS_PADRAO; // o arquivo pronto cria um A pra www
       } else {
         try { lote = JSON.parse(bruto); }

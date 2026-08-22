@@ -53,13 +53,21 @@
     // reage a botões que outras features adicionem ao header depois
     obs = new MutationObserver(() => { if (!movendo) aplicar(); });
     obs.observe(h, { childList: true });
+    // o rodapé também recebe botões injetados no load
+    const rod = document.querySelector("footer");
+    if (rod) obs.observe(rod, { childList: true });
   }
 
-  // botões de ação do header (todos os .botao, menos o toggle)
-  function botoesDoHeader() {
+  // Botões de ação do header E DO RODAPÉ (todos os .botao, menos o toggle).
+  // O rodapé não era recolhido: no celular ele ficava com 6 botões e 139px —
+  // 17% da tela — enquanto o header já virava um ☰ só.
+  function botoesDeAcao() {
     const h = header();
-    if (!h) return [];
-    return [...h.querySelectorAll(":scope > button.botao")].filter((b) => b !== toggle);
+    const r = document.querySelector("footer");
+    const lista = [];
+    if (h) lista.push(...h.querySelectorAll(":scope > button.botao"));
+    if (r) lista.push(...r.querySelectorAll(":scope > button.botao"));
+    return lista.filter((b) => b !== toggle);
   }
 
   function aplicar() {
@@ -68,12 +76,21 @@
     if (!toggle) montar();
     movendo = true;
     if (ehMobile()) {
-      // move os botões de ação do header pro painel
-      botoesDoHeader().forEach((b) => { if (b.parentElement !== painel) painel.appendChild(b); });
+      // move os botões de ação pro painel, lembrando DE ONDE cada um veio
+      botoesDeAcao().forEach((b) => {
+        if (b.parentElement !== painel) {
+          b.__origem = b.parentElement; // pra devolver ao lugar certo no desktop
+          painel.appendChild(b);
+        }
+      });
       toggle.style.display = "inline-block";
     } else {
-      // devolve os botões ao header (antes do toggle), fecha o menu
-      [...painel.querySelectorAll("button.botao")].forEach((b) => h.insertBefore(b, toggle));
+      // devolve cada botão ao container de origem (header OU rodapé)
+      [...painel.querySelectorAll("button.botao")].forEach((b) => {
+        const origem = b.__origem;
+        if (origem && origem !== h && origem.isConnected) origem.appendChild(b);
+        else h.insertBefore(b, toggle);
+      });
       painel.classList.remove("aberto");
       toggle.style.display = "none";
     }

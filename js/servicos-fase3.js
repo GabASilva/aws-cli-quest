@@ -24,11 +24,13 @@
   const NOME_SIMPLES = /^[a-zA-Z0-9._/-]{1,80}$/;
 
   // Lê um parâmetro que pode vir inline (JSON) ou de um arquivo (file://).
-  function lerJson(valor, flag, operacao, padrao) {
+  // recebe `conta` pra que arquivoLocal enxergue tambem os arquivos que a
+  // pessoa criou no shell, e nao so os prontos do lab
+  function lerJson(conta, valor, flag, operacao, padrao) {
     const bruto = String(valor);
     if (bruto.startsWith("file://")) {
       const arq = bruto.slice(7);
-      if (!arquivoLocal(arq)) {
+      if (!arquivoLocal(arq, conta)) {
         throw new ErroCli(`Error parsing parameter '--${flag}': Unable to load paramfile ${bruto}: arquivo não existe.\nDigite 'ls' pra ver os arquivos do lab.`);
       }
       return padrao; // os arquivos do lab têm conteúdo pronto
@@ -117,7 +119,7 @@
     "register-task-definition": (conta, pos, flags) => {
       estado(conta);
       const familia = exigirFlag(flags, "family");
-      const defs = lerJson(exigirFlag(flags, "container-definitions"), "container-definitions", "RegisterTaskDefinition", TAREFA_PADRAO);
+      const defs = lerJson(conta, exigirFlag(flags, "container-definitions"), "container-definitions", "RegisterTaskDefinition", TAREFA_PADRAO);
       if (!Array.isArray(defs) || !defs.length) throw new ErroCli(`An error occurred (ClientException) when calling the RegisterTaskDefinition operation: Container definitions should not be empty`);
       for (const d of defs) {
         if (!d.name || !d.image) throw new ErroCli(`An error occurred (ClientException) when calling the RegisterTaskDefinition operation: Container definition precisa de "name" e "image".`);
@@ -292,7 +294,7 @@
     "create-state-machine": (conta, pos, flags) => {
       estado(conta);
       const nome = exigirFlag(flags, "name");
-      const def = lerJson(exigirFlag(flags, "definition"), "definition", "CreateStateMachine", MAQUINA_PADRAO);
+      const def = lerJson(conta, exigirFlag(flags, "definition"), "definition", "CreateStateMachine", MAQUINA_PADRAO);
       exigirFlag(flags, "role-arn");
       if (!def.StartAt || !def.States) throw new ErroCli(`An error occurred (InvalidDefinition) when calling the CreateStateMachine operation: Invalid State Machine Definition: 'MISSING_REQUIRED_FIELD: StartAt/States'`);
       if (!def.States[def.StartAt]) throw new ErroCli(`An error occurred (InvalidDefinition) when calling the CreateStateMachine operation: MISSING_TRANSITION_TARGET: State '${def.StartAt}' não existe em States.`);
@@ -390,7 +392,7 @@
     },
     "put-targets": (conta, pos, flags) => {
       const r = acharRegra(conta, flags, "PutTargets", "rule");
-      const alvos = lerJson(exigirFlag(flags, "targets"), "targets", "PutTargets", [{ Id: "1", Arn: "arn:aws:lambda:us-east-1:123456789012:function:limpeza" }]);
+      const alvos = lerJson(conta, exigirFlag(flags, "targets"), "targets", "PutTargets", [{ Id: "1", Arn: "arn:aws:lambda:us-east-1:123456789012:function:limpeza" }]);
       const lista = [].concat(alvos);
       for (const a of lista) {
         if (!a.Id || !a.Arn) throw new ErroCli(`An error occurred (ValidationException) when calling the PutTargets operation: Parameter(s) Target.Id and Target.Arn are required.\nEx.: --targets '[{"Id":"1","Arn":"arn:aws:lambda:...:function:limpeza"}]'`);

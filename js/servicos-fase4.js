@@ -21,11 +21,13 @@
     conta.kms = conta.kms || { chaves: {}, aliases: {} };
     return conta;
   }
-  function lerJson(valor, flag, padrao) {
+  // recebe `conta` pra que arquivoLocal enxergue tambem os arquivos criados
+  // no shell, e nao so os prontos do lab
+  function lerJson(conta, valor, flag, padrao) {
     const bruto = String(valor);
     if (bruto.startsWith("file://")) {
       const arq = bruto.slice(7);
-      if (!arquivoLocal(arq)) throw new ErroCli(`Error parsing parameter '--${flag}': Unable to load paramfile ${bruto}: arquivo não existe.\nDigite 'ls' pra ver os arquivos do lab.`);
+      if (!arquivoLocal(arq, conta)) throw new ErroCli(`Error parsing parameter '--${flag}': Unable to load paramfile ${bruto}: arquivo não existe.\nDigite 'ls' pra ver os arquivos do lab.`);
       return padrao;
     }
     try { return JSON.parse(bruto); }
@@ -148,7 +150,7 @@
   const cmdGlue = {
     "create-database": (conta, pos, flags) => {
       estado(conta);
-      const entrada = lerJson(exigirFlag(flags, "database-input"), "database-input", { Name: "dados_loja" });
+      const entrada = lerJson(conta, exigirFlag(flags, "database-input"), "database-input", { Name: "dados_loja" });
       const nome = entrada.Name;
       if (!nome) throw new ErroCli(`An error occurred (InvalidInputException) when calling the CreateDatabase operation: DatabaseInput precisa de "Name".`);
       if (conta.glue.bancos[nome]) throw new ErroCli(`An error occurred (AlreadyExistsException) when calling the CreateDatabase operation: Database already exists.`);
@@ -163,7 +165,7 @@
     },
     "create-table": (conta, pos, flags) => {
       const b = acharBanco(conta, flags, "CreateTable", "database-name");
-      const entrada = lerJson(exigirFlag(flags, "table-input"), "table-input", TABELA_PADRAO);
+      const entrada = lerJson(conta, exigirFlag(flags, "table-input"), "table-input", TABELA_PADRAO);
       const nome = entrada.Name;
       if (!nome) throw new ErroCli(`An error occurred (InvalidInputException) when calling the CreateTable operation: TableInput precisa de "Name".`);
       if (b.tabelas[nome]) throw new ErroCli(`An error occurred (AlreadyExistsException) when calling the CreateTable operation: Table already exists.`);

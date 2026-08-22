@@ -116,14 +116,32 @@
       "      UserName: app-deploy\n",
   };
 
+  // Expõe os templates pro `cat infra.yaml` mostrar o YAML de verdade em vez de
+  // "(arquivo de exemplo)". É o MESMO texto que o create-stack parseia —
+  // copiar noutro arquivo criaria uma segunda fonte da verdade.
+  if (typeof window !== "undefined") {
+    window.ARQUIVOS_CONTEUDO = window.ARQUIVOS_CONTEUDO || {};
+    for (const [nome, texto] of Object.entries(CFN_TEMPLATES)) {
+      window.ARQUIVOS_CONTEUDO[nome] = texto;
+      if (typeof ARQUIVOS_LOCAIS !== "undefined") ARQUIVOS_LOCAIS[nome] = texto.length;
+    }
+  }
+
   function corpoDoTemplate(conta, flags) {
     const tb = exigirFlag(flags, "template-body");
     let texto;
     if (String(tb).startsWith("file://")) {
       const nome = String(tb).slice(7);
-      // templates prontos OU arquivos que o usuário salvou (ex.: gerados pelo Arquiteto IA, ou via ">")
-      const salvos = (conta && conta.arquivosSalvos) || {};
-      texto = CFN_TEMPLATES[nome] !== undefined ? CFN_TEMPLATES[nome] : salvos[nome];
+      // templates prontos OU qualquer arquivo que a pessoa tenha criado —
+      // pelo redirecionamento do aws (">") ou escrevendo no shell com
+      // `echo ... > meu.yaml`. O arquivoLocal() é quem sabe olhar as três
+      // fontes; antes aqui só existia arquivosSalvos, e um template escrito
+      // no shell era recusado mesmo aparecendo no `ls`.
+      if (CFN_TEMPLATES[nome] !== undefined) texto = CFN_TEMPLATES[nome];
+      else {
+        const arq = typeof arquivoLocal === "function" ? arquivoLocal(nome, conta) : null;
+        texto = arq ? arq.conteudo : undefined;
+      }
       if (texto === undefined) {
         throw new ErroCli(`Error parsing parameter '--template-body': Unable to load paramfile ${tb}: arquivo não existe. Templates prontos: ${Object.keys(CFN_TEMPLATES).join(", ")}.`);
       }

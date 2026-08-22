@@ -1051,6 +1051,10 @@ const MIMES = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".woff2": "font/woff2",
 };
 
 // só estes tipos podem ser servidos (o resto = 404)
@@ -1183,7 +1187,11 @@ function servirEstatico(req, res, rota) {
       cache = "public, max-age=31536000, immutable";
     } else {
       // sem versão (ou em dev): revalida sempre, nunca serve velho
-      cache = rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store";
+      // imagens (favicon, cartão social) mudam raramente e são pedidas por
+      // crawlers e por toda visita — no-store aqui era desperdício de banda.
+      cache = rota.startsWith("/img/")
+        ? "public, max-age=86400"
+        : rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store";
     }
     const cabecalhos = {
       "Content-Type": MIMES[ext] || "application/octet-stream",

@@ -417,6 +417,18 @@
         try { prova(jogo.conta, "grepReject"); } catch (e) { /* ok */ }
       }
       if (!["curl", "ssh", "nmap"].includes(nome)) return anterior(linha);
+      // Só intercepta quando o laboratório de diagnóstico está DE PÉ. Sem esta
+      // guarda, este wrap (que carrega por último, e por isso fica por fora de
+      // todos) roubava o ssh e o curl da trilha "Primeiros passos" — e como ele
+      // lê o host como "primeiro token sem hífen", o `ssh -i labsuser.pem
+      // ec2-user@<ip>` virava "Could not resolve hostname labsuser.pem".
+      // Resultado: as 4 primeiras atividades do app eram impossíveis de concluir.
+      const labDePe = !!(((jogo || {}).conta || {}).vpc || {}).labIds;
+      if (!labDePe) return anterior(linha);
+      // Mesmo com o lab de pé, as formas próprias do setup seguem pro setup-lab:
+      // ssh COM chave (-i) e o curl do instalador do CLI não são do lab.
+      if (nome === "ssh" && /\s-i\s/.test(bruto)) return anterior(linha);
+      if (nome === "curl" && /awscli.*\.zip/.test(bruto)) return anterior(linha);
       if (typeof imprimirComando === "function") imprimirComando(bruto);
       const alvo = bruto.split(/\s+/).filter((t) => !t.startsWith("-"))[1];
       if (!alvo) {

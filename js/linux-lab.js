@@ -47,6 +47,36 @@ function semearArvore() {
   return raiz;
 }
 
+// ---------- Núcleo PURO do shell (sem DOM) ----------
+// Extraído do wrap de executarLinha pra que o harness de teste possa executar
+// os comandos de shell. Antes, `cat`/`ls`/`grep` só existiam dentro da camada
+// de UI — e por isso as 42 atividades das trilhas setup, linux e formatos eram
+// um PONTO CEGO: o teste/fumaca.js nunca as executava.
+// Devolve null quando a linha não é comando de shell (aí quem chama trata
+// como comando `aws`).
+function executarShellPuro(conta, linha) {
+  const bruto = String(linha || "").trim();
+  const nome = bruto.split(/\s+/)[0];
+  if (!COMANDOS_LINUX[nome]) return null;
+  fsSeed(conta);
+
+  // separa um eventual redirecionamento ">" / ">>"
+  let redir = null, alvo = null, corpo = bruto;
+  const mr = /\s(>>?)\s*([^\s>]+)\s*$/.exec(bruto);
+  if (mr) { redir = mr[1]; alvo = mr[2]; corpo = bruto.slice(0, mr.index); }
+
+  const toks = tokensLinux(corpo);
+  const args = toks.slice(1);
+  let saida = "", ok = true;
+  try {
+    saida = COMANDOS_LINUX[nome](conta, args, redir, alvo);
+  } catch (e) {
+    ok = false;
+    saida = e.message;
+  }
+  return { ok, saida, cmd: { servico: "linux", sub: nome, args, posicionais: args, flags: {}, linha: bruto } };
+}
+
 // ---------- Sistema de arquivos ----------
 function fsSeed(conta) {
   if (!conta.fs) {
@@ -57,7 +87,15 @@ function fsSeed(conta) {
     const home = ((((conta.fs.filhos || {}).home || {}).filhos || {})["ec2-user"] || {}).filhos;
     if (home) {
       for (const nome of Object.keys(ARQUIVOS_CONTEUDO)) {
-        if (nome.includes("/") || home[nome]) continue;
+        if (nome.includes("/")) continue;
+        const atual = home[nome];
+        // Antes daqui saía um `continue` pra QUALQUER arquivo já existente — e
+        // com isso quem já jogava ficava preso ao "(arquivo de exemplo)" pra
+        // sempre, mesmo depois de o conteúdo de verdade passar a existir.
+        // Agora o placeholder também é trocado. O que a pessoa mesma escreveu
+        // (via ">") nunca é sobrescrito: só cai aqui quem ainda é placeholder.
+        if (atual && atual.tipo === "arquivo" &&
+            !/^\(arquivo de exemplo\)/.test(String(atual.conteudo || ""))) continue;
         home[nome] = { tipo: "arquivo", conteudo: ARQUIVOS_CONTEUDO[nome], modo: "644" };
       }
     }
@@ -477,25 +515,10 @@ const DESAFIOS_LINUX = [
     if (!COMANDOS_LINUX[nome]) return execAnterior(linha);
 
     eco(bruto);
-    fsSeed(jogo.conta);
-
-    // separa um eventual redirecionamento ">" / ">>"
-    let redir = null, alvo = null, corpo = bruto;
-    const mr = /\s(>>?)\s*([^\s>]+)\s*$/.exec(bruto);
-    if (mr) { redir = mr[1]; alvo = mr[2]; corpo = bruto.slice(0, mr.index); }
-
-    const toks = tokensLinux(corpo);
-    const args = toks.slice(1);
-    let saida = "", ok = true;
-    try {
-      saida = COMANDOS_LINUX[nome](jogo.conta, args, redir, alvo);
-    } catch (e) {
-      ok = false;
-      saida = e.message;
-    }
-    imprimir(saida, ok ? "" : "erro");
+    const r = executarShellPuro(jogo.conta, bruto);
+    imprimir(r.saida, r.ok ? "" : "erro");
     salvarJogo();
-    if (ok) verificarDesafios({ servico: "linux", sub: nome, args, posicionais: args, flags: {}, linha: bruto });
+    if (r.ok) verificarDesafios(r.cmd);
     rolarTerminal();
   };
 })();

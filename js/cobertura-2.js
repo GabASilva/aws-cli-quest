@@ -80,10 +80,22 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-group") },
 
     { id: "cob-iam-2", servico: "iam", nivel: 3, xp: 110, titulo: "O que esta pessoa pode fazer?",
-      descricao: "A pergunta que toda auditoria faz. Liste as <b>políticas anexadas</b> ao usuário <b>helena</b>. <small>(atenção: isso mostra as diretas — o que vem por GRUPO não aparece aqui)</small>",
-      dicas: ["`list-…` lista. O nome do comando fala em \"attached user policies\".", "A forma é: aws iam list-attached-user-policies --user-name <nome>"],
-      solucao: ["aws iam list-attached-user-policies --user-name helena"],
-      validar: (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-attached-user-policies") },
+      // A versão anterior listava a usuária "helena", que só é criada em
+      // missoes.js — trilha "Treino relâmpago", que vem DEPOIS do IAM. Quem
+      // fazia a trilha na ordem batia num NoSuchEntity. Agora a atividade cria
+      // o que precisa, como as autossuficientes do cobertura-3.js.
+      descricao: "A pergunta que toda auditoria faz. Crie a usuária <b>auditoria-tmp</b>, dê a ela uma política e liste as <b>políticas anexadas</b> a ela. <small>(atenção: isso mostra só as <b>diretas</b> — o que vem por GRUPO não aparece aqui, e é aí que auditoria costuma se enganar)</small>",
+      dicas: ["Três passos: criar a usuária, anexar a política, listar. `list-…` lista.", "A forma do último é: aws iam list-attached-user-policies --user-name <nome>"],
+      solucao: [
+        "aws iam create-user --user-name auditoria-tmp",
+        "aws iam attach-user-policy --user-name auditoria-tmp --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+        "aws iam list-attached-user-policies --user-name auditoria-tmp",
+      ],
+      validar: (c, cmd, ok) => {
+        const u = c.iam.usuarios["auditoria-tmp"];
+        return ok && ehCmd(cmd, "iam", "list-attached-user-policies") &&
+               !!u && (u.politicas || []).some((a) => a.includes("AmazonS3ReadOnlyAccess"));
+      } },
 
     { id: "cob-iam-3", servico: "iam", nivel: 3, xp: 100, titulo: "Que versões esta política teve?",
       descricao: "Política guarda histórico. Liste as <b>versões</b> da <b>lab_policy</b> e repare qual está marcada como padrão. <small>(é assim que você descobre desde quando uma permissão existe)</small>",

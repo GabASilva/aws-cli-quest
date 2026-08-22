@@ -124,9 +124,35 @@ function normalizarCaminho(p) {
   return String(p).replace(/^\.\//, "").replace(/\/+$/, "");
 }
 
-function arquivoLocal(p) {
+// Um arquivo local existe se estiver em QUALQUER uma de três fontes:
+//   1. ARQUIVOS_LOCAIS  — os arquivos prontos do lab
+//   2. conta.arquivosSalvos — criados por redirecionamento do próprio aws (>)
+//   3. a árvore do shell (conta.fs) — criados com `echo ... > x.json`
+// Antes só a primeira contava. O resultado era absurdo: a pessoa criava um
+// arquivo, via ele no `ls`, e o `file://` respondia "arquivo não existe".
+// Passar `conta` é o que destrava 2 e 3 — sem ela, só o lab é enxergado.
+function arquivoLocal(p, conta) {
   const caminho = normalizarCaminho(p);
-  return ARQUIVOS_LOCAIS[caminho] !== undefined ? { caminho, tamanho: ARQUIVOS_LOCAIS[caminho] } : null;
+  if (ARQUIVOS_LOCAIS[caminho] !== undefined) {
+    const doLab = typeof ARQUIVOS_CONTEUDO !== "undefined" ? ARQUIVOS_CONTEUDO[caminho] : undefined;
+    return { caminho, tamanho: ARQUIVOS_LOCAIS[caminho], conteudo: doLab };
+  }
+  const salvos = (conta && conta.arquivosSalvos) || {};
+  if (salvos[caminho] !== undefined) {
+    const txt = String(salvos[caminho]);
+    return { caminho, tamanho: txt.length, conteudo: txt };
+  }
+  // noRelHome navega a árvore do shell; vive no linux-lab.js, que carrega
+  // depois deste arquivo — por isso a checagem é em tempo de execução.
+  if (conta && typeof noRelHome === "function") {
+    let no = null;
+    try { no = noRelHome(conta, caminho); } catch (e) { no = null; }
+    if (no && no.tipo === "arquivo") {
+      const txt = String(no.conteudo || "");
+      return { caminho, tamanho: txt.length, conteudo: txt };
+    }
+  }
+  return null;
 }
 
 // ---------- Utilitários ----------
@@ -334,7 +360,7 @@ const cmdS3 = {
 
     if (!uriOrigem && uriDestino) {
       // upload: local -> s3
-      const arq = arquivoLocal(origem);
+      const arq = arquivoLocal(origem, conta);
       if (!arq) {
         let chaveDest = uriDestino.chave;
         if (!chaveDest || chaveDest.endsWith("/")) chaveDest += origem.split("/").pop();
@@ -446,7 +472,7 @@ const cmdS3api = {
     const b = exigirBucket(conta, nome, "PutBucketPolicy");
     const politica = exigirFlag(flags, "policy");
     if (politica.startsWith("file://")) {
-      const arq = arquivoLocal(politica.slice(7));
+      const arq = arquivoLocal(politica.slice(7), conta);
       if (!arq) throw new ErroCli(`Error parsing parameter '--policy': Unable to load paramfile ${politica}: arquivo não existe. Digite 'ls' para ver os arquivos locais.`);
     } else {
       try { JSON.parse(politica); }
@@ -844,7 +870,7 @@ const cmdIam = {
     const doc = exigirFlag(flags, "assume-role-policy-document");
     let trustDoc;
     if (doc.startsWith("file://")) {
-      if (!arquivoLocal(doc.slice(7))) throw new ErroCli(`Error parsing parameter '--assume-role-policy-document': Unable to load paramfile ${doc}: arquivo não existe. Digite 'ls' (existe um trust.json pronto).`);
+      if (!arquivoLocal(doc.slice(7), conta)) throw new ErroCli(`Error parsing parameter '--assume-role-policy-document': Unable to load paramfile ${doc}: arquivo não existe. Digite 'ls' (existe um trust.json pronto).`);
       trustDoc = TRUST_PADRAO; // o trust.json pronto confia no serviço EC2
     } else {
       try { trustDoc = JSON.parse(doc); }
@@ -874,7 +900,7 @@ const cmdIam = {
     const doc = exigirFlag(flags, "policy-document");
     let documento;
     if (doc.startsWith("file://")) {
-      if (!arquivoLocal(doc.slice(7))) throw new ErroCli(`Error parsing parameter '--policy-document': Unable to load paramfile ${doc}: arquivo não existe. Digite 'ls' (existe um politica-publica.json pronto).`);
+      if (!arquivoLocal(doc.slice(7), conta)) throw new ErroCli(`Error parsing parameter '--policy-document': Unable to load paramfile ${doc}: arquivo não existe. Digite 'ls' (existe um politica-publica.json pronto).`);
       documento = { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: "s3:*", Resource: "*" }] };
     } else {
       try { documento = JSON.parse(doc); }
@@ -946,7 +972,7 @@ const cmdIam = {
     const doc = exigirFlag(flags, "policy-document");
     let documento;
     if (doc.startsWith("file://")) {
-      if (!arquivoLocal(doc.slice(7))) throw new ErroCli(`Error parsing parameter '--policy-document': Unable to load paramfile ${doc}: arquivo não existe.`);
+      if (!arquivoLocal(doc.slice(7), conta)) throw new ErroCli(`Error parsing parameter '--policy-document': Unable to load paramfile ${doc}: arquivo não existe.`);
       documento = { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: "s3:*", Resource: "*" }] };
     } else {
       try { documento = JSON.parse(doc); }
@@ -1074,7 +1100,7 @@ const cmdLambda = {
     if (!/^arn:aws:iam::\d{12}:role\/.+$/.test(role)) throw new ErroCli(`An error occurred (ValidationException) when calling the CreateFunction operation: '${role}' failed to satisfy constraint: Role ARN inválido.\nEx.: arn:aws:iam::123456789012:role/papel-lambda`);
     const handler = exigirFlag(flags, "handler");
     const zip = exigirFlag(flags, "zip-file");
-    if (!zip.startsWith("fileb://") || !arquivoLocal(zip.slice(8))) {
+    if (!zip.startsWith("fileb://") || !arquivoLocal(zip.slice(8), conta)) {
       throw new ErroCli(`Error parsing parameter '--zip-file': use fileb://<arquivo.zip> com um arquivo que existe. Digite 'ls' (existe um app.zip pronto).`);
     }
     conta.lambda.funcoes[nome] = { runtime, role, handler, timeout: 3, memoria: 128, env: {}, invocada: false, criadaEm: agoraIso() };

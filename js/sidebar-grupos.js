@@ -19,7 +19,7 @@
   // Ordem dos grupos = ordem de aprendizado sugerida.
   const GRUPOS = [
     { id: "fundamentos", nome: "Fundamentos", emoji: "🚀",
-      servicos: ["setup", "linux", "s3", "ec2", "iam"] },
+      servicos: ["setup", "linux", "formatos", "s3", "ec2", "iam"] },
     { id: "computacao", nome: "Computação e contêineres", emoji: "⚙️",
       servicos: ["lambda", "ebs", "autoscaling", "elbv2", "elasticbeanstalk", "ecr", "ecs", "eks"] },
     { id: "dados", nome: "Bancos e armazenamento", emoji: "🗄️",
