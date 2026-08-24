@@ -1,0 +1,9 @@
+# CLImb — climb.dev.br
+User-agent: *
+Allow: /
+
+# Rotas de API e do painel não têm o que indexar
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://climb.dev.br/sitemap.xml

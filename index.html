@@ -28,11 +28,29 @@
   <meta name="twitter:description" content="Mais de 600 atividades em mais de 60 trilhas. Você digita os comandos reais num simulador que guarda o estado.">
   <meta name="twitter:image" content="https://climb.dev.br/img/og.jpg">
 
+  <!-- Dados estruturados: ajuda o buscador a entender que isto e um app de
+       ensino, e nao uma pagina qualquer. Os numeros ficam de fora de proposito
+       (envelhecem); quem tem o catalogo atualizado e o /sobre.html, gerado. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "CLImb",
+    "url": "https://climb.dev.br/",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Navegador",
+    "inLanguage": "pt-BR",
+    "description": "Simulador de terminal AWS CLI: voce digita os comandos reais e o estado persiste entre eles. Nao e quiz, nao e video.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+    "isAccessibleForFree": true
+  }
+  </script>
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
 
   <header>
+    <h1 style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0">CLImb — aprenda AWS CLI digitando de verdade</h1>
     <div class="logo">⚡ CLImb <small>AWS CLI</small></div>
     <div class="nivel-box">
       <span id="tituloNivel"></span>
@@ -68,6 +86,7 @@
     <button class="botao perigo" id="btnResetar">Resetar progresso</button>
   </footer>
   <p class="aviso-marca">
+    <a href="/sobre.html" style="color:var(--laranja)">O que o CLImb ensina</a> ·
     <a href="/privacidade.html" style="color:var(--laranja)">Privacidade e termos</a> ·
     Projeto independente e educativo, <strong>sem afiliação, patrocínio ou endosso</strong> da Amazon.
     “AWS” e “Amazon Web Services” são marcas registradas da Amazon.com, Inc. ou de suas afiliadas. É um simulador — não conecta a nenhuma conta AWS real.

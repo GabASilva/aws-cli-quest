@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O que o CLImb ensina — 630 atividades de AWS CLI</title>
+<meta name="description" content="Catálogo completo do CLImb: 630 atividades em 63 trilhas de AWS CLI, de S3 e IAM a VPC, Lambda, CloudFormation e Kubernetes. Você digita os comandos num terminal simulado.">
+<link rel="canonical" href="https://climb.dev.br/sobre.html">
+<link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#10151f">
+<meta property="og:type" content="website">
+<meta property="og:title" content="O que o CLImb ensina — 630 atividades de AWS CLI">
+<meta property="og:description" content="Catálogo completo: 630 atividades em 63 trilhas, de S3 e IAM a VPC, Lambda e CloudFormation.">
+<meta property="og:url" content="https://climb.dev.br/sobre.html">
+<meta property="og:image" content="https://climb.dev.br/img/og.jpg">
+<style>
+  :root { --fundo:#10151f; --painel:#161e2d; --borda:#2a3650;
+          --texto:#dce3ee; --fraco:#8b99b0; --laranja:#ff9900; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2rem 1.2rem 4rem; background:var(--fundo); color:var(--texto);
+         font-family:"Segoe UI", system-ui, -apple-system, sans-serif; line-height:1.65; }
+  .env { max-width: 48rem; margin: 0 auto; }
+  a { color: var(--laranja); }
+  h1 { font-size: clamp(1.5rem,4vw,2.1rem); line-height:1.2; margin:0 0 .4rem; }
+  h2 { font-size: 1.15rem; margin: 2.4rem 0 .6rem; color: var(--laranja); }
+  .sub { color: var(--fraco); margin:0 0 2rem; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.9rem; }
+  th, td { text-align:left; padding:.5rem .6rem; border-bottom:1px solid var(--borda); }
+  th { color: var(--fraco); font-weight:600; }
+  td:last-child, th:last-child { text-align:right; white-space:nowrap; }
+  .caixa { background:var(--painel); border:1px solid var(--borda); border-radius:.6rem;
+           padding:1rem 1.1rem; margin:1.4rem 0; }
+  .cta { display:inline-block; background:var(--laranja); color:#10151f; font-weight:700;
+         padding:.8rem 1.5rem; border-radius:.6rem; text-decoration:none; margin:.6rem 0; }
+  .voltar { display:inline-block; margin-bottom:1.5rem; color:var(--fraco); text-decoration:none; }
+  code { background:var(--painel); padding:.1rem .35rem; border-radius:.25rem; font-size:.9em; }
+  footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--borda);
+           color:var(--fraco); font-size:.8rem; }
+</style>
+</head>
+<body>
+<div class="env">
+  <a class="voltar" href="/">&larr; voltar ao CLImb</a>
+
+  <h1>O que o CLImb ensina</h1>
+  <p class="sub">630 atividades em 63 trilhas &mdash; todas praticadas digitando comandos de verdade.</p>
+
+  <div class="caixa">
+    O CLImb é um <strong>simulador de terminal AWS</strong>. Você digita
+    <code>aws s3 mb s3://loja</code> e o bucket passa a existir; digita
+    <code>aws s3 ls</code> depois e ele está lá. O estado persiste entre um comando e o
+    seguinte, os erros são os mesmos que a AWS devolveria, e <strong>nada custa dinheiro</strong>
+    &mdash; não há conexão com nenhuma conta AWS real.
+  </div>
+
+  <a class="cta" href="/">Começar agora &mdash; grátis</a>
+
+  <h2>Como funciona</h2>
+  <p>Cada atividade é um problema de trabalho, não um comando solto: <em>&ldquo;o time precisa
+  de um bucket para o site&rdquo;</em>, <em>&ldquo;um funcionário saiu, revogue o acesso&rdquo;</em>.
+  Você lê o cenário, digita o comando e o simulador responde como a AWS responderia.</p>
+  <p>Antes de cada comando novo há uma explicação de <strong>por que ele existe</strong> &mdash;
+  não só o que digitar. E há dicas graduais: a resposta só aparece depois que as dicas acabam.</p>
+  <p>Na trilha <strong>Diagnóstico</strong>, a infraestrutura chega quebrada e você precisa
+  achar a causa nos <em>flow logs</em>, como num plantão de verdade.</p>
+
+  <h2>As 63 trilhas</h2>
+  <table>
+    <tr><th>Trilha</th><th>Sobre</th><th>Atividades</th></tr>
+    <tr><td><strong>Primeiros passos</strong></td><td>Instalar e configurar o CLI</td><td>7</td></tr>
+    <tr><td><strong>Linux essencial</strong></td><td>Comandos de shell</td><td>27</td></tr>
+    <tr><td><strong>JSON e YAML</strong></td><td>Os arquivos que a AWS lê</td><td>13</td></tr>
+    <tr><td><strong>S3</strong></td><td>Armazenamento de objetos</td><td>31</td></tr>
+    <tr><td><strong>EC2</strong></td><td>Máquinas virtuais</td><td>21</td></tr>
+    <tr><td><strong>IAM</strong></td><td>Usuários e permissões</td><td>22</td></tr>
+    <tr><td><strong>Lambda</strong></td><td>Funções serverless</td><td>20</td></tr>
+    <tr><td><strong>DynamoDB</strong></td><td>Banco NoSQL</td><td>18</td></tr>
+    <tr><td><strong>Cenários</strong></td><td>Missões combinadas</td><td>5</td></tr>
+    <tr><td><strong>Conserte o comando</strong></td><td>Ache o erro</td><td>5</td></tr>
+    <tr><td><strong>Missões relâmpago</strong></td><td>Treino rápido</td><td>36</td></tr>
+    <tr><td><strong>Mundo real</strong></td><td>Cenários completos</td><td>42</td></tr>
+    <tr><td><strong>CloudFormation</strong></td><td>Infraestrutura como código</td><td>9</td></tr>
+    <tr><td><strong>VPC</strong></td><td>Rede na nuvem</td><td>18</td></tr>
+    <tr><td><strong>RDS</strong></td><td>Banco relacional</td><td>13</td></tr>
+    <tr><td><strong>CloudWatch</strong></td><td>Monitoramento e logs</td><td>30</td></tr>
+    <tr><td><strong>SQS</strong></td><td>Filas de mensagens</td><td>10</td></tr>
+    <tr><td><strong>SNS</strong></td><td>Notificações (pub/sub)</td><td>9</td></tr>
+    <tr><td><strong>EBS</strong></td><td>Discos das máquinas</td><td>7</td></tr>
+    <tr><td><strong>API Gateway</strong></td><td>APIs HTTP</td><td>8</td></tr>
+    <tr><td><strong>Route 53</strong></td><td>DNS e domínios</td><td>6</td></tr>
+    <tr><td><strong>CloudFront</strong></td><td>CDN e cache</td><td>5</td></tr>
+    <tr><td><strong>ECR</strong></td><td>Registro de imagens</td><td>5</td></tr>
+    <tr><td><strong>ECS</strong></td><td>Rodar contêineres</td><td>10</td></tr>
+    <tr><td><strong>Secrets Manager</strong></td><td>Senhas e segredos</td><td>6</td></tr>
+    <tr><td><strong>Step Functions</strong></td><td>Orquestração de passos</td><td>7</td></tr>
+    <tr><td><strong>EventBridge</strong></td><td>Eventos e agendamentos</td><td>8</td></tr>
+    <tr><td><strong>EKS</strong></td><td>Kubernetes gerenciado</td><td>7</td></tr>
+    <tr><td><strong>Glue</strong></td><td>Catálogo de dados</td><td>8</td></tr>
+    <tr><td><strong>Athena</strong></td><td>SQL direto no S3</td><td>5</td></tr>
+    <tr><td><strong>KMS</strong></td><td>Chaves e criptografia</td><td>12</td></tr>
+    <tr><td><strong>CloudTrail</strong></td><td>Auditoria da conta</td><td>8</td></tr>
+    <tr><td><strong>Systems Manager</strong></td><td>Parameter Store</td><td>7</td></tr>
+    <tr><td><strong>Cognito</strong></td><td>Login de usuários</td><td>8</td></tr>
+    <tr><td><strong>Auto Scaling</strong></td><td>Elasticidade automática</td><td>8</td></tr>
+    <tr><td><strong>Load Balancer</strong></td><td>Distribui o tráfego</td><td>9</td></tr>
+    <tr><td><strong>Elastic Beanstalk</strong></td><td>Deploy gerenciado</td><td>5</td></tr>
+    <tr><td><strong>EFS</strong></td><td>Disco compartilhado</td><td>5</td></tr>
+    <tr><td><strong>ElastiCache</strong></td><td>Cache em memória</td><td>3</td></tr>
+    <tr><td><strong>ACM</strong></td><td>Certificados HTTPS</td><td>4</td></tr>
+    <tr><td><strong>Budgets</strong></td><td>Alertas de gasto</td><td>5</td></tr>
+    <tr><td><strong>Cost Explorer</strong></td><td>Para onde vai a grana</td><td>4</td></tr>
+    <tr><td><strong>Organizations</strong></td><td>Várias contas, uma fatura</td><td>5</td></tr>
+    <tr><td><strong>Trusted Advisor</strong></td><td>Consultor automático</td><td>2</td></tr>
+    <tr><td><strong>GuardDuty</strong></td><td>Detecção de ameaças</td><td>5</td></tr>
+    <tr><td><strong>Inspector</strong></td><td>Caça-vulnerabilidades</td><td>4</td></tr>
+    <tr><td><strong>Macie</strong></td><td>Dados sensíveis no S3</td><td>5</td></tr>
+    <tr><td><strong>WAF</strong></td><td>Firewall de aplicação</td><td>4</td></tr>
+    <tr><td><strong>Shield</strong></td><td>Anti-DDoS</td><td>3</td></tr>
+    <tr><td><strong>Config</strong></td><td>Auditoria de configuração</td><td>5</td></tr>
+    <tr><td><strong>Rekognition</strong></td><td>IA que enxerga</td><td>3</td></tr>
+    <tr><td><strong>Translate</strong></td><td>Tradução neural</td><td>2</td></tr>
+    <tr><td><strong>Polly</strong></td><td>Texto vira voz</td><td>2</td></tr>
+    <tr><td><strong>Comprehend</strong></td><td>Entende texto</td><td>3</td></tr>
+    <tr><td><strong>Bedrock</strong></td><td>IA generativa</td><td>2</td></tr>
+    <tr><td><strong>Kinesis</strong></td><td>Streaming de dados</td><td>5</td></tr>
+    <tr><td><strong>Redshift</strong></td><td>Data warehouse</td><td>3</td></tr>
+    <tr><td><strong>Diagnóstico</strong></td><td>Conserte a infra quebrada</td><td>15</td></tr>
+    <tr><td><strong>Projetos</strong></td><td>Sistemas completos</td><td>5</td></tr>
+    <tr><td><strong>Políticas IAM</strong></td><td>Avançado · customer managed</td><td>6</td></tr>
+    <tr><td><strong>Consultas &amp; saída</strong></td><td>Avançado · --query / --output</td><td>5</td></tr>
+    <tr><td><strong>Gestão &amp; faxina</strong></td><td>Avançado · ciclo de vida</td><td>5</td></tr>
+    <tr><td><strong>Missões cegas</strong></td><td>Avançado · poucas dicas</td><td>4</td></tr>
+  </table>
+
+  <h2>Para quem é</h2>
+  <p>Para quem está estudando computação em nuvem, se preparando para certificação AWS, ou
+  precisa usar a linha de comando no trabalho e cansou de copiar comando de tutorial sem
+  entender. Também serve para quem já sabe: as trilhas avançadas cobrem
+  <code>--query</code> (JMESPath), políticas IAM próprias e missões com poucas dicas.</p>
+
+  <h2>Quanto custa</h2>
+  <p>As trilhas de fundamentos &mdash; Primeiros passos, Linux essencial, JSON e YAML, S3, EC2 e
+  IAM &mdash; são <strong>gratuitas</strong>, sem cartão e sem prazo. O restante do catálogo faz
+  parte do plano Pro. Seu progresso salva no navegador mesmo sem conta.</p>
+
+  <a class="cta" href="/">Abrir o terminal</a>
+
+  <footer>
+    CLImb &mdash; projeto independente e educativo, sem afiliação, patrocínio ou endosso da
+    Amazon. &ldquo;AWS&rdquo; e &ldquo;Amazon Web Services&rdquo; são marcas registradas da
+    Amazon.com, Inc. ou de suas afiliadas.<br>
+    <a href="/">Início</a> &middot; <a href="/privacidade.html">Privacidade e termos</a>
+  </footer>
+</div>
+</body>
+</html>

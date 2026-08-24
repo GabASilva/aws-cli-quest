@@ -1135,10 +1135,15 @@ const MIMES = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".woff2": "font/woff2",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
 };
 
 // só estes tipos podem ser servidos (o resto = 404)
-const EXT_PUBLICAS = new Set([".html", ".js", ".css", ".png", ".svg", ".ico", ".jpg", ".jpeg", ".webp", ".woff2"]);
+// .txt e .xml entram por causa de robots.txt e sitemap.xml: sem eles o
+// servidor devolvia 403 para o crawler, que e pior do que 404 — sinaliza
+// "existe mas voce nao pode ver" em vez de "nao existe".
+const EXT_PUBLICAS = new Set([".html", ".js", ".css", ".png", ".svg", ".ico", ".jpg", ".jpeg", ".webp", ".woff2", ".txt", ".xml"]);
 // nunca servir código de servidor, scripts de admin, dados, configs etc.
 const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|lib\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
 
