@@ -1,0 +1,81 @@
+# Monitor externo do CLImb.
+#
+# POR QUE AQUI e não num serviço de uptime: roda na infraestrutura do GitHub,
+# independente do Fly — que é o requisito de um monitor (quem vigia não pode
+# cair junto). E não exige criar conta em lugar nenhum: o aviso sai como issue
+# neste próprio repositório, que o GitHub já manda pro seu e-mail.
+#
+# SOBRE A FREQUÊNCIA E O CUSTO: a máquina do Fly dorme quando ociosa
+# (min_machines_running = 0). Cada checagem ACORDA ela, então monitorar de 5 em
+# 5 minutos custaria o mesmo que deixá-la ligada o tempo todo (~US$ 2/mês) e
+# anularia a economia. A cada 30 minutos fica em torno de US$ 0,30/mês.
+# Para mudar, é só o cron abaixo.
+#
+# O TIMEOUT É GENEROSO DE PROPÓSITO: com a máquina dormindo, o primeiro pedido
+# leva ~6s (medido). Timeout curto dispararia alarme falso toda vez que ela
+# estivesse apenas adormecida — e alarme falso treina a gente a ignorar alarme.
+
+name: Monitor
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  checar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checar /api/saude
+        id: checagem
+        run: |
+          URL="https://climb.dev.br/api/saude"
+          CODIGO="000"
+          # Três tentativas antes de dar como fora: uma falha isolada de rede
+          # do runner não é o app caindo.
+          for i in 1 2 3; do
+            CODIGO=$(curl -s -o corpo.txt -w "%{http_code}" --max-time 30 "$URL" || echo "000")
+            CORPO=$(cat corpo.txt 2>/dev/null || echo "")
+            if [ "$CODIGO" = "200" ] && echo "$CORPO" | grep -q '"ok":true'; then
+              echo "Tentativa $i: OK"
+              echo "estado=ok" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Tentativa $i falhou: HTTP $CODIGO"
+            if [ "$i" -lt 3 ]; then sleep 20; fi
+          done
+          echo "estado=falha" >> "$GITHUB_OUTPUT"
+          echo "detalhe=HTTP $CODIGO apos 3 tentativas" >> "$GITHUB_OUTPUT"
+
+      - name: Abrir aviso se caiu
+        if: steps.checagem.outputs.estado == 'falha'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DETALHE: ${{ steps.checagem.outputs.detalhe }}
+        run: |
+          TITULO="CLImb fora do ar"
+          QUANDO=$(date -u '+%d/%m/%Y %H:%M')
+          # Reaproveita a issue já aberta em vez de criar uma por checagem —
+          # senão uma queda de uma hora vira duas dezenas de e-mails.
+          EXISTE=$(gh issue list --state open --search "$TITULO in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTE" ]; then
+            gh issue comment "$EXISTE" --body "Ainda fora as $QUANDO UTC - $DETALHE"
+          else
+            CORPO=$(printf 'O endpoint https://climb.dev.br/api/saude nao respondeu como esperado.\n\n**Detectado em:** %s UTC\n**Resultado:** %s (3 tentativas, 30s de timeout cada)\n\nOnde olhar:\n- flyctl status -a aws-cli-quest\n- flyctl logs -a aws-cli-quest\n- flyctl checks list -a aws-cli-quest\n\nEsta issue fecha sozinha quando o app voltar.\n' "$QUANDO" "$DETALHE")
+            gh issue create --title "$TITULO" --body "$CORPO"
+          fi
+
+      - name: Fechar aviso se voltou
+        if: steps.checagem.outputs.estado == 'ok'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITULO="CLImb fora do ar"
+          ABERTA=$(gh issue list --state open --search "$TITULO in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$ABERTA" ]; then
+            gh issue comment "$ABERTA" --body "Voltou as $(date -u '+%d/%m %H:%M') UTC."
+            gh issue close "$ABERTA"
+          fi
