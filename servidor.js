@@ -83,6 +83,30 @@ function enviarVerificacao(usuario, email) {
   );
 }
 
+// ---------- Retenção de registros com IP (LGPD) ----------
+// Alertas de antifraude e log de admin guardam IP, que é dado pessoal. Antes
+// só havia teto de QUANTIDADE (500), o que na prática é retenção indefinida:
+// com pouco volume, um IP de hoje ficaria guardado para sempre. Agora há
+// prazo, e o IP some antes do resto — o registro continua auditável (o quê,
+// quando, quem), só perde o rastro de rede.
+const DIAS_GUARDA_IP = 90;     // depois disso o IP é apagado do registro
+const DIAS_GUARDA_REGISTRO = 365; // e o registro inteiro é descartado
+
+function podarRegistrosAntigos() {
+  const agora = Date.now();
+  const limiteIp = agora - DIAS_GUARDA_IP * 86400000;
+  const limiteTudo = agora - DIAS_GUARDA_REGISTRO * 86400000;
+  const quando = (r) => Date.parse(r && r.quando) || 0;
+  const podar = (lista) => (Array.isArray(lista) ? lista : [])
+    .filter((r) => quando(r) >= limiteTudo)
+    .map((r) => {
+      if (r && r.ip && quando(r) < limiteIp) { const c = Object.assign({}, r); delete c.ip; return c; }
+      return r;
+    });
+  if (Array.isArray(bd.alertas)) bd.alertas = podar(bd.alertas);
+  if (Array.isArray(bd.adminLog)) bd.adminLog = podar(bd.adminLog);
+}
+
 let gravacaoPendente = false;
 function salvarBd() {
   // debounce simples pra não gravar a cada request
@@ -91,6 +115,7 @@ function salvarBd() {
   setTimeout(() => {
     gravacaoPendente = false;
     try {
+      podarRegistrosAntigos(); // descarta IP velho antes de tocar o disco
       const tmp = ARQUIVO_DADOS + ".tmp";
       fs.writeFileSync(tmp, JSON.stringify(bd));
       fs.renameSync(tmp, ARQUIVO_DADOS);
@@ -401,7 +426,7 @@ function perfilSeguro(p) {
     github: textoLimitado(p.github, 80),
     linkedin: textoLimitado(p.linkedin, 120),
     // perfil público é o padrão (a graça é poder compartilhar), mas dá pra fechar
-    publico: p.publico === false ? false : true,
+    publico: p.publico === true, // opt-in: indefinido = privado
   };
 }
 
@@ -867,6 +892,61 @@ async function tratarApi(req, res, rota) {
   }
 
   // POST /api/email  (autenticado, { email }) — define/atualiza o e-mail da conta
+  // ---------- Direitos do titular (LGPD Art. 18) ----------
+  // Antes destas duas rotas, apagar uma conta só era possível pelo painel de
+  // admin, e não havia como a pessoa obter o que guardamos sobre ela.
+
+  // GET /api/meus-dados — tudo que o sistema tem sobre quem está logado.
+  // Devolve o registro INTEIRO menos salt e hash da senha (que não são dado
+  // do titular, são segredo de autenticação — entregá-los só criaria risco).
+  if (rota === "/api/meus-dados" && req.method === "GET") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const u = bd.usuarios[nome];
+    if (!u) return responderJson(res, 404, { erro: "Conta não encontrada." });
+    const copia = {};
+    for (const [k, v] of Object.entries(u)) if (k !== "salt" && k !== "hash") copia[k] = v;
+    const sessoes = Object.values(bd.sessoes || {}).filter((x) => x.usuario === nome).length;
+    return responderJson(res, 200, {
+      geradoEm: new Date().toISOString(),
+      usuario: nome,
+      dados: copia,
+      sessoesAtivas: sessoes,
+      observacao: "Salt e hash da senha não são incluídos de propósito: são segredo de autenticação, não informação sua.",
+    });
+  }
+
+  // POST /api/conta/apagar { senha } — eliminação a pedido do titular.
+  // Exige a senha de novo: apagar tudo é irreversível, e um token vazado não
+  // pode bastar. Contas criadas pelo Google não têm senha; nesse caso a
+  // confirmação é digitar o próprio nome de usuário.
+  if (rota === "/api/conta/apagar" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const u = bd.usuarios[nome];
+    if (!u) return responderJson(res, 404, { erro: "Conta não encontrada." });
+    const corpo = await lerCorpo(req);
+    const conf = String(corpo.confirmacao || "");
+    const temSenha = !!(u.salt && u.hash);
+    const ok = temSenha ? conferirSenha(conf, u.salt, u.hash) : conf === nome;
+    if (!ok) {
+      return responderJson(res, 403, {
+        erro: temSenha ? "Senha incorreta." : "Digite exatamente o seu nome de usuário para confirmar.",
+      });
+    }
+    delete bd.usuarios[nome];
+    for (const t of Object.keys(bd.sessoes || {})) if (bd.sessoes[t].usuario === nome) delete bd.sessoes[t];
+    for (const t of Object.keys(bd.verificacoes || {})) if (bd.verificacoes[t].usuario === nome) delete bd.verificacoes[t];
+    for (const t of Object.keys(bd.resets || {})) if (bd.resets[t].usuario === nome) delete bd.resets[t];
+    for (const sala of Object.values(bd.salas || {})) {
+      if (Array.isArray(sala.membros)) sala.membros = sala.membros.filter((m) => m !== nome);
+    }
+    // alertas antigos citam o usuário pelo nome — some junto
+    if (Array.isArray(bd.alertas)) bd.alertas = bd.alertas.filter((a) => a.usuario !== nome);
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
   if (rota === "/api/email" && req.method === "POST") {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });

@@ -208,7 +208,7 @@
         <button class="botao" data-pf="entrar">👤 Criar conta / Entrar</button>
       </div>`;
     }
-    if (p.publico === false) {
+    if (p.publico !== true) {
       return `<div class="perfil-share fechado">
         <div class="perfil-share-tit">🔒 Seu perfil está fechado</div>
         <p>Ninguém consegue abrir seu link. Pra compartilhar, ligue <b>Perfil público</b> em ✏️ Editar.</p>
@@ -321,8 +321,8 @@
             ${statusEmail}
           </label>
           <label class="pf-check">
-            <input type="checkbox" id="pfPublico" ${p.publico === false ? "" : "checked"}>
-            <span>Perfil público — qualquer pessoa com o link <b>${escaparHtml(linkPerfil() || "(precisa de conta)")}</b> vê seu progresso, bio e links. Seu e-mail nunca aparece.</span>
+            <input type="checkbox" id="pfPublico" ${p.publico === true ? "checked" : ""}>
+            <span><b>Publicar meu perfil</b> — desligado por padrão. Se ligar, qualquer pessoa com o link <b>${escaparHtml(linkPerfil() || "(precisa de conta)")}</b> passa a ver seu <b>nome de usuário, XP, atividades concluídas, sequência de dias e desde quando você é membro</b>, além da bio e dos links que você preencher. Seu <b>e-mail nunca aparece</b>. Dá pra desligar quando quiser — a página volta a responder como inexistente.</span>
           </label>
           <p class="codigo-erro" id="pfErro"></p>
           <div class="perfil-form-acoes">

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacidade e termos — CLImb</title>
+<meta name="description" content="O que o CLImb guarda, por quê, com quem compartilha e como você apaga tudo.">
+<link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#10151f">
+<style>
+  :root { --fundo:#10151f; --painel:#161e2d; --borda:#2a3650;
+          --texto:#dce3ee; --fraco:#8b99b0; --laranja:#ff9900; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2rem 1.2rem 4rem; background:var(--fundo); color:var(--texto);
+         font-family:"Segoe UI", system-ui, -apple-system, sans-serif; line-height:1.65; }
+  .env { max-width: 44rem; margin: 0 auto; }
+  a { color: var(--laranja); }
+  h1 { font-size: clamp(1.5rem,4vw,2rem); line-height:1.2; margin:0 0 .3rem; }
+  h2 { font-size: 1.1rem; margin: 2.2rem 0 .6rem; color: var(--laranja); }
+  .sub { color: var(--fraco); margin: 0 0 2rem; font-size:.9rem; }
+  table { width:100%; border-collapse: collapse; margin:.8rem 0; font-size:.9rem; }
+  th, td { text-align:left; padding:.55rem .6rem; border-bottom:1px solid var(--borda); vertical-align: top; }
+  th { color: var(--fraco); font-weight:600; }
+  .caixa { background:var(--painel); border:1px solid var(--borda); border-radius:.6rem;
+           padding:1rem 1.1rem; margin:1.2rem 0; }
+  .voltar { display:inline-block; margin-bottom:1.5rem; color:var(--fraco); text-decoration:none; }
+  .voltar:hover { color: var(--laranja); }
+  code { background:var(--painel); padding:.1rem .35rem; border-radius:.25rem; font-size:.9em; }
+  footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--borda);
+           color:var(--fraco); font-size:.8rem; }
+</style>
+</head>
+<body>
+<div class="env">
+  <a class="voltar" href="/">← voltar ao CLImb</a>
+
+  <h1>Privacidade e termos</h1>
+  <p class="sub">Última atualização: 22 de agosto de 2026</p>
+
+  <div class="caixa">
+    <strong>Em uma frase:</strong> o CLImb guarda o mínimo para o seu progresso não se perder,
+    não usa nenhum rastreador, não vende nem compartilha seus dados com anunciantes, e você
+    pode baixar tudo ou apagar sua conta a qualquer momento, sozinho, dentro do app.
+  </div>
+
+  <h2>Quem é o responsável</h2>
+  <p>O CLImb é um projeto independente e educativo, mantido por uma pessoa física.
+  É um simulador — <strong>não conecta a nenhuma conta AWS real</strong> e não tem
+  afiliação com a Amazon.</p>
+  <p>Para qualquer pedido sobre seus dados, incluindo os direitos listados abaixo,
+  escreva para <a href="mailto:contato@climb.dev.br">contato@climb.dev.br</a>.</p>
+
+  <h2>O que é coletado</h2>
+  <p>Você pode usar o CLImb <strong>sem criar conta</strong>. Nesse caso, o progresso fica
+  apenas no seu navegador e nada é enviado ao servidor.</p>
+  <p>Se você criar uma conta, ficam guardados:</p>
+  <table>
+    <tr><th>Dado</th><th>Para quê</th></tr>
+    <tr><td>Nome de usuário</td><td>Identificar sua conta e aparecer no ranking</td></tr>
+    <tr><td>E-mail <em>(opcional)</em></td><td>Recuperar senha e confirmar a conta. Nunca aparece publicamente</td></tr>
+    <tr><td>Senha</td><td>Guardada apenas como <em>hash</em> com <em>salt</em> — nem quem mantém o CLImb consegue lê-la</td></tr>
+    <tr><td>Progresso, XP, sequência de dias</td><td>Continuar de onde parou em qualquer dispositivo</td></tr>
+    <tr><td>Datas de criação e último acesso</td><td>Segurança da conta e estatísticas de uso</td></tr>
+    <tr><td>Licença (grátis / Pro)</td><td>Liberar as trilhas correspondentes</td></tr>
+  </table>
+  <p>Não são coletados CPF, telefone, endereço, data de nascimento nem dados de pagamento —
+  estes últimos ficam inteiramente com o Mercado Pago e nunca passam pelo CLImb.</p>
+
+  <h2>Endereço de IP</h2>
+  <p>Seu IP é usado no momento do acesso para limitar tentativas de login e detectar criação
+  de contas em massa. Ele só é <strong>gravado</strong> se um desses alertas disparar, ou em
+  registros de ação administrativa. Nesse caso é <strong>apagado após 90 dias</strong>, e o
+  registro inteiro é descartado depois de 365 dias.</p>
+
+  <h2>Rastreadores</h2>
+  <p><strong>Não existe nenhum.</strong> Sem Google Analytics, sem pixel de rede social, sem
+  cookies de publicidade. O CLImb usa o armazenamento local do seu navegador
+  (<code>localStorage</code>) apenas para lembrar o seu progresso e a sua sessão — nada disso
+  é enviado a terceiros.</p>
+
+  <h2>Com quem os dados são compartilhados</h2>
+  <table>
+    <tr><th>Quem</th><th>O que recebe</th><th>Por quê</th></tr>
+    <tr><td>Fly.io</td><td>Hospedagem do banco, em <strong>São Paulo</strong></td><td>Rodar o serviço</td></tr>
+    <tr><td>Resend</td><td>Seu e-mail, só quando um e-mail é enviado</td><td>Confirmação de conta e recuperação de senha</td></tr>
+    <tr><td>Mercado Pago</td><td>Nenhum dado pessoal seu vindo do CLImb</td><td>Processar a assinatura, se você assinar</td></tr>
+    <tr><td>Google</td><td>Só se você escolher entrar com o Google; recebemos apenas seu e-mail</td><td>Login opcional</td></tr>
+  </table>
+  <p>O banco de dados fica no Brasil. O envio de e-mail passa por serviço com operação nos
+  Estados Unidos, o que caracteriza transferência internacional limitada ao seu endereço de
+  e-mail e ao conteúdo da mensagem.</p>
+
+  <h2>Perfil público</h2>
+  <p>Seu perfil é <strong>privado por padrão</strong>. Ele só fica acessível em
+  <code>climb.dev.br/u/seu-usuario</code> se você ligar a opção
+  <em>“Publicar meu perfil”</em> em Perfil → Editar. Quando ligado, ficam visíveis seu nome de
+  usuário, XP, atividades concluídas, sequência de dias, data de entrada e o que você
+  escrever na bio e nos links. <strong>Seu e-mail nunca aparece.</strong> Desligar volta a
+  página a responder como inexistente.</p>
+
+  <h2>Por quanto tempo</h2>
+  <table>
+    <tr><td>Sua conta e progresso</td><td>Enquanto você quiser — some quando você apagar a conta</td></tr>
+    <tr><td>Sessão de login</td><td>30 dias</td></tr>
+    <tr><td>Link de confirmação de e-mail</td><td>24 horas</td></tr>
+    <tr><td>IP em alertas de segurança</td><td>90 dias</td></tr>
+    <tr><td>Registros de alerta e de admin</td><td>365 dias</td></tr>
+  </table>
+
+  <h2>Seus direitos</h2>
+  <p>A LGPD (Lei 13.709/2018) garante que você possa saber o que existe sobre você, corrigir,
+  levar embora e apagar. No CLImb isso está em <strong>Perfil → Seus dados</strong>:</p>
+  <ul>
+    <li><strong>Baixar meus dados</strong> — gera um arquivo com tudo que o sistema guarda sobre você.</li>
+    <li><strong>Apagar minha conta</strong> — remove conta, progresso, XP, sessões e perfil público.
+      É imediato e definitivo; não guardamos cópia.</li>
+    <li><strong>Corrigir</strong> — nome, bio, links e e-mail são editáveis em Perfil → Editar.</li>
+  </ul>
+  <p>Se preferir, pode pedir qualquer uma dessas coisas por e-mail.</p>
+
+  <h2>Menores de idade</h2>
+  <p>O CLImb é feito para estudo de tecnologia e presume uso por maiores de 18 anos.
+  Se você tem menos de 18, use apenas com conhecimento e consentimento de quem é responsável
+  por você.</p>
+
+  <h2>Termos de uso</h2>
+  <p>O CLImb é oferecido “como está”, para fins educativos. Todos os recursos criados nas
+  atividades são <strong>simulados</strong>: nada é provisionado na AWS de verdade e nada gera
+  cobrança da Amazon. Não há garantia de disponibilidade contínua nem de que o conteúdo
+  reflita exatamente o comportamento atual dos serviços reais.</p>
+  <p>Você é responsável por manter sua senha em segurança. Contas usadas para abuso —
+  automação para inflar XP, tentativa de invasão, uso indevido de dados de outras pessoas —
+  podem ser suspensas.</p>
+  <p>“AWS” e “Amazon Web Services” são marcas registradas da Amazon.com, Inc. ou de suas
+  afiliadas. Este projeto não tem afiliação, patrocínio ou endosso da Amazon.</p>
+
+  <h2>Mudanças</h2>
+  <p>Se algo relevante mudar aqui, a data no topo muda junto e o aviso aparece em
+  <strong>✨ Novidades</strong> dentro do app.</p>
+
+  <footer>
+    CLImb — projeto independente e educativo · <a href="/">voltar ao app</a>
+  </footer>
+</div>
+</body>
+</html>
