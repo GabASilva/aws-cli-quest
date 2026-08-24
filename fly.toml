@@ -14,6 +14,21 @@ primary_region = "gru"
   auto_start_machines = true
   min_machines_running = 0
 
+  # Sem isto, um processo TRAVADO (que nao morre, so para de responder) fica de
+  # pe indefinidamente: o Fly so reinicia o que morre. O /api/saude ja existia
+  # e nao toca o banco, entao a checagem e barata.
+  #
+  # NOTA sobre custo: o autostop e decidido pelo Fly Proxy por trafego, e maquina
+  # parada nao e verificada — entao isto NAO deveria impedir a maquina de dormir.
+  # Se o custo estimado no painel de admin subir nos proximos dias, foi esta
+  # suposicao que falhou; ai e so remover este bloco.
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "4s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/saude"
+
 [[mounts]]
   source = "dados"
   destination = "/dados"
