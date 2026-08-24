@@ -1215,6 +1215,27 @@ const VERSAO = calcularVersao();
 // HTML pronto do servidor (robô de preview do LinkedIn/WhatsApp não roda JS).
 // Perfil inexistente e perfil fechado devolvem a MESMA resposta, pra a página
 // não virar um detector de "esse usuário existe?".
+// O app responde em dois endereços: climb.dev.br (canônico) e o antigo
+// aws-cli-quest.fly.dev, que segue no ar porque o notification_url do Mercado
+// Pago está gravado dentro de cada cobrança pendente — derrubá-lo quebraria
+// pagamento antigo. Só que dois domínios servindo o MESMO conteúdo divide
+// sinal de busca e conta como conteúdo duplicado.
+//
+// A saída é noindex no não-canônico, NÃO redirecionamento: um 301 no
+// /api/mp/webhook (que é POST) poderia ser perdido por cliente que não segue
+// redirect em POST. Cabeçalho não muda o fluxo de requisição nenhuma.
+function hostCanonico() {
+  const base = String(process.env.URL_BASE || "https://climb.dev.br");
+  return base.replace(/^https?:\/\//, "").replace(/\/+$/, "").toLowerCase();
+}
+function ehHostCanonico(req) {
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "")
+    .split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
+  if (!host) return true;                       // sem host: não marca nada
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) return true; // dev
+  return host === hostCanonico();
+}
+
 function urlBase(req) {
   if (process.env.URL_BASE) return String(process.env.URL_BASE).replace(/\/+$/, "");
   const proto = (req.headers["x-forwarded-proto"] || "http").split(",")[0].trim();
@@ -1525,6 +1546,9 @@ http
     const rota = decodeURIComponent(req.url.split("?")[0]);
     try {
       registrarMetrica();
+      // setHeader antes de qualquer writeHead: o Node mescla os dois, e nada
+      // mais no servidor define X-Robots-Tag.
+      if (!ehHostCanonico(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow");
       if (rota === "/api/saude") return responderJson(res, 200, { ok: true });
       if (rota === "/api/eventos" && req.method === "GET") return responderJson(res, 200, { eventos: eventosAtivos().map((e) => ({ id: e.id, titulo: e.titulo, mensagem: e.mensagem, tipo: e.tipo, fim: e.fim })) });
       if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
