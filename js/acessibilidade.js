@@ -149,4 +149,150 @@
       }
     }, 500);
   });
+
+  // ============================================================
+  // Auditoria de 2026-08-22 (segunda passada). O que ja estava certo ficou
+  // como estava: aria-live no terminal, rotulo no campo, foco visivel,
+  // landmarks, lang, contraste. O que segue e o que faltava.
+  // ============================================================
+
+  function injetarEstiloA11y() {
+    if (document.getElementById("a11yEstilo")) return;
+    const st = document.createElement("style");
+    st.id = "a11yEstilo";
+    st.textContent = `
+      /* Skip link: invisivel ate receber foco pelo teclado. */
+      .a11y-pular {
+        position: fixed; top: .5rem; left: .5rem; z-index: 200000;
+        transform: translateY(-200%);
+        background: var(--laranja, #ff9900); color: #10151f;
+        padding: .7rem 1.1rem; border-radius: .5rem;
+        font-weight: 700; text-decoration: none;
+        transition: transform .15s ease;
+      }
+      .a11y-pular:focus { transform: translateY(0); }
+      /* O ☰ e o controle principal de navegacao no celular e tinha 32px de
+         altura. 44px e o minimo recomendado pra alvo de toque. */
+      .menu-mobile-btn { min-height: 44px; min-width: 44px; }
+      /* h1 do cabecalho: some visualmente, existe pra leitor de tela e pra
+         navegacao por titulos. O logo continua igual na tela. */
+      .a11y-so-leitor {
+        position: absolute; width: 1px; height: 1px;
+        margin: -1px; padding: 0; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .a11y-pular { transition: none; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  // 1) Pular direto pro terminal. Eram 23 Tabs ate o campo onde se trabalha:
+  //    a lista lateral inteira vinha antes. Num app de linha de comando, cujo
+  //    publico vive no teclado, isso pesa em todo mundo — nao so em quem
+  //    depende de tecnologia assistiva.
+  function skipLink() {
+    if (document.querySelector(".a11y-pular")) return;
+    const a = document.createElement("a");
+    a.className = "a11y-pular";
+    a.href = "#entradaTerminal";
+    a.textContent = "Pular para o terminal";
+    a.addEventListener("click", (ev) => {
+      const inp = document.querySelector("#entradaTerminal");
+      if (inp) { ev.preventDefault(); inp.focus(); }
+    });
+    document.body.insertBefore(a, document.body.firstChild);
+  }
+
+  // 2) A pagina nao tinha <h1> nenhum — so um <h2> no card. Quem navega por
+  //    titulos (o modo mais comum com leitor de tela) nao tinha por onde comecar.
+  function tituloDaPagina() {
+    if (document.querySelector("h1")) return;
+    const logo = document.querySelector("header .logo");
+    if (!logo) return;
+    const h1 = document.createElement("h1");
+    h1.className = "a11y-so-leitor";
+    h1.textContent = "CLImb — aprenda AWS CLI digitando de verdade";
+    logo.parentNode.insertBefore(h1, logo);
+  }
+
+  // 3) A barra de XP existia so visualmente.
+  function barraDeProgresso() {
+    const barra = document.querySelector("#barraXp");
+    if (!barra || typeof jogo === "undefined") return;
+    const caixa = barra.parentElement;
+    if (!caixa) return;
+    caixa.setAttribute("role", "progressbar");
+    caixa.setAttribute("aria-valuemin", "0");
+    caixa.setAttribute("aria-valuemax", "100");
+    const pct = parseInt(barra.style.width, 10);
+    if (!isNaN(pct)) caixa.setAttribute("aria-valuenow", String(pct));
+    const txt = document.querySelector("#textoXp");
+    caixa.setAttribute("aria-label", "Progresso do nível" + (txt ? ": " + txt.textContent : ""));
+  }
+
+  // 4) A lista de atividades era uma <div> sem semantica: o leitor nao dizia
+  //    "item 3 de 31", entao nao havia nocao de onde se esta nem de quanto
+  //    falta. E o item travado nao dizia POR QUE estava travado.
+  function semanticaDaLista() {
+    document.querySelectorAll("#sidebar .lista-desafios").forEach((lista) => {
+      const itens = [...lista.querySelectorAll(".item-desafio")];
+      if (!itens.length) return;
+      lista.setAttribute("role", "list");
+      itens.forEach((it, i) => {
+        it.setAttribute("role", "listitem");
+        it.setAttribute("aria-posinset", String(i + 1));
+        it.setAttribute("aria-setsize", String(itens.length));
+        if (it.classList.contains("travado") && !it.getAttribute("aria-describedby")) {
+          const titulo = (it.querySelector(".item-titulo") || {}).textContent || "";
+          it.setAttribute("aria-label", titulo.trim() + " — bloqueada; conclua a atividade anterior para liberar");
+        }
+      });
+    });
+  }
+
+  // 5) Os cabecalhos de GRUPO ja diziam se estavam abertos (sidebar-grupos.js);
+  //    os de TRILHA nao. Mesma interacao, resposta diferente.
+  function trilhasAnunciamAbertura() {
+    document.querySelectorAll("#sidebar .servico").forEach((bloco) => {
+      const cab = bloco.querySelector(".servico-cab");
+      if (!cab) return;
+      cab.setAttribute("aria-expanded", bloco.classList.contains("aberto") ? "true" : "false");
+    });
+  }
+
+  function aplicarA11y() {
+    try {
+      injetarEstiloA11y();
+      skipLink();
+      tituloDaPagina();
+      barraDeProgresso();
+      semanticaDaLista();
+      trilhasAnunciamAbertura();
+    } catch (e) { /* nunca quebrar a UI por causa disto */ }
+  }
+
+  // A lista e o cabecalho sao redesenhados o tempo todo; reaplicamos junto.
+  function embrulharRender(nome) {
+    const original = window[nome];
+    if (typeof original !== "function" || original.__a11y) return;
+    function comA11y() {
+      const r = original.apply(this, arguments);
+      aplicarA11y();
+      return r;
+    }
+    comA11y.__a11y = true;
+    window[nome] = comA11y;
+  }
+
+  function iniciarA11y() {
+    aplicarA11y();
+    embrulharRender("renderSidebar");
+    embrulharRender("renderCabecalho");
+    setTimeout(aplicarA11y, 800);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciarA11y);
+  else iniciarA11y();
 })();
