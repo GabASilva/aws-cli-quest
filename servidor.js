@@ -1549,6 +1549,27 @@ http
       // setHeader antes de qualquer writeHead: o Node mescla os dois, e nada
       // mais no servidor define X-Robots-Tag.
       if (!ehHostCanonico(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow");
+
+      // HSTS: manda o navegador NUNCA mais tentar http neste dominio.
+      //
+      // O problema esta na PRIMEIRA requisicao: quem digita "climb.dev.br" sem
+      // o https:// faz o navegador tentar http antes. O Fly redireciona, mas
+      // esse primeiro pedido ja viajou aberto — e num Wi-Fi compartilhado da
+      // pra interceptar aquele instante e fazer SSL stripping.
+      //
+      // So enviado quando a conexao E https (o navegador ignora o cabecalho em
+      // http, mas mandar em localhost poderia travar o desenvolvimento local em
+      // http por um ANO — o efeito e memorizado pelo navegador).
+      //
+      // includeSubDomains entra porque nao ha subdominio web: os que existem
+      // (send, rsend) sao de e-mail e nunca recebem trafego de navegador.
+      //
+      // SEM "preload" de proposito: entrar na lista embutida dos navegadores e
+      // praticamente irreversivel — sair leva meses. Nao vale pra este caso.
+      const protocolo = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+      if (protocolo === "https") {
+        res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+      }
       if (rota === "/api/saude") return responderJson(res, 200, { ok: true });
       if (rota === "/api/eventos" && req.method === "GET") return responderJson(res, 200, { eventos: eventosAtivos().map((e) => ({ id: e.id, titulo: e.titulo, mensagem: e.mensagem, tipo: e.tipo, fim: e.fim })) });
       if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
