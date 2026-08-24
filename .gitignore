@@ -11,3 +11,7 @@ painel/config.json
 
 # Páginas de referência salvas localmente (HTML do console AWS) — não versionar
 paginas AWS/
+
+# copias do banco feitas por scripts/backup.js — contem e-mail e hash de senha.
+# O repositorio e PUBLICO: isto nunca pode entrar.
+backups/
