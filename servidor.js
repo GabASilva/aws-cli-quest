@@ -282,10 +282,50 @@ function lerCorpo(req) {
 }
 
 // headers de segurança aplicados em TODA resposta
+// CSP: a segunda parede contra XSS. A primeira e o escape de cada campo, que
+// esta correto hoje — mas depende de acertar em TODO campo, pra sempre. No dia
+// em que um campo novo esquecer o esc(), o navegador executaria o que o
+// atacante escreveu. E aqui o estrago seria grande: o token de sessao vive no
+// localStorage (js/api.js), entao um XSS nao vira defacement, vira sequestro
+// de conta.
+//
+// Levantado antes de escrever esta politica:
+//   - 79 recursos carregados, TODOS da propria origem (nenhum CDN);
+//   - nenhum eval nem new Function no app inteiro;
+//   - zero handlers onclick= no HTML;
+//   - 9 arquivos injetam <style> por JS e ha 5 atributos style=, por isso
+//     style-src precisa de 'unsafe-inline'. Isso enfraquece so o ESTILO —
+//     script-src continua restrito, que e o que protege o token.
+//   - o login do Google carrega script de accounts.google.com e abre iframe
+//     de la, entao script-src/frame-src/connect-src precisam liberar essa
+//     origem — e so ela.
+//
+// Sobre o accounts.google.com aparecer em QUATRO diretivas: o Sign in with
+// Google nao e so um script. Ele injeta folha de estilo propria (style-src),
+// abre um iframe pro fluxo de consentimento (frame-src) e conversa com os
+// endpoints do GIS (connect-src). A documentacao do Google lista exatamente
+// essas quatro. Liberamos a ORIGEM inteira em vez dos caminhos /gsi/client e
+// /gsi/style porque o proprio Google recomenda nao listar URL individual — o
+// dia em que eles mudarem um caminho, o login quebraria calado.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' https://accounts.google.com",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com",
+  "img-src 'self' data: https://lh3.googleusercontent.com",
+  "font-src 'self'",
+  "connect-src 'self' https://accounts.google.com",
+  "frame-src https://accounts.google.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ");
+
 const HEADERS_SEG = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY", // anti-clickjacking (ninguém embute o app num iframe)
   "Referrer-Policy": "no-referrer",
+  "Content-Security-Policy": CSP,
 };
 
 function responderJson(res, status, obj) {

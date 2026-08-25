@@ -24,6 +24,7 @@ on:
 
 permissions:
   issues: write
+  contents: read
 
 jobs:
   checar:
@@ -54,13 +55,20 @@ jobs:
         if: steps.checagem.outputs.estado == 'falha'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Sem isto o gh nao sabe em que repositorio mexer: ele descobre pelo
+          # remote do git do diretorio, e este job nao faz checkout — nao ha
+          # diretorio nenhum. Era a causa de os 12 primeiros runs falharem.
+          GH_REPO: ${{ github.repository }}
           DETALHE: ${{ steps.checagem.outputs.detalhe }}
         run: |
           TITULO="CLImb fora do ar"
           QUANDO=$(date -u '+%d/%m/%Y %H:%M')
           # Reaproveita a issue já aberta em vez de criar uma por checagem —
           # senão uma queda de uma hora vira duas dezenas de e-mails.
-          EXISTE=$(gh issue list --state open --search "$TITULO in:title" --json number --jq '.[0].number // empty')
+          # Filtra pelo título aqui em vez de usar --search: o índice de busca do
+          # GitHub demora a atualizar, e uma issue recém-criada não apareceria —
+          # a queda longa abriria uma issue nova a cada meia hora.
+          EXISTE=$(gh issue list --state open --limit 50 --json number,title                    --jq "[.[] | select(.title == \"$TITULO\")] | .[0].number // empty")
           if [ -n "$EXISTE" ]; then
             gh issue comment "$EXISTE" --body "Ainda fora as $QUANDO UTC - $DETALHE"
           else
@@ -72,10 +80,27 @@ jobs:
         if: steps.checagem.outputs.estado == 'ok'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           TITULO="CLImb fora do ar"
-          ABERTA=$(gh issue list --state open --search "$TITULO in:title" --json number --jq '.[0].number // empty')
+          # Fechar aviso velho é FAXINA, não emergência. Se o gh falhar aqui, o
+          # certo é avisar e seguir: nos 12 primeiros runs esta etapa quebrou e
+          # deixou o job vermelho toda vez que o app estava NO AR — alarme falso
+          # a cada 30 minutos, que é justamente o que treina a ignorar alarme.
+          # Queda de verdade continua gritando: quem falha alto é o passo de ABRIR.
+          # O filtro vai no --jq do próprio gh (que traz jq embutido) e DENTRO do
+          # guarda: assim um erro de filtro também cai no aviso, em vez de
+          # derrubar o passo. stderr vai pra arquivo pra não sujar o valor.
+          ERRO=$(mktemp)
+          if ! ABERTA=$(gh issue list --state open --limit 50 --json number,title                         --jq "[.[] | select(.title == \"$TITULO\")] | .[0].number // empty" 2>"$ERRO"); then
+            echo "::warning::Não consegui listar as issues (o app está no ar). Resposta do gh:"
+            cat "$ERRO"
+            exit 0
+          fi
           if [ -n "$ABERTA" ]; then
             gh issue comment "$ABERTA" --body "Voltou as $(date -u '+%d/%m %H:%M') UTC."
             gh issue close "$ABERTA"
+            echo "App no ar. Aviso #$ABERTA fechado."
+          else
+            echo "App no ar. Nenhum aviso aberto para fechar."
           fi
