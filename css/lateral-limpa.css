@@ -1,0 +1,93 @@
+/* CLImb — lateral limpa (seletor de trilhas), comum aos dois temas
+   Tudo prefixado com #sidebar de propósito: o tema Claro declara a fonte
+   em `body[data-tema="claro"] button` (0,1,2), e os cabeçalhos de trilha
+   SÃO <button> — sem o id, a fonte do tema venceria o monoespaçado. */
+/* ============================================================
+   Lateral (seletor de trilhas) — versão limpa
+   Monoespaçado, uma linha por item, sem emoji decorativo.
+   Vale nos DOIS temas: as regras usam token (var(--borda), var(--laranja)…),
+   então a mesma lateral sai escura no Clássico e clara no Claro.
+   ============================================================ */
+
+/* Os emoji decorativos saem. Os de ESTADO (✅🔓🔒) não somem: viram marcas
+   tipográficas monocromáticas logo abaixo — apagá-los perderia a informação
+   de concluído/liberado/travado, que só eles carregam. */
+#sidebar .servico-icone,
+#sidebar .grupo-emoji { display: none; }
+
+/* subtítulo fora: era ele que fazia cada trilha ocupar duas linhas */
+#sidebar .servico-nomes small { display: none; }
+
+/* cabeçalho da trilha: régua fina em vez de cartão preenchido */
+#sidebar .servico-cab {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--borda);
+  border-radius: 0;
+  padding: 7px 6px 7px 10px;
+  gap: 8px;
+  font-family: var(--fonte-mono);
+  font-size: .78rem;
+  box-shadow: inset 2px 0 0 transparent;   /* reserva o filete do estado ativo */
+  transition: box-shadow .15s, color .15s;
+}
+#sidebar .servico-cab:hover { color: var(--laranja); }
+#sidebar .servico-nomes strong { font-weight: 500; }
+#sidebar .servico.aberto .servico-cab {
+  border-color: var(--borda);
+  box-shadow: inset 2px 0 0 var(--laranja);
+  color: var(--laranja);
+}
+#sidebar .servico-prog {
+  font-family: var(--fonte-mono);
+  font-size: .7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-fraco);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* grupos: rótulo de seção, não botão */
+#sidebar .grupo-cab {
+  font-family: inherit;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  color: var(--texto-fraco);
+  padding: 14px 8px 6px;
+}
+#sidebar .grupo-cab:hover { background: transparent; color: var(--texto); }
+
+/* atividades: uma linha, marca de estado em vez de emoji */
+#sidebar .item-desafio {
+  grid-template-columns: 14px 1fr;
+  padding: 5px 8px;
+  border-radius: 0;
+  font-family: var(--fonte-mono);
+}
+#sidebar .item-titulo { font-size: .76rem; font-weight: 400; }
+#sidebar .item-meta { font-size: .66rem; opacity: .8; }
+.item-desafio.ativo {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: inset 2px 0 0 var(--laranja);
+  color: var(--laranja);
+}
+#sidebar .item-desafio:hover:not(:disabled) { background: var(--painel-2); }
+
+/* as marcas: glifos de texto, não emoji — herdam a cor e não viram colorido */
+#sidebar .item-desafio .status { font-size: 0; line-height: 1; }
+#sidebar .item-desafio .status::before {
+  font-family: var(--fonte-mono);
+  font-size: .74rem;
+}
+.item-desafio.feito .status::before {
+  content: "✓"; color: var(--verde);
+}
+.item-desafio.travado .status::before {
+  content: "·"; color: var(--texto-fraco);
+}
+#sidebar .item-desafio:not(.feito):not(.travado) .status::before {
+  content: "›"; color: var(--laranja);
+}

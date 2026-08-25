@@ -1,0 +1,182 @@
+/* ============================================================
+   CLImb — tema "Claro"
+   Segunda pele do app, escolhida pelo usuário. O tema Clássico
+   (escuro) continua sendo o padrão e não é tocado por este arquivo.
+
+   COMO FUNCIONA: o app é ~89% token-driven (var(--fundo), var(--texto)…),
+   então trocar de tema é redefinir 12 tokens — não reescrever telas.
+   Só ativa sob body[data-tema="claro"]; sem esse atributo, este arquivo
+   é inerte.
+
+   O QUE NÃO MUDA, DE PROPÓSITO:
+   - A emulação do Console da AWS. Ela tem ~239 cores cravadas porque
+     precisa parecer a AWS de verdade; tematizar aquilo destruiria o
+     valor didático da tela.
+   - O terminal continua escuro. Terminal claro dentro de um app que
+     promete "digitando de verdade" seria uma mentira sobre o produto —
+     e é a mesma decisão que a Amazon toma no CloudShell.
+   ============================================================ */
+
+/* ---------- fontes hospedadas aqui, não no Google ----------
+   Chamar fonts.googleapis.com exigiria afrouxar o CSP e contradiria a
+   política de privacidade, que promete nenhuma chamada a terceiros.
+   IBM Plex é OFL; a licença está em /fontes/LICENSE.txt.            */
+@font-face {
+  font-family: "Plex Sans";
+  src: url("/fontes/plex-sans-400.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Sans";
+  src: url("/fontes/plex-sans-600.woff2") format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Sans";
+  src: url("/fontes/plex-sans-700.woff2") format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url("/fontes/plex-mono-400.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url("/fontes/plex-mono-600.woff2") format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+
+/* ---------- os 12 tokens, versão clara ----------
+   Neutros puxados pro azul em vez de cinza puro: o cinza neutro ao lado
+   do laranja fica sujo, e o app inteiro é laranja sobre azul-escuro.
+   O laranja precisa mudar: #ff9900 sobre claro dá 2.1:1 e reprova em
+   qualquer critério. Mas ESCURECER o mesmo tom não resolve — laranja de
+   luminosidade baixa é marrom, literalmente. #a05300 (lum. 31%) passava no
+   contraste e ficava feio, cor de terra.
+   A saída é subir a luminosidade e girar o matiz pro vermelho: #b8420a tem
+   lum. 38% e matiz 19°, lê como laranja queimado, e ainda fecha AA nos dois
+   planos (5.13:1 no painel, 4.52:1 no fundo). O app usa o acento como TEXTO
+   em 34 regras, por isso ele precisa passar como texto, não só como filete.
+
+   Branco puro (#fff) ficou de fora de propósito: num painel grande ele
+   reflete demais e cansa a vista em sessão longa. O painel é #f6f7fa, um
+   quase-branco, sobre um fundo #e6e9f0 — a diferença entre os dois é o
+   que separa cartão de página, sem precisar de sombra.                 */
+body[data-tema="claro"] {
+  --fundo: #e6e9f0;
+  --painel: #f6f7fa;
+  --painel-2: #eceff5;
+  --borda: #ccd3e0;
+  --texto: #151a24;
+  --texto-fraco: #5a6375;
+  --laranja: #b8420a;
+  --laranja-escuro: #97350a;
+  --verde: #1c7a45;
+  --vermelho: #c0362c;
+  --azul: #1a63c4;
+  --fonte-mono: "Plex Mono", "Cascadia Code", Consolas, monospace;
+}
+
+/* tipografia: o body crava "Segoe UI", então precisa de override direto */
+body[data-tema="claro"],
+body[data-tema="claro"] button,
+body[data-tema="claro"] input,
+body[data-tema="claro"] select,
+body[data-tema="claro"] textarea {
+  font-family: "Plex Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+}
+
+/* ---------- o terminal continua escuro ----------
+   Truque que evita reescrever ~20 regras internas: as custom properties
+   herdam, então redefini-las NO #terminal faz toda regra lá dentro que
+   use var(--texto), var(--verde)… resolver para a paleta escura.      */
+body[data-tema="claro"] #terminal {
+  --texto: #d7dee9;
+  --texto-fraco: #7c8899;
+  --laranja: #ff9900;
+  --verde: #4ade80;
+  --vermelho: #ff6b6b;
+  --azul: #6ea8fe;
+  color: var(--texto);
+  border-color: #24304a;
+  border-radius: 8px;
+}
+
+/* ---------- forma: mais plano, menos raio ----------
+   O tema Clássico usa raio 12px e painéis com muito contraste; o Nítido
+   se apoia em linha fina e espaço, que é o que dá o ar de documento. */
+body[data-tema="claro"] header {
+  background: var(--painel);
+  border-bottom: 1px solid var(--borda);
+  box-shadow: 0 1px 0 rgba(21, 26, 36, .04);
+}
+body[data-tema="claro"] #sidebar {
+  background: var(--painel);
+  border-right: 1px solid var(--borda);
+}
+body[data-tema="claro"] main {
+  background: var(--fundo);
+}
+
+body[data-tema="claro"] .botao {
+  border-radius: 6px;
+}
+/* O botão primário usa texto quase-preto (#1a1205), calibrado para o laranja
+   VIVO do tema Clássico. Sobre o laranja queimado daqui isso cai para 3.37:1;
+   com branco sobe para 5.10:1. */
+body[data-tema="claro"] .botao:not(.secundario) {
+  color: #fff;
+}
+body[data-tema="claro"] .botao.secundario {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  color: var(--texto);
+}
+body[data-tema="claro"] .botao.secundario:hover {
+  border-color: var(--laranja);
+  color: var(--laranja);
+}
+
+/* cartões e blocos ganham linha em vez de preenchimento pesado */
+body[data-tema="claro"] .card-vazio,
+body[data-tema="claro"] #cardDesafio > div,
+body[data-tema="claro"] .modal-caixa,
+body[data-tema="claro"] .bloco,
+body[data-tema="claro"] .caixa {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+}
+
+/* ---------- ajustes pontuais ----------
+   Os poucos lugares do app (fora do Console AWS) com cor cravada que
+   não sobrevivem a um fundo claro.                                   */
+body[data-tema="claro"] .mc-badge,
+body[data-tema="claro"] .mc-cab,
+body[data-tema="claro"] .mc-dica,
+body[data-tema="claro"] .mc-prog {
+  background: var(--painel-2);
+  color: var(--texto);
+  border-color: var(--borda);
+}
+body[data-tema="claro"] .ia-yaml {
+  background: #0b0f16;
+  color: #d7dee9;
+  border-radius: 8px;
+}
+
+/* barra de rolagem discreta, combinando com o claro */
+body[data-tema="claro"] *::-webkit-scrollbar-thumb {
+  background: #c3cad9;
+}
+body[data-tema="claro"] *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* foco visível: no claro o contorno laranja precisa de mais peso */
+body[data-tema="claro"] :focus-visible {
+  outline: 2px solid var(--laranja);
+  outline-offset: 2px;
+}
+

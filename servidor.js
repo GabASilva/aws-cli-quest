@@ -1335,8 +1335,10 @@ function servirEstatico(req, res, rota) {
       // sem versão (ou em dev): revalida sempre, nunca serve velho
       // imagens (favicon, cartão social) mudam raramente e são pedidas por
       // crawlers e por toda visita — no-store aqui era desperdício de banda.
-      cache = rota.startsWith("/img/")
-        ? "public, max-age=86400"
+      // Fontes são imutáveis: o arquivo só muda se trocarmos a família, e aí
+      // o nome muda junto. Sem isto seriam ~163 KB rebaixados a cada visita.
+      cache = rota.startsWith("/img/") || rota.startsWith("/fontes/")
+        ? "public, max-age=31536000"
         : rota.startsWith("/js/") || rota.startsWith("/css/") ? "no-cache" : "no-store";
     }
     const cabecalhos = {

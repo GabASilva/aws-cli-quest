@@ -575,7 +575,7 @@ e nada quebra de verdade — pode experimentar à vontade.
   ls                    seus arquivos locais fictícios
   clear                 limpa a tela
 
-👈 Escolha um desafio na lista pra começar a ganhar XP.`);
+👉 O que fazer está no card acima. Digite os comandos aqui embaixo.`);
 }
 
 document.addEventListener("DOMContentLoaded", iniciar);

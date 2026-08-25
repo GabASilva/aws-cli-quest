@@ -791,8 +791,17 @@ const PORQUE = {
     if (info && !card.querySelector(".licao")) {
       const vistas = lerVistas();
       const naoVista = !vistas.has(info.sid);
-      // no celular nunca abre sozinha (ver telaEstreita): o custo de scroll é alto demais
-      const abrir = (naoVista || primeiraDaTrilha(d)) && !telaEstreita();
+      // Nasce SEMPRE fechada, em qualquer largura.
+      //
+      // O argumento que já valia pro celular vale pro desktop: a lição tem
+      // ~1100px e, aberta, empurra o enunciado e o terminal pra fora da tela.
+      // Quem abre a primeira atividade vê teoria e um campo de digitar, sem
+      // saber o que digitar — e digitar é a ação que retém (dos 22 que
+      // digitaram alguma vez, 77% passaram de 250 XP).
+      //
+      // A lição não some: fica a um clique, com o selo "leia antes" chamando.
+      // Reverter é trocar `false` por `(naoVista || primeiraDaTrilha(d)) && !telaEstreita()`.
+      const abrir = false;
       const wrap = document.createElement("div");
       wrap.innerHTML = htmlLicao(info.sid, info.licao, abrir, naoVista);
       const bloco = wrap.firstElementChild;

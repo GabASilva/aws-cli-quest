@@ -109,10 +109,33 @@
       footer.insertBefore(b, footer.firstChild);
       b.addEventListener("click", iniciar);
     }
-    // auto-abre no primeiro acesso (espera a app montar)
+    // Auto-abre SÓ pra quem chegou sem rumo.
+    //
+    // Desde a capa (22/08) quem clica em "Começar agora" já cai DENTRO da
+    // primeira atividade, com o terminal focado. Este tour de 7 passos
+    // escurecia a tela exatamente na hora de digitar — e o passo 1 ainda
+    // mandava "escolher um desafio na lista" que a capa já tinha escolhido.
+    // Manual antes da primeira jogada é o oposto do que o produto promete
+    // ("digitando de verdade"). Quem quiser o tour tem o "❔ Como jogar".
     let visto = false;
     try { visto = localStorage.getItem(CHAVE) === "1"; } catch (e) { /* ok */ }
-    if (!visto) setTimeout(iniciar, 700);
+    //
+    // A decisão precisa esperar a CAPA sair. Aos 700ms ela ainda está na
+    // frente e nada foi selecionado — decidir ali abria o tour por baixo dela,
+    // que reaparecia por cima da atividade assim que a capa fechava. Por isso
+    // adiamos enquanto #capa existir. Quando ela some, o fechar(true) já rodou
+    // o selecionarDesafio no mesmo bloco síncrono, então ui.desafioAtivo já
+    // está preenchido e a checagem abaixo é confiável.
+    const LIMITE = Date.now() + 60000; // parou na capa lendo: o tour não serve
+    function talvezAbrir() {
+      if (document.getElementById("capa")) {
+        if (Date.now() < LIMITE) setTimeout(talvezAbrir, 400);
+        return;
+      }
+      const jaEstaJogando = typeof ui !== "undefined" && ui.desafioAtivo;
+      if (!jaEstaJogando) iniciar();
+    }
+    if (!visto) setTimeout(talvezAbrir, 700);
   });
 
   window.iniciarTutorial = iniciar;
