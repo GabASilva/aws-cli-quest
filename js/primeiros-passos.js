@@ -64,10 +64,19 @@
   }
 
   // ---------- 1. divulgação progressiva ----------
+  // TRAVAR, não esconder. Botão escondido não ensina que a coisa existe — a
+  // pessoa não descobre o Console nem os Simulados, logo não tem motivo pra
+  // querer destravar. Travado e visível vira convite. Quem cuida da aparência,
+  // do bloqueio do clique e da dica que segue o mouse é o travas.js.
   function aplicarVisibilidade() {
     const tudo = mostrarTudo();
     for (const sel of ADIANTADOS) {
-      document.querySelectorAll(sel).forEach((b) => b.classList.toggle("pp-oculto", !tudo));
+      document.querySelectorAll(sel).forEach((b) => {
+        b.classList.toggle("pp-travado", !tudo);
+        // pro leitor de tela: o botão existe, mas não está operável ainda
+        if (tudo) b.removeAttribute("aria-disabled");
+        else b.setAttribute("aria-disabled", "true");
+      });
     }
     const mais = document.getElementById("btnMaisOpcoes");
     if (mais) mais.classList.toggle("pp-oculto", tudo);
@@ -81,13 +90,13 @@
     b.type = "button";
     b.id = "btnMaisOpcoes";
     b.className = "botao secundario";
-    b.textContent = "⋯ Mais";
-    b.title = "Mostrar todas as ferramentas (Console, Simulados, Turmas, Carreiras…)";
+    b.textContent = "🔓 Destravar tudo";
+    b.title = "Libera agora Console, Simulados, Turmas, Carreiras e Diagrama, sem esperar a 1ª atividade";
     b.addEventListener("click", () => {
       marcarRevelou();
       aplicarVisibilidade();
       if (typeof toast === "function") {
-        toast("Tudo liberado — Console, Simulados, Turmas, Carreiras e Diagrama já estão no menu.");
+        toast("Tudo destravado — Console, Simulados, Turmas, Carreiras e Diagrama já podem ser abertos.");
       }
     });
     rodape.appendChild(b);

@@ -137,6 +137,13 @@
       it.type = "button";
       it.setAttribute("role", "menuitem");
       it.textContent = (orig.textContent || "").trim();
+      // Espelha a trava do botão original (primeiros-passos.js + travas.js).
+      // Sem isto o item apareceria normal dentro do menu e o clique morreria
+      // calado no bloqueio — a pessoa não saberia por quê.
+      if (orig.classList.contains("pp-travado")) {
+        it.classList.add("pp-travado");
+        it.setAttribute("aria-disabled", "true");
+      }
       it.addEventListener("click", () => {
         fechar(menu, false);
         orig.click(); // handler original, intacto
