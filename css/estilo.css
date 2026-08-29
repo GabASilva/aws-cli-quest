@@ -1573,3 +1573,22 @@ summary:focus-visible,
   .carr-barra { display: none; }
   .carr-passo-prog { display: none; }
 }
+
+/* ---------- Diagrama ASCII no gabarito do simulado ---------- */
+/* Monoespaçado é obrigatório: o desenho é alinhado por coluna. E precisa
+   rolar sozinho no celular — quebrar linha destruiria o alinhamento. */
+.sim-rev-arte {
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: #0b0f17;
+  color: #b9c6da;
+  border: 1px solid var(--borda);
+  border-left: 2px solid var(--laranja);
+  border-radius: 8px;
+}
+@media (max-width: 600px) { .sim-rev-arte { font-size: 0.64rem; } }

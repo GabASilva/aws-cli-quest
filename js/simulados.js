@@ -96,12 +96,25 @@
     };
   }
   // Fonte oficial da explicação de uma questão (link no gabarito).
-  function fonteDe(q) {
-    const F = window.SIMULADOS_FONTES || {};
+  function chaveDaFonte(q) {
     const P = window.SIMULADOS_FONTE_POR_ID || {};
     const FB = window.SIMULADOS_FONTE_FALLBACK || {};
-    const chave = P[q.id] || FB[q.d];
+    return P[q.id] || FB[q.d] || null;
+  }
+  function fonteDe(q) {
+    const F = window.SIMULADOS_FONTES || {};
+    const chave = chaveDaFonte(q);
     return chave && F[chave] ? F[chave] : null;
+  }
+  // Diagrama em ASCII do conceito, quando existe (ver simulados-arte.js).
+  // Indexado pela MESMA chave da fonte, então desenho e explicação nunca
+  // falam de coisas diferentes.
+  function arteHtmlDe(q) {
+    const f = window.SIMULADOS_ARTE_DE;
+    if (typeof f !== "function") return "";
+    const arte = f(chaveDaFonte(q));
+    if (!arte) return "";
+    return '<pre class="sim-rev-arte" aria-label="Diagrama do conceito">' + esc(arte) + "</pre>";
   }
   function lerHist() {
     try { return JSON.parse(localStorage.getItem(CHAVE_HIST) || "{}"); } catch (e) { return {}; }
@@ -455,6 +468,7 @@
         <div class="sim-rev-cab"><span>Questão ${i + 1}</span> ${status}</div>
         <p class="sim-rev-q">${esc(q.q)}</p>
         <ul class="sim-rev-ops">${opcoes}</ul>
+        ${arteHtmlDe(q)}
         ${q.e ? `<div class="sim-rev-exp"><strong>Por quê:</strong> ${esc(q.e)}${fonteHtml}</div>` : fonteHtml}
       </div>`;
   }
