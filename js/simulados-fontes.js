@@ -175,6 +175,18 @@
     consolidatedbilling: { texto: "AWS — Cobrança consolidada (Organizations)", url: "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/consolidated-billing.html" },
     costtags: { texto: "AWS — Tags de alocação de custos", url: "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html" },
     savingsplans: { texto: "AWS Savings Plans", url: "https://aws.amazon.com/savingsplans/" },
+    // ---- parte 6: lacunas de cobertura (conferidas em 28/08/2026) ----
+    transcribe: { texto: "Amazon Transcribe — conversão de fala em texto", url: "https://aws.amazon.com/transcribe/" },
+    storagegateway: { texto: "AWS Storage Gateway — tipos de gateway", url: "https://docs.aws.amazon.com/storagegateway/latest/userguide/WhatIsStorageGateway.html" },
+    datasync: { texto: "AWS DataSync — transferência de dados em massa", url: "https://aws.amazon.com/datasync/" },
+    fsx: { texto: "Amazon FSx for Windows File Server", url: "https://aws.amazon.com/fsx/windows/" },
+    documentdb: { texto: "Amazon DocumentDB (compatível com MongoDB)", url: "https://aws.amazon.com/documentdb/" },
+    eventbridge: { texto: "Amazon EventBridge — barramento de eventos", url: "https://aws.amazon.com/eventbridge/" },
+    amplify: { texto: "AWS Amplify — apps web e móveis full-stack", url: "https://aws.amazon.com/amplify/" },
+    xray: { texto: "AWS X-Ray — rastreamento distribuído", url: "https://aws.amazon.com/xray/" },
+    auditmanager: { texto: "AWS Audit Manager — evidências para auditoria", url: "https://aws.amazon.com/audit-manager/" },
+    firewallmanager: { texto: "AWS Firewall Manager — regras centralizadas", url: "https://aws.amazon.com/firewall-manager/" },
+    ram: { texto: "AWS Resource Access Manager — compartilhar recursos entre contas", url: "https://aws.amazon.com/ram/" },
   };
 
   // Fonte EXPLÍCITA por questão (id -> chave). Verificado nas páginas oficiais.
@@ -269,6 +281,17 @@
     "clf-x21": "cloudformation", "clf-x22": "cloudwatch", "clf-x23": "athena", "clf-x24": "efs",
     "clf-x25": "cloudfront", "clf-x26": "dynamodb", "clf-x27": "savingsplans", "clf-x28": "costexplorer",
     "clf-x29": "support", "clf-x30": "freetier",
+    // ---- parte 6 ----
+    "clf-n01": "transcribe", "clf-n02": "storagegateway", "clf-n03": "storagegateway",
+    "clf-n04": "datasync", "clf-n05": "fsx", "clf-n06": "documentdb", "clf-n07": "eventbridge",
+    "clf-n08": "amplify", "clf-n09": "glue", "clf-n10": "sagemaker", "clf-n11": "bedrock",
+    "clf-n12": "textract", "clf-n13": "stepfunctions", "clf-n14": "transitgw", "clf-n15": "globalaccel",
+    "clf-n16": "xray", "clf-n17": "securityhub", "clf-n18": "detective", "clf-n19": "auditmanager",
+    "clf-n20": "firewallmanager", "clf-n21": "acm", "clf-n22": "ram", "clf-n23": "controltower",
+    "clf-n24": "directoryservice", "clf-n25": "macie", "clf-n26": "wellarch", "clf-n27": "globalinfra",
+    "clf-n28": "cloudcomputing", "clf-n29": "sqs", "clf-n30": "cloudfront", "clf-n31": "shared",
+    "clf-n32": "migrationhub", "clf-n33": "freetier", "clf-n34": "computeoptimizer",
+    "clf-n35": "costtags", "clf-n36": "consolidatedbilling", "clf-n37": "spot",
   };
 
   // Fallback por domínio, caso algum id não esteja mapeado.
