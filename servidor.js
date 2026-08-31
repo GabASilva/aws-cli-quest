@@ -307,13 +307,31 @@ function lerCorpo(req) {
 // essas quatro. Liberamos a ORIGEM inteira em vez dos caminhos /gsi/client e
 // /gsi/style porque o proprio Google recomenda nao listar URL individual — o
 // dia em que eles mudarem um caminho, o login quebraria calado.
+// Google Analytics (GA4): as origens abaixo só entram na política quando GA_ID
+// está definido. Sem a variável, a CSP fica EXATAMENTE tão restrita quanto era
+// antes — não se paga o preço de uma política mais frouxa por um recurso
+// desligado. Ligar: flyctl secrets set GA_ID=G-XXXXXXXXXX -a aws-cli-quest
+//
+// São três diretivas porque o gtag faz três coisas: baixa o script
+// (googletagmanager), manda os eventos por fetch/beacon (connect-src, e os
+// subdomínios regionais *.google-analytics.com entram por isso) e ainda cai
+// num pixel de imagem quando o beacon não passa (img-src).
+const GA_ID = String(process.env.GA_ID || "").trim();
+const GA_SCRIPT = GA_ID ? " https://www.googletagmanager.com" : "";
+const GA_CONECTA = GA_ID
+  ? " https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com"
+  : "";
+const GA_IMG = GA_ID
+  ? " https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com"
+  : "";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://accounts.google.com",
+  "script-src 'self' https://accounts.google.com" + GA_SCRIPT,
   "style-src 'self' 'unsafe-inline' https://accounts.google.com",
-  "img-src 'self' data: https://lh3.googleusercontent.com",
+  "img-src 'self' data: https://lh3.googleusercontent.com" + GA_IMG,
   "font-src 'self'",
-  "connect-src 'self' https://accounts.google.com",
+  "connect-src 'self' https://accounts.google.com" + GA_CONECTA,
   "frame-src https://accounts.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -826,7 +844,10 @@ async function tratarApi(req, res, rota) {
 
   // GET /api/config  (público — o que o front precisa saber pra montar a UI)
   if (rota === "/api/config" && req.method === "GET") {
-    return responderJson(res, 200, { googleClientId: process.env.GOOGLE_CLIENT_ID || null });
+    return responderJson(res, 200, {
+      googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+      gaId: GA_ID || null, // null = Analytics desligado; o front nem carrega o gtag
+    });
   }
 
   // POST /api/google  { credential }  — login/cadastro com Conta Google (one-click)
@@ -1261,9 +1282,19 @@ const VERSAO = calcularVersao();
 // pagamento antigo. Só que dois domínios servindo o MESMO conteúdo divide
 // sinal de busca e conta como conteúdo duplicado.
 //
-// A saída é noindex no não-canônico, NÃO redirecionamento: um 301 no
-// /api/mp/webhook (que é POST) poderia ser perdido por cliente que não segue
-// redirect em POST. Cabeçalho não muda o fluxo de requisição nenhuma.
+// A saída tem DUAS partes, e a divisão é proposital:
+//
+//   1. NAVEGAÇÃO (GET/HEAD fora de /api/) leva 301 pro domínio canônico. É o
+//      que resolve quem chega pelo endereço antigo do Fly ou digita www.
+//   2. TUDO em /api/ e todo método que não seja GET/HEAD fica onde está, sem
+//      redirect. Esta é a parte que NÃO pode mudar: o notification_url gravado
+//      dentro de cada cobrança pendente do Mercado Pago aponta pro
+//      aws-cli-quest.fly.dev, e um 301 num POST pode ser descartado por cliente
+//      que não segue redirect em POST — quebraria pagamento antigo. O mesmo
+//      valeria pra qualquer POST de formulário, que perderia o corpo.
+//
+// O noindex continua sendo mandado no não-canônico: ele cobre justamente o que
+// não é redirecionado.
 function hostCanonico() {
   const base = String(process.env.URL_BASE || "https://climb.dev.br");
   return base.replace(/^https?:\/\//, "").replace(/\/+$/, "").toLowerCase();
@@ -1274,6 +1305,23 @@ function ehHostCanonico(req) {
   if (!host) return true;                       // sem host: não marca nada
   if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) return true; // dev
   return host === hostCanonico();
+}
+
+// 301 de navegação pro domínio canônico. Devolve true quando já respondeu.
+// Cobre www.climb.dev.br e o aws-cli-quest.fly.dev de uma vez: qualquer host
+// que não seja o canônico cai aqui. req.url (e não a rota decodificada) porque
+// ele preserva caminho E query string exatamente como vieram.
+function redirecionarParaCanonico(req, res, rota) {
+  if (ehHostCanonico(req)) return false;
+  if (req.method !== "GET" && req.method !== "HEAD") return false; // ver comentário acima
+  if (rota.startsWith("/api/")) return false;                      // webhook do MP mora aqui
+  res.writeHead(301, {
+    Location: "https://" + hostCanonico() + req.url,
+    "Cache-Control": "no-store", // 301 é cacheado pra sempre pelo navegador; aqui não queremos
+    ...HEADERS_SEG,
+  });
+  res.end();
+  return true;
 }
 
 function urlBase(req) {
@@ -1612,6 +1660,8 @@ http
       if (protocolo === "https") {
         res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
       }
+      if (redirecionarParaCanonico(req, res, rota)) return;
+
       if (rota === "/api/saude") return responderJson(res, 200, { ok: true });
       if (rota === "/api/eventos" && req.method === "GET") return responderJson(res, 200, { eventos: eventosAtivos().map((e) => ({ id: e.id, titulo: e.titulo, mensagem: e.mensagem, tipo: e.tipo, fim: e.fim })) });
       if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
