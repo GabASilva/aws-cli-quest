@@ -70,6 +70,25 @@
       ],
     },
 
+    formatos: {
+      emoji: "📄", titulo: "JSON e YAML",
+      oque: "São os dois jeitos de <b>escrever dados em texto</b> que a AWS entende. <b>JSON</b> usa chaves e colchetes (<code>{\"nome\": \"ana\"}</code>) e é o que a CLI devolve quando você pergunta algo. <b>YAML</b> guarda a mesma informação usando <b>indentação</b> em vez de chaves — mais fácil de ler e de comentar. Não são linguagens de programação: são formulários preenchidos.",
+      serve: "Quase tudo que é mais complexo que uma flag chega à AWS como arquivo: <b>política de IAM</b>, <b>template de CloudFormation</b>, <b>definição de tarefa do ECS</b>. Saber ler e escrever esses arquivos é o que separa \"copiei do tutorial\" de \"entendi o que estou mandando\" — e é o que te deixa achar o erro quando a AWS reclama de uma vírgula.",
+      casos: [
+        "A AWS recusa sua política com <b>\"invalid JSON\"</b>: falta uma vírgula entre dois blocos, ou sobra uma na última linha (JSON não aceita vírgula sobrando).",
+        "Você precisa dar acesso de leitura a um bucket: a permissão é um JSON com <b>Effect</b>, <b>Action</b> e <b>Resource</b> — e é você quem escreve.",
+        "Um template de CloudFormation em YAML não sobe porque uma linha ficou com <b>tabulação</b> em vez de espaços: no YAML a indentação É a estrutura.",
+      ],
+      vocab: [
+        ["JSON", "dados entre <b>{ }</b> (objeto, pares chave:valor) e <b>[ ]</b> (lista). Todo texto vai entre aspas duplas."],
+        ["YAML", "os mesmos dados com <b>indentação</b> no lugar das chaves. Item de lista começa com <b>-</b>. Aceita comentário com <b>#</b>; JSON não aceita."],
+        ["Chave e valor", "o par <b>nome: conteúdo</b>. \"Chave\" aqui não tem nada a ver com chave de acesso — é só o nome do campo."],
+        ["file://", "prefixo que manda a CLI <b>ler o arquivo do seu disco</b> em vez de tratar o texto como valor. Esquecer dele é o erro nº 1 de quem passa política."],
+        ["Validar", "conferir se o arquivo está bem formado ANTES de mandar pra AWS — economiza a viagem e a mensagem de erro obscura."],
+      ],
+      cobra: "Formato de arquivo <b>não custa nada</b>. O que custa é o recurso que o arquivo cria: um template de CloudFormation é grátis, as 12 máquinas que ele sobe não.",
+    },
+
     linux: {
       emoji: "🐧", titulo: "Linux e o terminal",
       oque: "A <b>maioria dos servidores da nuvem roda Linux</b>, e a forma de operá-los é pelo <b>terminal</b> — aquela tela preta onde você digita. Não tem mouse dentro de um servidor: você entra por SSH e resolve tudo com comandos.",

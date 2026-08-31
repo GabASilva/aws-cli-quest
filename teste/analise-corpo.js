@@ -135,11 +135,16 @@ for (const d of DESAFIOS) {
   const ehLab = d.servico === "diagnostico"; // lab: monta o ambiente quebrado
   if (ehLab && typeof montarLabVpc === "function") montarLabVpc(conta);
   // shell (cat/ls/grep) agora roda: linux-lab expoe executarShellPuro, sem DOM
-  if (!ehLab && (d.solucao || []).some((s) => {
+  // A trilha setup NAO entra neste filtro: as linhas dela (ssh/curl/unzip/
+  // configure interativo) nao sao do executarShellPuro, sao do setup-lab, e
+  // passam pela cadeia logo abaixo. Sem esta excecao, setup-1..4 e setup-6
+  // eram descartados aqui e a trilha ficava sem teste nenhum.
+  const ehSetup = d.servico === "setup";
+  if (!ehLab && !ehSetup && (d.solucao || []).some((s) => {
     const l = s.trim();
     if (l.startsWith("aws")) return false;
     return typeof executarShellPuro !== "function" || !executarShellPuro(criarContaAws(), l);
-  })) continue; // a trilha setup e tratada logo abaixo, pela cadeia completa
+  })) continue;
   // já satisfeito antes de rodar a solução? (validador de ESTADO ganho de graça)
   let antes = false;
   try { antes = !!d.validar(conta, null, false); } catch (e) { antes = false; }
@@ -148,7 +153,13 @@ for (const d of DESAFIOS) {
     const linhaSol = resolver(sol);
     // a trilha setup passa pela CADEIA (setup-lab intercepta ssh/curl/unzip,
     // o 'aws --version' e o configure interativo antes do executor aws)
-    if (d.servico === "setup" && typeof rodarPelaCadeia === "function") {
+    if (ehSetup && typeof rodarPelaCadeia === "function") {
+      // ATENCAO (regra do CLAUDE.md): 'jogo' e binding lexico (let, jogo.js).
+      // O setup-lab le o 'jogo' lexico; a BASE_CADEIA le 'window.jogo'. Como o
+      // analise.js carrega jogo.js (o fumaca nao), os dois sao objetos
+      // DIFERENTES aqui — apontar so um deixava o estado do lab noutra conta e
+      // o validador do setup-5 nunca via 'versao'.
+      if (typeof jogo !== "undefined") jogo.conta = conta;
       window.jogo.conta = conta;
       const rr = rodarPelaCadeia(linhaSol);
       if (rr.cmd) ultimoCmd = rr.cmd;

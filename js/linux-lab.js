@@ -376,6 +376,12 @@ const DESAFIOS_LINUX = [
     descricao: "No Linux você se localiza com <b>pwd</b> (print working directory). Mostre o diretório atual.",
     dicas: ["É só digitar: pwd"], solucao: ["pwd"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "pwd" },
+  // whoami fica junto do pwd: os dois respondem "onde/quem eu sou" ao chegar
+  // numa máquina. Estava pendurado no fim da trilha, depois do clímax.
+  { id: "lnx-16", servico: "linux", nivel: 1, xp: 30, titulo: "Quem é você?",
+    descricao: "Toda instância EC2 loga como um usuário. Descubra quem você é com <b>whoami</b>.",
+    dicas: ["Digite: whoami"], solucao: ["whoami"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "whoami" },
   { id: "lnx-2", servico: "linux", nivel: 1, xp: 30, titulo: "O que tem aqui?",
     descricao: "Liste os arquivos e pastas da sua pasta atual com <b>ls</b>.",
     dicas: ["Digite: ls", "Dica: 'ls -l' mostra detalhes (permissões, tamanho)."], solucao: ["ls"],
@@ -404,6 +410,11 @@ const DESAFIOS_LINUX = [
     descricao: "Mostre o conteúdo do <b>tarefas.txt</b> com <b>cat</b>.",
     dicas: ["`cat` despeja o conteúdo inteiro de um arquivo na tela.", "A forma é: cat <nome-do-arquivo>"], solucao: ["cat tarefas.txt"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" },
+  // reforço do cat, logo depois da lição (estava no fim, depois do rm -r)
+  { id: "lnx-25", servico: "linux", nivel: 2, xp: 50, titulo: "Espie o relatório (cat)",
+    descricao: "Veja o conteúdo do <b>relatorio.csv</b> com <b>cat</b>.",
+    dicas: ["`cat` despeja o conteúdo inteiro de um arquivo na tela.", "A forma é: cat <nome-do-arquivo>"], solucao: ["cat relatorio.csv"],
+    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" && /relatorio/.test((cmd.args || []).join(" ")) },
   { id: "lnx-9", servico: "linux", nivel: 2, xp: 70, titulo: "Copie pra pasta de backup",
     descricao: "Copie o <b>tarefas.txt</b> pra dentro da pasta <b>backups</b> com <b>cp</b>.",
     dicas: ["cp <origem> <destino>"], solucao: ["cp tarefas.txt backups/"],
@@ -419,7 +430,14 @@ const DESAFIOS_LINUX = [
   { id: "lnx-12", servico: "linux", nivel: 3, xp: 90, titulo: "Proteja a chave (chmod 400)",
     descricao: "Igual no lab de SSH: a chave <b>labsuser.pem</b> precisa ficar <b>só com leitura pro dono</b>. Aplique <b>chmod 400</b> nela. (É o que destrava o ssh!)",
     dicas: ["chmod <permissão> <arquivo>", "400 = dono lê (4), grupo nada (0), outros nada (0)."], solucao: ["chmod 400 labsuser.pem"],
-    validar: (c) => { const n = noRelHome(c, "labsuser.pem"); return !!n && n.modo === "400"; } },
+    // A MESMA labsuser.pem do lab de setup (setup-1 também roda chmod 400 nela).
+    // Só estado deixava esta atividade completa de graça pra quem fez o Setup
+    // antes — então exige o chmod AQUI, além do arquivo terminar em 400.
+    validar: (c, cmd, ok) => {
+      if (!(ok && cmd && cmd.sub === "chmod" && /labsuser\.pem/.test((cmd.args || []).join(" ")))) return false;
+      const n = noRelHome(c, "labsuser.pem");
+      return !!n && n.modo === "400";
+    } },
   { id: "lnx-13", servico: "linux", nivel: 3, xp: 90, titulo: "Procure no log",
     descricao: "No arquivo <b>logs/app.log</b> tem linhas de erro. Use <b>grep</b> pra mostrar só as linhas que contêm <b>erro</b>.",
     dicas: ["grep <padrão> <arquivo>"], solucao: ["grep erro logs/app.log"],
@@ -434,10 +452,6 @@ const DESAFIOS_LINUX = [
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "man" },
 
   // --- Nível 2: fundamentos que faltavam (inspirado no "Learn Linux") ---
-  { id: "lnx-16", servico: "linux", nivel: 1, xp: 30, titulo: "Quem é você?",
-    descricao: "Toda instância EC2 loga como um usuário. Descubra quem você é com <b>whoami</b>.",
-    dicas: ["Digite: whoami"], solucao: ["whoami"],
-    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "whoami" },
   { id: "lnx-17", servico: "linux", nivel: 2, xp: 50, titulo: "Veja as permissões (ls -l)",
     descricao: "Liste com detalhes (permissões, dono, tamanho) usando <b>ls -l</b>. Repare na 1ª coluna, tipo <code>-rw-r--r--</code>: são as permissões de <b>dono</b>, <b>grupo</b> e <b>outros</b>.",
     dicas: ["É o mesmo `ls` de sempre, com a opção que pede a listagem \"longa\" (de \"long\").", "d no começo = diretório; rwx = ler/escrever/executar."], solucao: ["ls -l"],
@@ -472,10 +486,6 @@ const DESAFIOS_LINUX = [
     descricao: "A pasta <b>projetos</b> não é mais necessária. Apague ela e tudo que tem dentro com <b>rm -r</b>.",
     dicas: ["rm -r <pasta>", "Sem o -r, o rm se recusa a apagar diretórios."], solucao: ["rm -r projetos"],
     validar: (c) => !noRelHome(c, "projetos") },
-  { id: "lnx-25", servico: "linux", nivel: 2, xp: 50, titulo: "Espie o relatório (cat)",
-    descricao: "Veja o conteúdo do <b>relatorio.csv</b> com <b>cat</b>.",
-    dicas: ["`cat` despeja o conteúdo inteiro de um arquivo na tela.", "A forma é: cat <nome-do-arquivo>"], solucao: ["cat relatorio.csv"],
-    validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" && /relatorio/.test((cmd.args || []).join(" ")) },
   { id: "lnx-26", servico: "linux", nivel: 3, xp: 60, titulo: "Conte as linhas do notas",
     descricao: "Quantas linhas o <b>notas.txt</b> tem agora (depois do que você anexou)? Descubra com <b>wc -l</b>.",
     dicas: ["`wc` conta coisas num arquivo; a opção `-l` conta LINHAS (de \"lines\").", "A forma é: wc -l <arquivo>"], solucao: ["wc -l notas.txt"],

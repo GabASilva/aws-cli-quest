@@ -245,5 +245,33 @@
       solucao: ["aws s3 mb s3://pipeline-entrada", "aws dynamodb create-table --table-name PipelineDados --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST", "aws lambda create-function --function-name pipeline-proc --runtime python3.12 --role arn:aws:iam::123456789012:role/lambda-exec --handler index.handler --zip-file fileb://app.zip"],
       validar: (c) => !!c.s3.buckets["pipeline-entrada"] && !!c.dynamodb.tabelas["PipelineDados"] && !!c.lambda.funcoes["pipeline-proc"] },
   ];
-  for (const d of D) DESAFIOS.push(d);
+
+  // ------------------------------------------------------------------
+  // Onde cada REFORÇO entra (regra do CLAUDE.md: reforço vem logo depois
+  // da lição que ensina o comando, nunca pendurado no fim da trilha —
+  // depois do clímax ele derruba o nível e quebra a rampa).
+  // Os âncoras são de desafios.js, que carrega ANTES deste arquivo.
+  // O desafios-pratica.js carrega DEPOIS e insere nos mesmos âncoras, então
+  // a prática fica entre a lição e este reforço — que é a ordem desejada.
+  // ------------------------------------------------------------------
+  const APOS = {
+    "ec2-12": "ec2-5",     // listar pares de chave, logo após criar o par
+    "lambda-9": "lam-2",   // detalhe da função, logo após criar a função
+    "dynamodb-8": "dyn-2", // detalhe da tabela, logo após criar a tabela
+    "dynamodb-9": "dyn-1", // listar tabelas: reforço do próprio list-tables
+    "vpc-5": "vpc-1",      // uma segunda rede: reforço do create-vpc
+    "vpc-8": "vpc-5",      // listar VPCs, fechando o bloco de criação
+    "vpc-6": "vpc-2",      // listar sub-redes, logo após criar a sub-rede
+    "rds-5": "rds-1",      // outro banco: reforço do create-db-instance
+    "rds-6": "rds-2",      // listar bancos: reforço do describe-db-instances
+  };
+  function inserirApos(anchorId, desafio) {
+    const i = DESAFIOS.findIndex((x) => x.id === anchorId);
+    if (i < 0) { DESAFIOS.push(desafio); return; } // âncora sumiu: não perde a atividade
+    DESAFIOS.splice(i + 1, 0, desafio);
+  }
+  for (const d of D) {
+    if (APOS[d.id]) inserirApos(APOS[d.id], d);
+    else DESAFIOS.push(d);
+  }
 })();
