@@ -170,6 +170,43 @@ consulta rápida por termo, as lições são a introdução no fluxo. Não apose
 
 ---
 
+## Trabalho em dois lugares (celular + PC)
+
+O Remote Control (`claude --remote-control <nome>`) faz o celular controlar a
+**mesma** sessão que roda no PC — mesma pasta, mesmos arquivos. Não existe
+divergência entre os dois por construção. O que quebra é outra coisa:
+
+**1. Comece toda sessão olhando o estado.** Antes de tocar em qualquer arquivo:
+
+```bash
+git status                      # tem coisa não commitada de antes?
+git log --oneline origin/main..HEAD   # tem commit sem push?
+```
+
+Dez segundos que evitam trabalhar em cima de algo esquecido — ou refazer o
+que já estava pronto.
+
+**2. Uma sessão por pasta.** Se o Remote Control está de pé, não dirija também
+o app de desktop nesta mesma pasta: viram dois trabalhadores editando os
+mesmos arquivos sem saber um do outro. `ListAgents` mostra o que está rodando.
+
+**3. Não encerre um bloco de trabalho com coisa não commitada** se houver
+chance de trocar de aparelho. Trabalho não commitado é a ÚNICA coisa invisível
+de qualquer outro lugar — inclusive do `claude.ai/code`, que enxerga só o que
+está no GitHub.
+
+**4. Só publique com a árvore limpa, e dê push ANTES do deploy.**
+`flyctl deploy` empacota o **diretório de trabalho**, não o git. Ou seja: dá
+pra publicar código que não está commitado, e dá pra achar que publicou algo
+que só existia no git. Com a árvore limpa e o push feito antes, "o que está no
+ar?" tem uma resposta só.
+
+> Isto já aconteceu: em 25/08 o CSP foi dado como publicado quando ainda estava
+> só na máquina — o release mais recente do Fly era de horas antes. A conferência
+> que resolve é `flyctl releases -a aws-cli-quest` comparado com `git log`.
+
+---
+
 ## Regra nº 0 — NUNCA CHUTAR (não pule esta de jeito nenhum)
 
 Se você não tem a informação, **encontre antes de prosseguir**. Não escreva
