@@ -709,9 +709,13 @@ const PORQUE = {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   // guarda o <b>...</b> que escrevemos de propósito nos textos das lições
+  // Escapa TUDO e devolve só as três tags de formatação. <code> entra porque a
+  // lição de JSON/YAML precisa mostrar sintaxe literal (file://, {"a": 1}) —
+  // sem ela a tag apareceria crua na tela.
   function ricoSeguro(s) {
     return esc(s).replace(/&lt;b&gt;/g, "<b>").replace(/&lt;\/b&gt;/g, "</b>")
-      .replace(/&lt;i&gt;/g, "<i>").replace(/&lt;\/i&gt;/g, "</i>");
+      .replace(/&lt;i&gt;/g, "<i>").replace(/&lt;\/i&gt;/g, "</i>")
+      .replace(/&lt;code&gt;/g, "<code>").replace(/&lt;\/code&gt;/g, "</code>");
   }
 
   function licaoDoDesafio(d) {

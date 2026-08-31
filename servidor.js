@@ -16,6 +16,7 @@ const path = require("path");
 const crypto = require("crypto");
 const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
+const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
 const RAIZ = __dirname;
@@ -1337,6 +1338,90 @@ function dadosPerfilPublico(nome) {
   const d = perfilPub.dadosPublicos(nome, u, licencaPublica(u).pro);
   return d.publico ? d : null;
 }
+// ---------- Páginas públicas das lições (/aprender) ----------
+// Lidas UMA vez no boot: o texto só muda com deploy, e ler a cada requisição
+// seria desperdício. Se a leitura falhar, as rotas respondem 404 e o resto do
+// app segue intacto — página de SEO não pode derrubar o produto. O erro é
+// gritado no log porque falha silenciosa aqui significa tráfego perdido.
+let LICOES_PUB = null;
+try {
+  LICOES_PUB = pagLicoes.carregarLicoes(RAIZ).licoes;
+  console.log(`Lições públicas: ${Object.keys(LICOES_PUB).length} páginas em /aprender`);
+} catch (e) {
+  console.error("ATENÇÃO: não consegui carregar as lições para /aprender —", e.message);
+}
+
+function servirHtml(res, html) {
+  const corpo = Buffer.from(html, "utf8");
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": corpo.length,
+    "Cache-Control": "public, max-age=3600",
+    ...HEADERS_SEG,
+  });
+  res.end(corpo);
+}
+
+// /aprender e /aprender/<id>. Devolve true quando respondeu.
+function servirLicaoPublica(req, res, rota) {
+  if (!LICOES_PUB) return false;
+  const base = hostBasePublico(req);
+  if (rota === "/aprender" || rota === "/aprender/") {
+    servirHtml(res, pagLicoes.paginaIndice(LICOES_PUB, { base }));
+    return true;
+  }
+  const id = rota.slice("/aprender/".length).replace(/\/+$/, "");
+  const licao = LICOES_PUB[id];
+  if (!licao) {
+    // 404 de verdade. Deixar cair no servidor de estáticos devolvia 403, que
+    // diz "existe mas você não pode ver" — errado pro buscador e pra pessoa.
+    const corpo = Buffer.from(pagLicoes.paginaNaoEncontrada(LICOES_PUB, { base }), "utf8");
+    res.writeHead(404, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": corpo.length,
+      "Cache-Control": "no-store",
+      ...HEADERS_SEG,
+    });
+    res.end(corpo);
+    return true;
+  }
+  servirHtml(res, pagLicoes.paginaLicao(id, licao, { base }));
+  return true;
+}
+
+// Base absoluta pro canonical/og:url. Sempre o domínio canônico: estas páginas
+// existem pra ranquear, e canonical apontando pro host errado divide o sinal.
+function hostBasePublico() {
+  return "https://" + hostCanonico();
+}
+
+// Sitemap GERADO, não arquivo estático: com 50+ lições, um sitemap escrito à
+// mão nasce desatualizado na primeira lição nova.
+function servirSitemap(res) {
+  const base = hostBasePublico();
+  const urls = [
+    { loc: `${base}/`, freq: "weekly", pri: "1.0" },
+    { loc: `${base}/sobre.html`, freq: "monthly", pri: "0.8" },
+    { loc: `${base}/privacidade.html`, freq: "yearly", pri: "0.3" },
+  ];
+  if (LICOES_PUB) {
+    for (const u of pagLicoes.urlsLicoes(LICOES_PUB, base)) {
+      urls.push({ loc: u, freq: "monthly", pri: u.endsWith("/aprender") ? "0.9" : "0.7" });
+    }
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map((u) => `  <url>\n    <loc>${pagLicoes.esc(u.loc)}</loc>\n    <changefreq>${u.freq}</changefreq>\n    <priority>${u.pri}</priority>\n  </url>`).join("\n") +
+    `\n</urlset>\n`;
+  const corpo = Buffer.from(xml, "utf8");
+  res.writeHead(200, {
+    "Content-Type": "application/xml; charset=utf-8",
+    "Content-Length": corpo.length,
+    "Cache-Control": "public, max-age=3600",
+    ...HEADERS_SEG,
+  });
+  res.end(corpo);
+}
+
 function servirPerfilPublico(req, res, rota) {
   const nome = rota.slice(3).replace(/\/+$/, "");
   const d = dadosPerfilPublico(nome);
@@ -1667,6 +1752,10 @@ http
       if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
       if (rota.startsWith("/api/")) return await tratarApi(req, res, rota);
       if (rota.startsWith("/u/")) return servirPerfilPublico(req, res, rota);
+      if (rota === "/sitemap.xml") return servirSitemap(res);
+      if (rota === "/aprender" || rota.startsWith("/aprender/")) {
+        if (servirLicaoPublica(req, res, rota)) return;
+      }
       servirEstatico(req, res, rota);
     } catch (e) {
       responderJson(res, 400, { erro: e.message || "erro" });
