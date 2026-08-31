@@ -2,5 +2,15 @@
 node_modules
 quest-dados.json
 quest-dados.json.tmp
+quest-dados.json.bak*
+*.bak.*
 *.log
 teste
+
+# HTML do console AWS salvo localmente (398 MB) — nao vai pra imagem
+paginas AWS/
+
+# segredos e copias do banco — nunca na imagem publicada
+painel/config.json
+backups/
+.env
