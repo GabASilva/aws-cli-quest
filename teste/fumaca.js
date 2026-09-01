@@ -58,7 +58,7 @@ window.rodarPelaCadeia = function (linha) {
   return { ok: !_term.erro, saida: _term.linhas.join(" | "), cmd: _term.cmd };
 };
 `;
-const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
+const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -107,6 +107,8 @@ const teste = `
     if (linha.includes("<zone-id>") && conta.route53) linha = linha.replace(/<zone-id>/g, ult(conta.route53.zonas));
     if (linha.includes("<dist-id>") && conta.cloudfront) linha = linha.replace(/<dist-id>/g, ult(conta.cloudfront.distribuicoes));
     if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
+    // tarefa de sintese do Polly: o id nasce sorteado no start-speech-synthesis-task
+    if (linha.includes("<task-id>") && conta.polly) linha = linha.replace(/<task-id>/g, ult(conta.polly.tarefas));
     if ((linha.includes("<root-id>") || linha.includes("<resource-id>")) && conta.apigateway) {
       const api = conta.apigateway.apis[ult(conta.apigateway.apis)];
       if (api) {

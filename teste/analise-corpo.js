@@ -91,6 +91,8 @@ function resolver(linha) {
   if (linha.includes("<zone-id>") && conta.route53) linha = linha.replace(/<zone-id>/g, ult(conta.route53.zonas));
   if (linha.includes("<dist-id>") && conta.cloudfront) linha = linha.replace(/<dist-id>/g, ult(conta.cloudfront.distribuicoes));
   if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
+  // tarefa de sintese do Polly: o id nasce sorteado no start-speech-synthesis-task
+  if (linha.includes("<task-id>") && conta.polly) linha = linha.replace(/<task-id>/g, ult(conta.polly.tarefas));
   if ((linha.includes("<root-id>") || linha.includes("<resource-id>")) && conta.apigateway) {
     const api = conta.apigateway.apis[ult(conta.apigateway.apis)];
     if (api) {
