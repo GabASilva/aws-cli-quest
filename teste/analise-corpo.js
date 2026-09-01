@@ -93,6 +93,9 @@ function resolver(linha) {
   if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
   // tarefa de sintese do Polly: o id nasce sorteado no start-speech-synthesis-task
   if (linha.includes("<task-id>") && conta.polly) linha = linha.replace(/<task-id>/g, ult(conta.polly.tarefas));
+  // Route 53: id da ultima mudanca de registro e do health check criado
+  if (linha.includes("<change-id>") && conta.route53) linha = linha.replace(/<change-id>/g, ult(conta.route53.mudancas));
+  if (linha.includes("<hc-id>") && conta.route53) linha = linha.replace(/<hc-id>/g, ult(conta.route53.checks));
   // CloudFront: o ETag MUDA a cada alteracao, entao e sempre lido na hora
   if ((linha.includes("<etag>") || linha.includes("<inv-id>")) && conta.cloudfront) {
     const d = conta.cloudfront.distribuicoes[ult(conta.cloudfront.distribuicoes)];
