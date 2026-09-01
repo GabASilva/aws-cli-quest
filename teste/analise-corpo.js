@@ -93,6 +93,14 @@ function resolver(linha) {
   if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
   // tarefa de sintese do Polly: o id nasce sorteado no start-speech-synthesis-task
   if (linha.includes("<task-id>") && conta.polly) linha = linha.replace(/<task-id>/g, ult(conta.polly.tarefas));
+  // ACM: o arn do certificado emitido pela AWS e o do importado sao diferentes
+  if ((linha.includes("<cert-arn>") || linha.includes("<cert-importado>")) && conta.acm) {
+    const todos = Object.values(conta.acm.certificados || {});
+    const emitido = todos.filter((x) => x.tipo !== "IMPORTED").pop();
+    const importado = todos.filter((x) => x.tipo === "IMPORTED").pop();
+    if (emitido) linha = linha.replace(/<cert-arn>/g, emitido.arn);
+    if (importado) linha = linha.replace(/<cert-importado>/g, importado.arn);
+  }
   // Route 53: id da ultima mudanca de registro e do health check criado
   if (linha.includes("<change-id>") && conta.route53) linha = linha.replace(/<change-id>/g, ult(conta.route53.mudancas));
   if (linha.includes("<hc-id>") && conta.route53) linha = linha.replace(/<hc-id>/g, ult(conta.route53.checks));
