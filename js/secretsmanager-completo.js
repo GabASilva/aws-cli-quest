@@ -160,7 +160,7 @@
 
     { id: "sec-9", servico: "secretsmanager", nivel: 3, xp: 80, titulo: "Pare de inventar senha",
       descricao: "Vai nascer um banco novo e alguém já ia digitar <b>Senha@123</b>. Senha inventada por gente tem padrão, e padrão se quebra. <b>Gere</b> uma senha de <b>32 caracteres</b> <b>sem pontuação</b> (o banco antigo não aceita símbolos).",
-      dicas: ["`get-random-password` gera a senha — veja a lista de comandos com: aws secretsmanager help", "A forma é: aws secretsmanager get-random-password --password-length 32 --exclude-punctuation"],
+      dicas: ["Não precisa inventar: o próprio Secrets Manager gera a senha. Repare no verbo — é `get-`, não `create-`: nada fica guardado, o valor só é devolvido na sua tela.", "São duas flags: uma diz o tamanho, a outra tira os símbolos. Se não lembrar o nome exato da segunda, faça o que se faz no trabalho: `aws secretsmanager get-random-password help`."],
       solucao: ["aws secretsmanager get-random-password --password-length 32 --exclude-punctuation"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "get-random-password") && String(cmd.flags["password-length"]) === "32" },
 

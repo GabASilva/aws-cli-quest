@@ -260,7 +260,7 @@
 
     { id: "acm-8", servico: "acm", nivel: 3, xp: 110, titulo: "Certificado comprado fora",
       descricao: "A empresa já tinha um certificado <b>comprado de outra autoridade</b> e quer usá-lo no load balancer. <b>Importe</b> ele pro ACM (os arquivos <b>cert.pem</b> e <b>chave.pem</b> estão no disco). <small>(digite <code>ls</code> se quiser conferir)</small>",
-      dicas: ["`import-certificate` traz um certificado externo; os arquivos vão com file://", "A forma é: aws acm import-certificate --certificate file://cert.pem --private-key file://chave.pem"],
+      dicas: ["`import-certificate` traz pra dentro do ACM um certificado emitido por outra autoridade. Como o conteúdo está em arquivo e não colado na tela, o CLI usa o prefixo `file://`.", "São duas flags: o certificado público e a chave privada. Cuidado com a armadilha: o nome da flag e o nome do arquivo no disco não são iguais — rode `ls` e use exatamente os nomes que estiverem lá."],
       solucao: ["aws acm import-certificate --certificate file://cert.pem --private-key file://chave.pem"],
       validar: (c) => certs(c).some((x) => x.tipo === "IMPORTED") },
 

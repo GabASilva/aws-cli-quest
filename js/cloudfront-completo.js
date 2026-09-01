@@ -183,7 +183,7 @@
 
     { id: "cf-7", servico: "cloudfront", nivel: 3, xp: 80, titulo: "Quanto tempo a borda guarda?",
       descricao: "O site está servindo página velha e alguém sugere \"diminuir o cache\". Antes de inventar configuração, veja as <b>políticas de cache</b> que a AWS já entrega prontas — elas decidem o TTL e o que entra na chave do cache.",
-      dicas: ["`list-…` mostra o que existe — veja a lista de comandos com: aws cloudfront help", "A forma do comando é: aws cloudfront list-cache-policies --type managed"],
+      dicas: ["Política de cache é um recurso como outro qualquer: existe um `list-` pra ela. A lista completa de comandos sai em `aws cloudfront help`.", "O comando pede `--type` pra separar as duas famílias: as que a AWS já entrega prontas e as que alguém da sua conta criou. Você quer as prontas — o valor é uma palavra só, em inglês."],
       solucao: ["aws cloudfront list-cache-policies --type managed"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "list-cache-policies") },
 

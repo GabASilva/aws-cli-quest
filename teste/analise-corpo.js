@@ -222,6 +222,31 @@ for (const d of DESAFIOS) {
   if (f && (d.xp < f[0] || d.xp > f[1])) avisos.push(`xp fora da faixa n${d.nivel} (${d.xp}xp): ${d.id} — ${d.titulo}`);
 }
 
+// ---------- DICA QUE ENTREGA A SOLUÇÃO ----------
+// Regra do CLAUDE.md: "a dica NÃO pode ser a solução literal". Quando a última
+// dica contém o comando inteiro, a atividade deixa de exigir raciocínio — a
+// pessoa copia a dica e segue. É o defeito mais fácil de cometer escrevendo
+// trilha em série, então ele é medido aqui em vez de depender de memória.
+// Também acusa dica[0] repetida palavra por palavra dentro da MESMA trilha:
+// dica de molde não ajuda em nada, só preenche o campo.
+{
+  const normD = (s) => String(s).replace(/\s+/g, " ").replace(/["']/g, "").trim().toLowerCase();
+  const primeiras = {};
+  for (const d of DESAFIOS) {
+    if (!Array.isArray(d.dicas) || !d.dicas.length) continue;
+    if (Array.isArray(d.solucao) && d.solucao.length) {
+      const ultima = normD(d.dicas[d.dicas.length - 1]);
+      const entrega = d.solucao.map(normD).find((s) => s.length > 12 && ultima.includes(s));
+      if (entrega) avisos.push(`dica entrega a solução: ${d.id} — a última dica contém "${entrega.slice(0, 60)}"`);
+    }
+    const k = d.servico + "||" + normD(d.dicas[0]);
+    (primeiras[k] = primeiras[k] || []).push(d.id);
+  }
+  for (const k of Object.keys(primeiras)) {
+    if (primeiras[k].length > 1) avisos.push(`dica[0] de molde repetida na trilha ${k.split("||")[0]}: ${primeiras[k].join(", ")}`);
+  }
+}
+
 // ---------- NIVEIS: cliente (js/jogo.js) x servidor (lib/perfil-publico.js) ----------
 // A página pública /u/<usuario> é renderizada no SERVIDOR e mostra o título do
 // nível, então a tabela está duplicada lá. Aqui garantimos que não divergiu.

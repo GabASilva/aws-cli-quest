@@ -220,7 +220,7 @@
 
     { id: "pol-4", servico: "polly", nivel: 2, xp: 60, titulo: "Quais léxicos existem?",
       descricao: "Antes de sintetizar, confira o que a conta tem. <b>Liste os léxicos</b> desta região. <small>(léxico é por região: o que existe em São Paulo não existe na Virgínia)</small>",
-      dicas: ["`list-…` mostra o que existe — veja a lista de comandos com: aws polly help", "A forma do comando é: aws polly list-lexicons"],
+      dicas: ["Léxico é um recurso da conta como outro qualquer, e no Polly o verbo de leitura é `list-`. O nome do recurso entra no plural, em inglês.", "O comando não leva flag nenhuma. E se a lista vier vazia depois de você ter criado um léxico, o problema não é o comando: é a região — léxico existe numa região só."],
       solucao: ["aws polly list-lexicons"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "polly", "list-lexicons") },
 
@@ -245,7 +245,7 @@
 
     { id: "pol-8", servico: "polly", nivel: 3, xp: 85, titulo: "Quais narrações estão rodando?",
       descricao: "Você perdeu o <b>TaskId</b> que o comando anterior devolveu — acontece. <b>Liste as tarefas</b> de síntese pra achar o id e ver o estado de cada uma.",
-      dicas: ["`list-…` mostra o que existe — veja a lista de comandos com: aws polly help", "A forma do comando é: aws polly list-speech-synthesis-tasks"],
+      dicas: ["A tarefa não sumiu porque você perdeu o id: ela continua registrada no serviço. O que você procura é o `list-` das tarefas de síntese.", "O nome do comando descreve o recurso inteiro, nesta ordem: síntese de fala + tarefas. Na saída, olhe o `TaskStatus` antes de sair procurando o arquivo — `inProgress` quer dizer que o áudio ainda não chegou no bucket."],
       solucao: ["aws polly list-speech-synthesis-tasks"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "polly", "list-speech-synthesis-tasks") },
 
