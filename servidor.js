@@ -17,6 +17,7 @@ const crypto = require("crypto");
 const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
+const pagSimulado = require("./lib/pagina-simulado.js"); // página pública do simulado
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
 const RAIZ = __dirname;
@@ -1351,6 +1352,15 @@ try {
   console.error("ATENÇÃO: não consegui carregar as lições para /aprender —", e.message);
 }
 
+const ROTA_SIMULADO = "/simulado-aws-clf-c02";
+let SIMULADO_PUB = null;
+try {
+  SIMULADO_PUB = pagSimulado.carregarSimulados(RAIZ);
+  console.log(`Página do simulado: ${SIMULADO_PUB.questoes.length} questões no banco`);
+} catch (e) {
+  console.error("ATENÇÃO: não consegui carregar o simulado para a página pública —", e.message);
+}
+
 function servirHtml(res, html) {
   const corpo = Buffer.from(html, "utf8");
   res.writeHead(200, {
@@ -1404,6 +1414,7 @@ function servirSitemap(res) {
     { loc: `${base}/sobre.html`, freq: "monthly", pri: "0.8" },
     { loc: `${base}/privacidade.html`, freq: "yearly", pri: "0.3" },
   ];
+  if (SIMULADO_PUB) urls.push({ loc: base + ROTA_SIMULADO, freq: "monthly", pri: "0.9" });
   if (LICOES_PUB) {
     for (const u of pagLicoes.urlsLicoes(LICOES_PUB, base)) {
       urls.push({ loc: u, freq: "monthly", pri: u.endsWith("/aprender") ? "0.9" : "0.7" });
@@ -1753,6 +1764,9 @@ http
       if (rota.startsWith("/api/")) return await tratarApi(req, res, rota);
       if (rota.startsWith("/u/")) return servirPerfilPublico(req, res, rota);
       if (rota === "/sitemap.xml") return servirSitemap(res);
+      if (rota === ROTA_SIMULADO && SIMULADO_PUB) {
+        return servirHtml(res, pagSimulado.paginaSimulado(SIMULADO_PUB, { base: hostBasePublico() }));
+      }
       if (rota === "/aprender" || rota.startsWith("/aprender/")) {
         if (servirLicaoPublica(req, res, rota)) return;
       }

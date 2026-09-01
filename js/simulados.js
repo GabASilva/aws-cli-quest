@@ -61,6 +61,10 @@
     },
   };
 
+  // Exposto pra a página pública do simulado (lib/pagina-simulado.js) ler os
+  // domínios e pesos daqui, em vez de manter uma segunda cópia que desencontra.
+  window.SIMULADOS_CERTS = CERTS;
+
   const CHAVE_HIST = "climb.simulados.hist"; // histórico de tentativas por cert
 
   // ---------- Estado da prova em andamento ----------

@@ -24,6 +24,15 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-01",
+      data: "1 set 2026",
+      titulo: "🎓 O simulado CLF-C02 agora tem uma página pública — com 12 questões abertas",
+      itens: [
+        "<b>🎓 Quem procura “simulado AWS Cloud Practitioner” no Google agora pode achar o CLImb.</b> Existe uma página nova em <code>climb.dev.br/simulado-aws-clf-c02</code> que explica a prova de verdade: o que cada domínio cobra e <b>com que peso</b> (Conceitos 24%, Segurança 30%, Tecnologia 34%, Cobrança 12%), quantas questões o simulado sorteia e qual é a nota de corte.",
+        "<b>📖 E ela abre 12 questões do banco, com gabarito comentado.</b> Três de cada domínio, com a resposta certa, a explicação de <b>por quê</b> e o <b>link pra página oficial da AWS</b> que sustenta cada resposta — o mesmo padrão das <b>345</b>. São questões de verdade, não amostra enfeitada: é a forma honesta de alguém conferir a qualidade antes de criar conta. O restante do banco continua no app.",
+      ],
+    },
+    {
       versao: "2026-08-31",
       data: "31 ago 2026",
       titulo: "⌨️ O terminal virou um terminal de verdade — e a ordem das trilhas foi arrumada",
