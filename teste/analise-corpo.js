@@ -93,6 +93,16 @@ function resolver(linha) {
   if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
   // tarefa de sintese do Polly: o id nasce sorteado no start-speech-synthesis-task
   if (linha.includes("<task-id>") && conta.polly) linha = linha.replace(/<task-id>/g, ult(conta.polly.tarefas));
+  // CloudFront: o ETag MUDA a cada alteracao, entao e sempre lido na hora
+  if ((linha.includes("<etag>") || linha.includes("<inv-id>")) && conta.cloudfront) {
+    const d = conta.cloudfront.distribuicoes[ult(conta.cloudfront.distribuicoes)];
+    if (d) {
+      if (!d.etag) d.etag = "E0000000000000";
+      linha = linha.replace(/<etag>/g, d.etag);
+      const inv = (d.invalidacoes || [])[(d.invalidacoes || []).length - 1];
+      linha = linha.replace(/<inv-id>/g, inv ? inv.id : "");
+    }
+  }
   if ((linha.includes("<root-id>") || linha.includes("<resource-id>")) && conta.apigateway) {
     const api = conta.apigateway.apis[ult(conta.apigateway.apis)];
     if (api) {
