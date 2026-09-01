@@ -1345,9 +1345,13 @@ function dadosPerfilPublico(nome) {
 // app segue intacto — página de SEO não pode derrubar o produto. O erro é
 // gritado no log porque falha silenciosa aqui significa tráfego perdido.
 let LICOES_PUB = null;
+let GRATIS_PUB = null; // quais trilhas são abertas — pra página não mentir sobre preço
 try {
-  LICOES_PUB = pagLicoes.carregarLicoes(RAIZ).licoes;
-  console.log(`Lições públicas: ${Object.keys(LICOES_PUB).length} páginas em /aprender`);
+  const carregado = pagLicoes.carregarLicoes(RAIZ);
+  LICOES_PUB = carregado.licoes;
+  GRATIS_PUB = carregado.gratis;
+  console.log(`Lições públicas: ${Object.keys(LICOES_PUB).length} páginas em /aprender` +
+    ` (grátis: ${GRATIS_PUB.servicos.length} trilhas + ${GRATIS_PUB.porTrilha} por trilha)`);
 } catch (e) {
   console.error("ATENÇÃO: não consegui carregar as lições para /aprender —", e.message);
 }
@@ -1377,7 +1381,7 @@ function servirLicaoPublica(req, res, rota) {
   if (!LICOES_PUB) return false;
   const base = hostBasePublico(req);
   if (rota === "/aprender" || rota === "/aprender/") {
-    servirHtml(res, pagLicoes.paginaIndice(LICOES_PUB, { base }));
+    servirHtml(res, pagLicoes.paginaIndice(LICOES_PUB, { base, gratis: GRATIS_PUB }));
     return true;
   }
   const id = rota.slice("/aprender/".length).replace(/\/+$/, "");
@@ -1395,7 +1399,7 @@ function servirLicaoPublica(req, res, rota) {
     res.end(corpo);
     return true;
   }
-  servirHtml(res, pagLicoes.paginaLicao(id, licao, { base }));
+  servirHtml(res, pagLicoes.paginaLicao(id, licao, { base, gratis: GRATIS_PUB }));
   return true;
 }
 

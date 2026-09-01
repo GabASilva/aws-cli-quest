@@ -21,10 +21,33 @@
 // dela. Cobrar por ela seria cobrar pra entender o que já está sendo pedido.
 const SERVICOS_GRATIS = ["setup", "linux", "formatos", "s3", "ec2", "iam"];
 
-// um desafio é grátis se for de uma trilha grátis OU se for o Desafio do dia
+// As N PRIMEIRAS de CADA trilha são abertas (decisão do Gabriel, 2026-09-01).
+// Antes, quem não era Pro via 47 das 53 trilhas como um muro: não dava pra
+// saber se Lambda, VPC ou Bedrock valiam a pena sem pagar antes. Agora toda
+// trilha tem uma porta de entrada — você chega até a primeira criação de
+// recurso, que é onde o simulador se prova.
+// Projeto NÃO entra: é o fecho da trilha, não uma amostra.
+const GRATIS_POR_TRILHA = 3;
+let _primeirasGratis = null;
+function idsPrimeirasGratis() {
+  if (_primeirasGratis) return _primeirasGratis;
+  const conta = {};
+  _primeirasGratis = new Set();
+  if (typeof DESAFIOS === "undefined") return _primeirasGratis; // ainda não carregou
+  for (const d of DESAFIOS) {
+    if (!d || d.tipo === "projeto") continue;
+    const n = (conta[d.servico] = (conta[d.servico] || 0) + 1);
+    if (n <= GRATIS_POR_TRILHA) _primeirasGratis.add(d.id);
+  }
+  return _primeirasGratis;
+}
+
+// um desafio é grátis se for de trilha grátis, se for uma das primeiras da
+// trilha dele, OU se for o Desafio do dia
 function desafioEhGratis(d) {
   if (!d) return true;
   if (SERVICOS_GRATIS.includes(d.servico)) return true;
+  if (d.tipo !== "projeto" && idsPrimeirasGratis().has(d.id)) return true;
   if (typeof window.desafioDoDia === "function") {
     try { if (d.id === window.desafioDoDia().id) return true; } catch (e) { /* ok */ }
   }
@@ -68,12 +91,16 @@ function podeAcessar(d) {
     };
   }
 
+  // O selo diz "3 grátis", não "Pro": a trilha não está mais fechada: as
+  // primeiras atividades abrem pra qualquer um. Dizer "🔒 Pro" numa trilha em
+  // que a pessoa PODE entrar seria mentira, e ela nem tentaria.
   function marcarPro(bloco) {
     const prog = bloco.querySelector(".servico-prog");
     if (prog && !bloco.querySelector(".selo-pro")) {
       const selo = document.createElement("span");
       selo.className = "selo-pro";
-      selo.textContent = "🔒 Pro";
+      selo.textContent = `${GRATIS_POR_TRILHA} grátis 🔒`;
+      selo.title = `As ${GRATIS_POR_TRILHA} primeiras atividades desta trilha são abertas; o resto é Pro.`;
       prog.replaceWith(selo);
     }
     bloco.classList.add("bloco-pro");
