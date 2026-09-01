@@ -194,7 +194,8 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "get-distribution-config") },
 
     { id: "cf-9", servico: "cloudfront", nivel: 3, xp: 115, titulo: "Desligue a CDN",
-      descricao: "O site vai sair do ar e a CDN precisa ser aposentada. <b>Não existe apagar direto:</b> primeiro você <b>desliga</b>. Use o ETag que acabou de pegar no <code>--if-match</code>. <small>(se o ETag não bater, a AWS recusa — alguém mexeu antes de você)</small>",
+      descricao: "O site vai sair do ar e a CDN precisa ser aposentada. <b>Não existe apagar direto:</b> primeiro você <b>desliga</b>. Use o ETag que acabou de pegar no <code>--if-match</code>. <small>(se o ETag não bater, a AWS recusa — alguém mexeu antes de você)</small>" +
+        "<br><small>⚠️ <b>Simplificado aqui:</b> na AWS real o <code>--distribution-config</code> exige a configuração <b>inteira</b> — você pega ela no <code>get-distribution-config</code>, edita só o <code>Enabled</code> e devolve tudo. Mandar apenas <code>{\"Enabled\":false}</code> lá dá erro. Neste simulador aceitamos só o campo que muda, pra caber numa linha.</small>",
       dicas: ["`update-…` altera o recurso, e aqui ele exige o --if-match com o ETag atual.", "A forma é: aws cloudfront update-distribution --id <id> --if-match <etag> --distribution-config '{\"Enabled\":false}'"],
       solucao: ["aws cloudfront update-distribution --id <dist-id> --if-match <etag> --distribution-config '{\"Enabled\":false}'"],
       validar: (c) => dists(c).some((d) => d.ativo === false) },

@@ -158,7 +158,8 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "route53", "get-hosted-zone") },
 
     { id: "r53-8", servico: "route53", nivel: 3, xp: 90, titulo: "Já propagou?",
-      descricao: "Você trocou o registro e o time pergunta se já valeu. Toda mudança no Route 53 nasce <b>PENDING</b> e vira <b>INSYNC</b>. <b>Consulte o estado</b> da mudança que você fez. <small>(o id vem no ChangeInfo da resposta do change-resource-record-sets)</small>",
+      descricao: "Você trocou o registro e o time pergunta se já valeu. Toda mudança no Route 53 nasce <b>PENDING</b> e vira <b>INSYNC</b>. <b>Consulte o estado</b> da mudança que você fez. <small>(o id vem no ChangeInfo da resposta do change-resource-record-sets)</small>" +
+        "<br><small>⚠️ <b>Simplificado aqui:</b> na AWS real a mudança leva de segundos a poucos minutos pra virar INSYNC, e você consulta quantas vezes precisar. Neste simulador ela vira INSYNC já na segunda consulta. E atenção ao que <b>não</b> é simplificação: INSYNC não quer dizer que o mundo já vê o valor novo — o <b>TTL</b> do registro ainda vale nos resolvedores por aí.</small>",
       dicas: ["`get-change` consulta o andamento de uma alteração — veja a lista de comandos com: aws route53 help", "A forma do comando é: aws route53 get-change --id <id-da-mudança>"],
       solucao: ["aws route53 get-change --id <change-id>"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "route53", "get-change") },

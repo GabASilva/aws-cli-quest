@@ -237,7 +237,8 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "polly", "synthesize-speech") && String(cmd.flags["lexicon-names"] || "").includes(LEX) },
 
     { id: "pol-7", servico: "polly", nivel: 3, xp: 110, titulo: "Narre um texto longo",
-      descricao: "O time quer o artigo inteiro em áudio, e ele não cabe no <b>synthesize-speech</b> (que tem teto de caracteres). Use a <b>síntese assíncrona</b>: ela processa em segundo plano e entrega o áudio no bucket <b>narracao-climb</b>.",
+      descricao: "O time quer o artigo inteiro em áudio, e ele não cabe no <b>synthesize-speech</b> (que tem teto de caracteres). Use a <b>síntese assíncrona</b>: ela processa em segundo plano e entrega o áudio no bucket <b>narracao-climb</b>." +
+        "<br><small>⚠️ <b>Simplificado aqui:</b> na AWS real a tarefa leva tempo e passa por <code>scheduled</code> → <code>inProgress</code> → <code>completed</code>; você consulta até terminar. Neste simulador ela fica pronta na hora, pra você não precisar esperar.</small>",
       dicas: ["`start-…-task` começa um trabalho que roda em segundo plano — veja a lista de comandos com: aws polly help", "A forma é: aws polly start-speech-synthesis-task --text <texto> --output-format mp3 --voice-id <voz> --output-s3-bucket-name <bucket>"],
       solucao: ['aws polly start-speech-synthesis-task --text "Capitulo um: o que e a nuvem" --output-format mp3 --voice-id Camila --output-s3-bucket-name narracao-climb'],
       validar: (c) => tarefas(c).some((t) => t.bucket === "narracao-climb") },
