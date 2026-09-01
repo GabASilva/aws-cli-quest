@@ -476,10 +476,10 @@
       dicas: ["Pra ver o que já existe, o verbo costuma ser `list-…` — veja a lista de comandos com: aws ecr help", "A forma do comando é: aws ecr list-images --repository-name <nome>"],
       solucao: ["aws ecr list-images --repository-name loja-imagens"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "ecr", "list-images") },
-    { id: "ecr-5", servico: "ecr", nivel: 3, xp: 70, titulo: "Devolva o armário",
-      descricao: "Projeto encerrado: <b>apague</b> o repositório <b>loja-imagens</b>.",
-      dicas: ["Apagar é sempre `delete-…` — veja a lista de comandos com: aws ecr help", "A forma do comando é: aws ecr delete-repository --repository-name <nome>"],
-      solucao: ["aws ecr delete-repository --repository-name loja-imagens"],
+    { id: "ecr-5", servico: "ecr", nivel: 3, xp: 70, titulo: "O armário não sai vazio",
+      descricao: "O laboratório do <b>loja-imagens</b> acabou: <b>apague</b> o repositório. Tente primeiro do jeito óbvio e leia o que voltar — o ECR não deixa você levar junto, sem querer, um repositório que ainda tem imagem dentro.",
+      dicas: ["Apagar é sempre `delete-…`. Rode primeiro só com o nome do repositório e leia o erro com calma: ele diz exatamente o que está faltando.", "O ECR se recusa a apagar repositório com imagem dentro. A flag que assume esse risco é a mesma que aparece nesse tipo de comando na AWS inteira, e ela não recebe valor nenhum."],
+      solucao: ["aws ecr delete-repository --repository-name loja-imagens --force"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "ecr", "delete-repository") && !(c.ecr && c.ecr.repositorios["loja-imagens"]) },
 
     // ===================== ECS =====================

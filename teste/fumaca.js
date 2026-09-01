@@ -58,7 +58,7 @@ window.rodarPelaCadeia = function (linha) {
   return { ok: !_term.erro, saida: _term.linhas.join(" | "), cmd: _term.cmd };
 };
 `;
-const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
+const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "ecr-completo.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -116,6 +116,13 @@ const teste = `
       const importado = todos.filter((x) => x.tipo === "IMPORTED").pop();
       if (emitido) linha = linha.replace(/<cert-arn>/g, emitido.arn);
       if (importado) linha = linha.replace(/<cert-importado>/g, importado.arn);
+    }
+    // ECR: a imagem ORFA (sem tag) do repositorio do projeto so pode ser
+    // apontada pelo digest - que e justamente o que a atividade ensina.
+    if (linha.includes("<digest-orfa>") && conta.ecr) {
+      const r = (conta.ecr.repositorios || {})["pagamentos/checkout-api"];
+      const orfa = ((r || {}).detalhes || []).find((d) => !d.tags.length);
+      if (orfa) linha = linha.replace(/<digest-orfa>/g, orfa.digest);
     }
     // Route 53: id da ultima mudanca de registro e do health check criado
     if (linha.includes("<change-id>") && conta.route53) linha = linha.replace(/<change-id>/g, ult(conta.route53.mudancas));

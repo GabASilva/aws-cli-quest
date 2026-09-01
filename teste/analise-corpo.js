@@ -93,6 +93,13 @@ function resolver(linha) {
   if (linha.includes("<api-id>") && conta.apigateway) linha = linha.replace(/<api-id>/g, ult(conta.apigateway.apis));
   // tarefa de sintese do Polly: o id nasce sorteado no start-speech-synthesis-task
   if (linha.includes("<task-id>") && conta.polly) linha = linha.replace(/<task-id>/g, ult(conta.polly.tarefas));
+  // ECR: a imagem ORFA (sem tag) do repositorio do projeto so pode ser apontada
+  // pelo digest - e e justamente isso que a atividade do marco ensina.
+  if (linha.includes("<digest-orfa>") && conta.ecr) {
+    const r = (conta.ecr.repositorios || {})["pagamentos/checkout-api"];
+    const orfa = ((r || {}).detalhes || []).find((d) => !d.tags.length);
+    if (orfa) linha = linha.replace(/<digest-orfa>/g, orfa.digest);
+  }
   // ACM: o arn do certificado emitido pela AWS e o do importado sao diferentes
   if ((linha.includes("<cert-arn>") || linha.includes("<cert-importado>")) && conta.acm) {
     const todos = Object.values(conta.acm.certificados || {});
