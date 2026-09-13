@@ -87,10 +87,18 @@ header {
   border-radius: 10px;
   background: var(--painel-2);
   border: 1px solid var(--borda);
-  opacity: 0.55;
   text-align: center;
+  /* O estado zerado fica apagado por COR, nao por opacity. Com opacity .55 o
+     texto caia pra ~2:1 sobre o painel e reprovava o contraste do axe — e era
+     justo o estado que TODO visitante novo ve (streak 0). Cor fraca explicita
+     mantem o "apagado" e passa o AA (5,8:1). */
+  color: var(--texto-fraco);
 }
-.streak.aceso { opacity: 1; border-color: var(--laranja); box-shadow: 0 0 12px rgba(255, 153, 0, 0.25); }
+.streak.aceso {
+  color: var(--texto);
+  border-color: var(--laranja);
+  box-shadow: 0 0 12px rgba(255, 153, 0, 0.25);
+}
 .streak small { display: block; font-size: 0.65rem; color: var(--laranja); font-weight: 600; }
 
 .botao {
@@ -171,7 +179,14 @@ main {
 .item-desafio:hover:not(:disabled) { background: var(--painel-2); }
 .item-desafio.ativo { border-color: var(--laranja); background: var(--painel-2); }
 .item-desafio.feito .item-titulo { color: var(--texto-fraco); text-decoration: line-through; }
-.item-desafio.travado { opacity: 0.45; cursor: not-allowed; }
+/* Travada: era opacity .45, que arrastava titulo E meta pra baixo de 2:1 e
+   reprovava o contraste em cadeia (o axe acusava desde o <main> ate o
+   span.item-meta). O apagamento agora e por cor — passa o AA e continua
+   visivelmente mais fraca que uma atividade liberada. O cadeado no .status e o
+   cursor not-allowed seguem dizendo que esta travada. */
+.item-desafio.travado { cursor: not-allowed; color: var(--texto-fraco); }
+.item-desafio.travado .item-titulo { font-weight: 500; color: var(--texto-fraco); }
+.item-desafio.travado .item-meta { color: var(--texto-fraco); }
 .item-desafio .status { grid-area: st; }
 .item-titulo { grid-area: titulo; font-size: 0.86rem; font-weight: 600; }
 .item-meta { grid-area: meta; font-size: 0.7rem; color: var(--texto-fraco); }
@@ -673,7 +688,14 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
   body { display: block; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
   header { position: sticky; top: 0; z-index: 50; }
   main { display: block; min-height: 0; }
-  #sidebar { max-height: 46vh; border-right: none; border-bottom: 1px solid var(--borda); }
+  /* min-height junto do max: a lista nasce VAZIA no HTML e o app.js a preenche
+     depois. Sem reservar a altura, o conteudo de baixo era empurrado quando ela
+     enchia — era a maior fonte de CLS no celular (0,164 no PageSpeed de 13/09).
+     As duas medidas iguais = altura fixa; o overflow-y:auto ja rola o que sobra. */
+  #sidebar {
+    min-height: 46vh; max-height: 46vh;
+    border-right: none; border-bottom: 1px solid var(--borda);
+  }
   #cardDesafio { max-height: none; }
   .centro { min-height: 58vh; }
   #terminal { min-height: 260px; }

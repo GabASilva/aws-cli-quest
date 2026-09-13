@@ -93,6 +93,10 @@
     const n = escondidas.length;
     btn.innerHTML = `<span class="tl-seta" aria-hidden="true">⌄</span>+${n} ${n === 1 ? "atividade desbloqueia" : "atividades desbloqueiam"} conforme você avança`;
     btn.setAttribute("aria-expanded", "false");
+    // A .lista-desafios recebe role="list" (acessibilidade.js). Um filho sem
+    // role="listitem" reprova o aria-required-children — era o que derrubava a
+    // Acessibilidade a 91 e a Navegacao agentica a 0/2 no PageSpeed de 13/09.
+    btn.setAttribute("role", "listitem");
     btn.title = "Ver todas as atividades desta trilha";
     btn.addEventListener("click", (ev) => {
       ev.stopPropagation(); // não deixar o clique fechar/abrir a trilha

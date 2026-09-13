@@ -344,6 +344,7 @@
     `;
     document.body.appendChild(capa);
     document.body.classList.add("capa-aberta");
+    esconderAppAtras(true);
 
     const term = capa.querySelector("#capaTerm");
     if (term) animarTerminal(term);
@@ -360,10 +361,28 @@
     setTimeout(() => capa.querySelector("#capaComecar")?.focus(), 120);
   }
 
+  // A capa cobre a tela inteira (fixed, inset 0), mas o app continuava ATRAS
+  // dela na arvore de acessibilidade: leitor de tela lia o header, as 63
+  // trilhas e o rodape que ninguem esta vendo, e o axe auditava tudo aquilo
+  // (no PageSpeed de 13/09 as falhas de contraste vinham todas com o seletor
+  // "body.capa-aberta > ..."). aria-hidden tira do leitor; inert tira do Tab.
+  function esconderAppAtras(esconder) {
+    document.querySelectorAll("body > header, body > main, body > footer, body > .aviso-marca").forEach((el) => {
+      if (esconder) {
+        el.setAttribute("aria-hidden", "true");
+        el.inert = true;
+      } else {
+        el.removeAttribute("aria-hidden");
+        el.inert = false;
+      }
+    });
+  }
+
   function fechar(irParaAtividade) {
     const capa = document.getElementById("capa");
     if (!capa) return;
     marcarDispensada();
+    esconderAppAtras(false);
     document.getElementById("capaTerm")?._pararCapa?.();
     capa.classList.add("saindo");
     document.body.classList.remove("capa-aberta");

@@ -144,7 +144,11 @@
       }
       const side = document.querySelector("#sidebar");
       if (side && !side.getAttribute("aria-label")) {
-        side.setAttribute("role", "navigation");
+        // Sem role="navigation" aqui de proposito: o #sidebar e um <nav>, que
+        // ja tem esse role implicito. Quando era <aside role="navigation">, o
+        // par elemento/role era invalido (ARIA in HTML permite ao aside apenas
+        // feed/none/note/presentation/region/search) e reprovava duas
+        // auditorias do Lighthouse.
         side.setAttribute("aria-label", "Trilhas e atividades");
       }
     }, 500);

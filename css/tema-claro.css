@@ -128,6 +128,13 @@ body[data-tema="claro"] .botao {
 body[data-tema="claro"] .botao:not(.secundario) {
   color: #fff;
 }
+/* Mesmo caso do botão primário, com o mesmo remédio: o link "Pular para o
+   terminal" (injetado por acessibilidade.js) trazia o texto quase-preto do
+   tema Clássico e sobre o laranja queimado daqui dava 3,33:1. Com branco, 5,5:1.
+   Ele só aparece no foco por teclado — justamente quem mais depende dele. */
+body[data-tema="claro"] .a11y-pular {
+  color: #fff;
+}
 body[data-tema="claro"] .botao.secundario {
   background: var(--painel);
   border: 1px solid var(--borda);

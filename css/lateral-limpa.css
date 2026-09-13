@@ -67,7 +67,10 @@
   font-family: var(--fonte-mono);
 }
 #sidebar .item-titulo { font-size: .76rem; font-weight: 400; }
-#sidebar .item-meta { font-size: .66rem; opacity: .8; }
+/* Sem opacity: com .8 o "Basico · 50 XP" caia pra 4,2:1 e reprovava o AA (o
+   axe listou o span.item-meta em 13/09). A cor --texto-fraco ja deixa a linha
+   secundaria discreta, com 5,8:1. */
+#sidebar .item-meta { font-size: .66rem; }
 .item-desafio.ativo {
   background: transparent;
   border-color: transparent;
