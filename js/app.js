@@ -484,6 +484,23 @@ async function aoEsquecerSenha(ev) {
 
 // ---------- Inicialização ----------
 async function iniciar() {
+  // CAMINHO RÁPIDO (quem não tem sessão salva): não há nada pra esperar da
+  // nuvem, então a tela monta AGORA, com o progresso do próprio navegador.
+  // Sem isto a interface inteira ficava esperando o apiIniciar() — e como a
+  // máquina do Fly dorme, isso custava ~2 s de tela vazia em produção (medido
+  // em 15/09: o gate do pronto.js estourava o teto e a tela aparecia meio
+  // montada, trazendo o CLS de volta). Quem TEM sessão continua no fluxo de
+  // sempre: esperar a nuvem antes de pintar progresso que pode estar velho.
+  let semSessao = false;
+  try { semSessao = !localStorage.getItem("awsCliQuest.token"); } catch (e) { semSessao = false; }
+  if (semSessao) {
+    carregarJogo();
+    renderCabecalho();
+    renderSidebar();
+    renderCard();
+    boasVindas();
+  }
+
   // tenta o backend e restaura sessão antes de carregar o progresso
   let sessao = null;
   try { sessao = await apiIniciar(); } catch (e) { /* offline */ }
@@ -558,7 +575,7 @@ async function iniciar() {
     }
   });
 
-  boasVindas();
+  if (!semSessao) boasVindas(); // no caminho rápido já foi impresso lá em cima
   entrada.focus();
 }
 
