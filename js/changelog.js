@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-15",
+      data: "15 set 2026",
+      titulo: "⚡ O CLImb abre na hora — e parou de tremer enquanto carrega",
+      itens: [
+        "<b>⚡ Abrir o CLImb deixou de ser uma espera.</b> O app é feito de <b>93 arquivos de JavaScript</b> e, até agora, o navegador lia um de cada vez <i>antes</i> de desenhar qualquer coisa — você olhava pra uma tela vazia enquanto <b>676 KB</b> desciam. Agora eles descem <b>em paralelo</b>, e o desenho da página não espera mais o último arquivo chegar pra começar. Não mudou o que o app faz; mudou <i>quando</i> ele aparece.",
+        "<b>🩹 E a página parou de tremer na sua frente.</b> Justamente por aparecer cedo, dava pra ver a interface se montando por cima de si mesma: a barra de XP empurrava tudo pra baixo, o card da atividade nascia pequeno e crescia, e no celular o <b>☰</b> chegava depois e reorganizava o cabeçalho — com o botão fugindo do dedo na hora do clique. Isso tem nome e nota (<i>Cumulative Layout Shift</i>): estava em <b>0,99</b> no celular e agora está em <b>0,01</b>. A tela passou a esperar estar pronta pra aparecer.",
+        "<b>👁️ Texto apagado demais virou texto legível.</b> Três partes do app usavam transparência pra parecer “desligadas”, e transparência come o contraste: a caixa de <b>sequência zerada</b> (o estado de quem está chegando agora), as atividades <b>ainda travadas</b> na lateral e a linha <code>Básico · 50 XP</code> de cada uma. Agora o apagado vem da cor, não da transparência — continua discreto, e dá pra ler. Varremos a página inteira nos dois temas: não sobrou texto abaixo do mínimo de contraste.",
+        "<b>🔊 E duas coisas que atrapalhavam de verdade quem usa leitor de tela.</b> A tela de apresentação cobre o app inteiro, mas o leitor seguia lendo o que estava <i>atrás</i> dela: cabeçalho, as 63 trilhas, rodapé — conteúdo que ninguém está vendo. E a lista lateral se anunciava com um papel que o HTML não permite naquele elemento, então nem sempre era reconhecida como navegação. As duas foram corrigidas: a <b>Acessibilidade do app agora marca 100</b> no teste do Google, e era 91.",
+      ],
+    },
+    {
       versao: "2026-09-01",
       data: "1 set 2026",
       titulo: "🧗 Sete trilhas magras viraram trilhas completas — e toda trilha abre as 3 primeiras atividades",
