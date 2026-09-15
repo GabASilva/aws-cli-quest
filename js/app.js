@@ -495,6 +495,7 @@ async function iniciar() {
   try { semSessao = !localStorage.getItem("awsCliQuest.token"); } catch (e) { semSessao = false; }
   if (semSessao) {
     carregarJogo();
+    atualizarBotaoConta();
     renderCabecalho();
     renderSidebar();
     renderCard();
@@ -514,15 +515,27 @@ async function iniciar() {
     sessao = null;
   }
 
-  if (sessao && sessao.perfil) {
+  // Só remonta a tela se o que voltou da nuvem MUDA o que está nela. Quem veio
+  // pelo caminho rápido já tem tudo desenhado; redesenhar por desencargo custa
+  // caro, porque renderSidebar() zera o innerHTML e reconstrói — a lateral
+  // colapsa por um quadro e empurra o resto (foi o que levou o CLS de produção
+  // de 0,10 pra 0,25 na v132).
+  const veioDaNuvem = !!(sessao && sessao.perfil);
+  if (veioDaNuvem) {
     aplicarProgressoNuvem(sessao.perfil, sessao.progresso);
-  } else {
+  } else if (!semSessao) {
     carregarJogo();
   }
-  atualizarBotaoConta();
-  renderCabecalho();
-  renderSidebar();
-  renderCard();
+  // O botao de conta so e reescrito se o que ele diz mudou: com o backend no ar
+  // e ninguem logado ele ja diz "Entrar" desde o caminho rapido, e reescrever
+  // texto igual ainda conta como mexer no DOM — o que faria o pronto.js achar
+  // que a montagem continua e segurar a tela ate a resposta da rede.
+  if (veioDaNuvem || !semSessao || !api.online) atualizarBotaoConta();
+  if (veioDaNuvem || !semSessao) {
+    renderCabecalho();
+    renderSidebar();
+    renderCard();
+  }
 
   const entrada = $("#entradaTerminal");
   entrada.addEventListener("keydown", (ev) => {
