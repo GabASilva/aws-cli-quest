@@ -45,7 +45,7 @@
       clearTimeout(timer);
       timer = setTimeout(function () {
         obs.disconnect();
-        requestAnimationFrame(function () { requestAnimationFrame(pronto); });
+        pronto();
       }, QUIETO);
     }
     var obs = new MutationObserver(adiar);
@@ -53,15 +53,22 @@
       var el = document.querySelector(sel);
       if (el) obs.observe(el, { childList: true, subtree: true });
     });
-    adiar(); // comeca a contar mesmo que nada mude
+    // NAO comecamos a contar aqui de proposito. A contagem so vale depois da
+    // PRIMEIRA mudanca: silencio antes da montagem comecar nao e "acabou", e
+    // confundir os dois foi o defeito da primeira versao deste arquivo — ela
+    // liberava a tela aos 209 ms, antes de a interface ser desenhada (aos
+    // 272 ms), e o CLS voltava inteiro. Se nada mudar nunca, o TETO resolve.
   }
 
   // Dois quadros depois do DOM montado: o setTimeout(0) espera todos os outros
   // handlers de DOMContentLoaded, e os dois rAF esperam layout e pintura.
+  // Sem requestAnimationFrame aqui, e isso NAO e detalhe: enquanto a tela esta
+  // invisivel o navegador nao tem o que pintar, nao gera quadro nenhum e o rAF
+  // simplesmente nunca dispara. A primeira versao deste arquivo esperava dois
+  // rAF pra liberar — e por isso ficava travada ate o TETO, custando ~2 s de
+  // tela vazia em producao (FCP 0,3 s -> 2,2 s na v131).
   function quandoMontado() {
-    setTimeout(function () {
-      requestAnimationFrame(function () { requestAnimationFrame(pronto); });
-    }, 0);
+    setTimeout(pronto, 0);
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", vigiar);
