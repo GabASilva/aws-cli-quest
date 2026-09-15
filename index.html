@@ -48,6 +48,11 @@
   <link rel="stylesheet" href="css/estilo.css">
   <link rel="stylesheet" href="css/lateral-limpa.css">
   <link rel="stylesheet" href="css/tema-claro.css">
+  <!-- Sem JavaScript a classe .app-pronto nunca entra e a tela ficaria
+       invisivel pra sempre (ver js/pronto.js). Aqui ela volta a aparecer. -->
+  <noscript><style>
+    body header, body main, body footer, body .aviso-marca { visibility: visible !important; }
+  </style></noscript>
 </head>
 <body>
 
@@ -166,6 +171,9 @@
 
   <div id="toasts"></div>
 
+  <!-- primeiro de todos: segura a pintura ate a interface estar montada
+       (sem isto a tela treme enquanto o JS acrescenta header, card e rodape) -->
+  <script defer src="js/pronto.js"></script>
   <script defer src="js/simulador.js"></script>
   <script defer src="js/manuais.js"></script>
   <script defer src="js/manuais-fase6-9.js"></script>
