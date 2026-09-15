@@ -15,3 +15,6 @@ paginas AWS/
 # copias do banco feitas por scripts/backup.js — contem e-mail e hash de senha.
 # O repositorio e PUBLICO: isto nunca pode entrar.
 backups/
+
+# relatorio do PageSpeed salvo localmente (3 MB) — nao versionar nem publicar
+teste pagespeed google/
