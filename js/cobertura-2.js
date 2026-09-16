@@ -47,7 +47,7 @@
 
     { id: "cob-vpc-5", servico: "vpc", nivel: 3, xp: 100, titulo: "Qual máquina é aquele IP do log?",
       descricao: "Os flow logs mostram <b>eni-…</b>, não o nome da máquina. Liste as <b>interfaces de rede</b> — é assim que se liga uma linha de log à instância que recebeu a conexão.",
-      dicas: ["`describe-…` mostra os detalhes. A interface de rede é o \"cabo\" da instância.", "Este comando não precisa de parâmetro: aws ec2 describe-network-interfaces"],
+      dicas: ["`describe-…` mostra os detalhes. A interface de rede é o \"cabo\" da instância.", "É um `describe-` do ec2, e o recurso é o “cabo” que a descrição cita: network interface, no plural e com hífen. Sem parâmetro."],
       solucao: ["aws ec2 describe-network-interfaces"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-network-interfaces") },
 
@@ -248,7 +248,7 @@
 
     { id: "cob-org-1", servico: "organizations", nivel: 2, xp: 80, titulo: "Dados da organização",
       descricao: "Veja os <b>detalhes da organização</b>: o id e qual conta é a \"mãe\" (management account).",
-      dicas: ["`describe-…` mostra os detalhes. Este não precisa de parâmetro.", "A forma é: aws organizations describe-organization"],
+      dicas: ["`describe-…` mostra os detalhes. Este não precisa de parâmetro.", "`describe-` + o recurso no singular: a conta participa de uma organização só, não de várias. Sem parâmetro."],
       solucao: ["aws organizations describe-organization"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "organizations", "describe-organization") },
 
@@ -272,7 +272,7 @@
 
     { id: "cob-asg-1", servico: "autoscaling", nivel: 2, xp: 90, titulo: "Como está o grupo elástico?",
       descricao: "Veja os <b>detalhes do Auto Scaling group</b>: capacidade mínima, máxima, desejada e quais instâncias estão nele agora.",
-      dicas: ["`describe-…` mostra o estado. Este pode vir sem parâmetro, trazendo todos os grupos.", "A forma é: aws autoscaling describe-auto-scaling-groups"],
+      dicas: ["`describe-…` mostra o estado. Este pode vir sem parâmetro, trazendo todos os grupos.", "Verbo `describe-` colado no recurso, no plural e com hífen no lugar do espaço — o recurso é o próprio grupo. Sem parâmetro; `aws autoscaling help` lista os comandos se a grafia fugir."],
       solucao: ["aws autoscaling describe-auto-scaling-groups"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "autoscaling", "describe-auto-scaling-groups") },
 

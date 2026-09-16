@@ -95,7 +95,7 @@ const DESAFIOS_FORMATOS_2 = [
       "Se errar e usar <b>&gt;</b> de novo no meio, você apaga tudo o que já tinha escrito)</small>",
     dicas: [
       "São cinco linhas: Resources: / o nome lógico / Type: / Properties: / BucketName:. Cuide da indentação — em YAML ela é sintaxe.",
-      "Primeira com > e as outras quatro com >>. No fim: aws cloudformation validate-template --template-body file://infra-minha.yaml",
+      "Primeira linha com > e as outras quatro com >>. Pra conferir no fim, o CloudFormation tem um comando que valida o template sem criar nada: ele recebe o arquivo em `--template-body`, com o prefixo `file://`.",
     ],
     solucao: [
       "echo 'Resources:' > infra-minha.yaml",

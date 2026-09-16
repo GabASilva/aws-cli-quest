@@ -38,7 +38,7 @@
     // ===================== Inspector =====================
     { id: "cob-insp-1", servico: "inspector2", nivel: 2, xp: 80, titulo: "O Inspector está mesmo ligado?",
       descricao: "Antes de confiar num scanner, confirme que ele está ativo. Veja o <b>status do Inspector na conta</b>.",
-      dicas: ["`batch-get-…` busca o estado de várias contas de uma vez — aqui, a sua.", "Este comando não precisa de nenhum parâmetro: aws inspector2 batch-get-account-status"],
+      dicas: ["`batch-get-…` busca o estado de várias contas de uma vez — aqui, a sua.", "O nome tem três partes: o `batch-get-`, o que você quer olhar (a conta) e o que quer saber dela (o status). Sem parâmetro."],
       solucao: ["aws inspector2 batch-get-account-status"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "inspector2", "batch-get-account-status") },
 
@@ -51,19 +51,19 @@
     // ===================== Macie =====================
     { id: "cob-macie-1", servico: "macie2", nivel: 2, xp: 80, titulo: "Confira a sessão do Macie",
       descricao: "Veja o <b>estado da sessão</b> do Macie: se está habilitado e de quanto em quanto tempo ele publica os achados.",
-      dicas: ["`get-…` busca o estado de algo específico — aqui, a sessão do serviço na sua conta.", "Este comando não precisa de parâmetro: aws macie2 get-macie-session"],
+      dicas: ["`get-…` busca o estado de algo específico — aqui, a sessão do serviço na sua conta.", "`get-` + o nome do serviço + o que você quer dele: a sessão. Sem parâmetro. (Na CLI o serviço é `macie2`, mas o comando ainda fala em macie.)"],
       solucao: ["aws macie2 get-macie-session"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "macie2", "get-macie-session") },
 
     { id: "cob-macie-2", servico: "macie2", nivel: 2, xp: 80, titulo: "Os jobs que estão rodando",
       descricao: "Você mandou o Macie vasculhar o bucket. <b>Liste os jobs</b> de classificação pra acompanhar.",
-      dicas: ["Pra ver o que já existe, o verbo costuma ser `list-…`.", "Este comando não precisa de parâmetro: aws macie2 list-classification-jobs"],
+      dicas: ["Pra ver o que já existe, o verbo costuma ser `list-…`.", "Verbo `list-` + o tipo de job que o Macie roda — os de classificação — no plural. Sem parâmetro."],
       solucao: ["aws macie2 list-classification-jobs"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "macie2", "list-classification-jobs") },
 
     { id: "cob-macie-3", servico: "macie2", nivel: 3, xp: 90, titulo: "Desligue o Macie",
       descricao: "O Macie cobra por bucket monitorado e por GB inspecionado. <b>Desabilite</b> o serviço.",
-      dicas: ["`disable-…` é o oposto do enable que você usou pra ligar.", "Este comando não precisa de parâmetro: aws macie2 disable-macie"],
+      dicas: ["`disable-…` é o oposto do enable que você usou pra ligar.", "Troque o `enable` que você usou pra ligar pelo oposto e mantenha o resto igual. Sem parâmetro."],
       solucao: ["aws macie2 disable-macie"],
       validar: (c) => !!(c.macie && c.macie.ligado === false) },
 
@@ -89,27 +89,27 @@
 
     { id: "cob-shield-2", servico: "shield", nivel: 2, xp: 80, titulo: "Levei algum ataque?",
       descricao: "Veja as <b>estatísticas de ataque</b> detectadas na conta. É o relatório que responde \"aquela lentidão de ontem foi DDoS?\".",
-      dicas: ["`describe-…` mostra os detalhes/estado de algo — aqui, o resumo dos ataques do período.", "Este comando não precisa de parâmetro: aws shield describe-attack-statistics"],
+      dicas: ["`describe-…` mostra os detalhes/estado de algo — aqui, o resumo dos ataques do período.", "`describe-` + o assunto em inglês, na ordem “ataque” e depois “estatísticas”, ligados por hífen. Sem parâmetro."],
       solucao: ["aws shield describe-attack-statistics"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "shield", "describe-attack-statistics") },
 
     // ===================== Config =====================
     { id: "cob-cfg-1", servico: "configservice", nivel: 2, xp: 80, titulo: "O gravador está gravando mesmo?",
       descricao: "Criar o gravador e dar start não garante nada — confirme. Veja o <b>status do configuration recorder</b> e repare no campo <b>recording</b>.",
-      dicas: ["`describe-…` mostra o estado. O nome do comando termina em \"-status\".", "Este comando não precisa de parâmetro: aws configservice describe-configuration-recorder-status"],
+      dicas: ["`describe-…` mostra o estado. O nome do comando termina em \"-status\".", "Depois do `describe-` vem o nome do recurso por extenso — configuration recorder — e `-status` no fim. Tudo ligado por hífen, sem parâmetro."],
       solucao: ["aws configservice describe-configuration-recorder-status"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "describe-configuration-recorder-status") },
 
     { id: "cob-cfg-2", servico: "configservice", nivel: 2, xp: 80, titulo: "Quais regras estão valendo?",
       descricao: "Liste as <b>config rules</b> da conta e confira que a sua regra de criptografia está ativa.",
-      dicas: ["`describe-…` também serve pra listar, quando o que você quer é o estado de cada item.", "Este comando não precisa de parâmetro: aws configservice describe-config-rules"],
+      dicas: ["`describe-…` também serve pra listar, quando o que você quer é o estado de cada item.", "`describe-` + “config rules” com hífen no lugar do espaço, no plural. Sem parâmetro."],
       solucao: ["aws configservice describe-config-rules"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "describe-config-rules") },
 
     // ===================== Kinesis (o stream foi apagado na trilha) =====================
     { id: "cob-kin-1", servico: "kinesis", nivel: 2, xp: 90, titulo: "Quais canos existem?",
       descricao: "Você apagou o stream anterior. Crie um novo chamado <b>sensores-fabrica</b> com <b>2</b> shards e depois <b>liste</b> os streams da conta.",
-      dicas: ["São dois comandos: primeiro criar (você já fez isso na trilha), depois listar — e o verbo de listar costuma ser `list-…`.", "A forma é: aws kinesis create-stream --stream-name <nome> --shard-count <n>  →  aws kinesis list-streams"],
+      dicas: ["São dois comandos: primeiro criar (você já fez isso na trilha), depois listar — e o verbo de listar costuma ser `list-…`.", "No create, as duas flags são `--stream-name` e `--shard-count`. Pra listar depois, o verbo `list-` com o recurso no plural — e esse não leva flag nenhuma."],
       solucao: [
         "aws kinesis create-stream --stream-name sensores-fabrica --shard-count 2",
         "aws kinesis list-streams",

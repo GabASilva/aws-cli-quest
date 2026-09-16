@@ -69,7 +69,7 @@ const DESAFIOS_FORMATOS = [
       "devolve costuma apontar a linha errada, o que faz muita gente procurar no lugar errado)</small>",
     dicas: [
       "Abra o arquivo e leia com calma a linha ANTES de cada `}` e `]`.",
-      "A forma é: cat politica-quebrada.json — o defeito está no fim de uma das linhas.",
+      "Mesmo `cat` de sempre, no arquivo que a descrição diz que a AWS recusou. O defeito está no FIM de uma das linhas, não no meio.",
     ],
     solucao: ["cat politica-quebrada.json"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" && /politica-quebrada\.json/.test((cmd.args || []).join(" ")) },
@@ -92,7 +92,7 @@ const DESAFIOS_FORMATOS = [
       "“<b>isto está dentro daquilo</b>” é só o <b>espaço no começo da linha</b> — não há chave nenhuma fechando bloco. " +
       "<small>(por isso YAML quebra com <b>TAB</b>: o formato exige espaços. E um espaço a mais muda " +
       "de qual recurso a propriedade é — o arquivo continua válido e faz outra coisa, que é o pior tipo de bug)</small>",
-    dicas: ["Mesmo comando; agora conte os espaços de cada nível.", "A forma é: cat infra.yaml"],
+    dicas: ["Mesmo comando; agora conte os espaços de cada nível.", "Mesmo `cat`, no .yaml que a descrição cita. Depois conte os espaços do começo de cada linha, um nível por vez."],
     solucao: ["cat infra.yaml"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" && /infra\.yaml/.test((cmd.args || []).join(" ")) },
 
@@ -126,7 +126,7 @@ const DESAFIOS_FORMATOS = [
       "É o que transforma a saída da AWS em algo que dá pra usar num script)</small>",
     dicas: [
       "Primeiro rode sem nada pra ver o despejo inteiro, depois filtre.",
-      "A forma é: aws glue get-databases --query 'DatabaseList[].Name'",
+      "Repita o comando de antes e acrescente `--query`, com o caminho entre aspas simples. O caminho tem duas partes: a lista que veio na resposta e, depois do `[]`, o campo que você quer de cada item.",
     ],
     solucao: [
       "aws glue get-databases",
@@ -144,7 +144,7 @@ const DESAFIOS_FORMATOS = [
       "ela espera lista dá erro de tipo, não de sintaxe — o JSON está “certo” e mesmo assim não serve)</small>",
     dicas: [
       "São dois `cat`, um em cada arquivo. Olhe o PRIMEIRO caractere de cada um.",
-      "A forma é: cat tarefa-web.json  e depois  cat maquina-estados.json",
+      "Um `cat` por arquivo, na ordem em que a descrição os cita. A resposta está no primeiro caractere de cada um: `[` abre lista, `{` abre objeto.",
     ],
     solucao: ["cat tarefa-web.json", "cat maquina-estados.json"],
     validar: (c, cmd, ok) => ok && cmd && cmd.sub === "cat" && /maquina-estados\.json/.test((cmd.args || []).join(" ")) },
