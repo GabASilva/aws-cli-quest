@@ -17,6 +17,7 @@ const crypto = require("crypto");
 const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
+const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades nas páginas públicas
 const pagSimulado = require("./lib/pagina-simulado.js"); // página pública do simulado
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
@@ -1391,13 +1392,18 @@ function dadosPerfilPublico(nome) {
 // app segue intacto — página de SEO não pode derrubar o produto. O erro é
 // gritado no log porque falha silenciosa aqui significa tráfego perdido.
 let LICOES_PUB = null;
+let CONTEUDO_PUB = null;
 let GRATIS_PUB = null; // quais trilhas são abertas — pra página não mentir sobre preço
 try {
   const carregado = pagLicoes.carregarLicoes(RAIZ);
   LICOES_PUB = carregado.licoes;
   GRATIS_PUB = carregado.gratis;
+  // O conteúdo do app (manuais + atividades) entra nas páginas de /aprender:
+  // sem ele elas saem com ~240 palavras, que é raso demais pro Google indexar.
+  CONTEUDO_PUB = conteudoApp.carregar(RAIZ);
   console.log(`Lições públicas: ${Object.keys(LICOES_PUB).length} páginas em /aprender` +
-    ` (grátis: ${GRATIS_PUB.servicos.length} trilhas + ${GRATIS_PUB.porTrilha} por trilha)`);
+    ` (grátis: ${GRATIS_PUB.servicos.length} trilhas + ${GRATIS_PUB.porTrilha} por trilha)` +
+    `, com ${Object.keys(CONTEUDO_PUB.manuais).length} manuais e ${CONTEUDO_PUB.desafios.length} atividades`);
 } catch (e) {
   console.error("ATENÇÃO: não consegui carregar as lições para /aprender —", e.message);
 }
@@ -1427,10 +1433,28 @@ function servirLicaoPublica(req, res, rota) {
   if (!LICOES_PUB) return false;
   const base = hostBasePublico(req);
   if (rota === "/aprender" || rota === "/aprender/") {
-    servirHtml(res, pagLicoes.paginaIndice(LICOES_PUB, { base, gratis: GRATIS_PUB }));
+    servirHtml(res, pagLicoes.paginaIndice(LICOES_PUB, {
+      base, gratis: GRATIS_PUB,
+      comandosComPagina: CONTEUDO_PUB ? conteudoApp.comandosComPagina(CONTEUDO_PUB) : {},
+    }));
     return true;
   }
-  const id = rota.slice("/aprender/".length).replace(/\/+$/, "");
+  const resto = rota.slice("/aprender/".length).replace(/\/+$/, "");
+
+  // /aprender/<servico>/<comando>: página do comando, quando ele tem material
+  // pra sustentar uma (ver comandosComPagina). Vem ANTES da lição porque a
+  // lição casa só com um segmento.
+  if (resto.indexOf("/") > 0 && CONTEUDO_PUB) {
+    const [servico, sub] = resto.split("/");
+    const cmd = conteudoApp.comandosComPagina(CONTEUDO_PUB)[servico + "." + sub];
+    if (cmd) {
+      const irmaos = Object.values(conteudoApp.comandosComPagina(CONTEUDO_PUB));
+      servirHtml(res, pagLicoes.paginaComando(cmd, { base, licoes: LICOES_PUB, irmaos }));
+      return true;
+    }
+  }
+
+  const id = resto;
   const licao = LICOES_PUB[id];
   if (!licao) {
     // 404 de verdade. Deixar cair no servidor de estáticos devolvia 403, que
@@ -1445,7 +1469,11 @@ function servirLicaoPublica(req, res, rota) {
     res.end(corpo);
     return true;
   }
-  servirHtml(res, pagLicoes.paginaLicao(id, licao, { base, gratis: GRATIS_PUB }));
+  servirHtml(res, pagLicoes.paginaLicao(id, licao, {
+    base, gratis: GRATIS_PUB, conteudo: CONTEUDO_PUB,
+    licoes: LICOES_PUB, meta: CONTEUDO_PUB ? CONTEUDO_PUB.meta : [],
+    comandosComPagina: CONTEUDO_PUB ? conteudoApp.comandosComPagina(CONTEUDO_PUB) : {},
+  }));
   return true;
 }
 
@@ -1468,6 +1496,13 @@ function servirSitemap(res) {
   if (LICOES_PUB) {
     for (const u of pagLicoes.urlsLicoes(LICOES_PUB, base)) {
       urls.push({ loc: u, freq: "monthly", pri: u.endsWith("/aprender") ? "0.9" : "0.7" });
+    }
+  }
+  // Páginas de comando: são as que respondem à busca de cauda longa
+  // ("aws s3 mb"), então entram no sitemap com prioridade de página de conteúdo.
+  if (CONTEUDO_PUB) {
+    for (const c of Object.values(conteudoApp.comandosComPagina(CONTEUDO_PUB))) {
+      urls.push({ loc: `${base}/aprender/${c.servico}/${c.sub}`, freq: "monthly", pri: "0.7" });
     }
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
