@@ -1274,6 +1274,52 @@ function calcularVersao() {
 }
 const VERSAO = calcularVersao();
 
+// ---------- Pre-aquecimento do cache de compressao ----------
+// O cache acima so enche conforme os arquivos vao sendo pedidos, e a maquina do
+// Fly DORME: cada vez que ela acorda o processo e novo e o cache esta vazio.
+// Quem acordou a maquina e justamente quem paga a conta — uma visita pede ~100
+// arquivos, cada compressao trava o event loop, e tudo o mais entra na fila.
+// Foi assim que o Lighthouse desistiu de buscar o robots.txt em 16/09 ("Timed
+// out fetching resource") e derrubou o SEO de 100 pra 92, com o arquivo intacto
+// no disco e respondendo em 50 ms fora do aperto.
+//
+// Aquecer resolve, mas de proposito NAO de uma vez: um setImmediate por arquivo
+// devolve o event loop entre cada compressao, entao a visita que chegar no meio
+// do aquecimento e atendida junto, sem esperar o lote inteiro terminar.
+function aquecerCompressao() {
+  const alvos = [];
+  for (const dir of ["js", "css"]) {
+    let nomes = [];
+    try { nomes = fs.readdirSync(path.join(RAIZ, dir)); } catch (e) { continue; }
+    for (const f of nomes) {
+      if (COMPRIMIVEL.has(path.extname(f).toLowerCase())) alvos.push(dir + "/" + f);
+    }
+  }
+  const t0 = Date.now();
+  let feitos = 0;
+  let bytes = 0;
+  const proximo = () => {
+    const rel = alvos.shift();
+    if (!rel) {
+      console.log("Compressao pre-aquecida: " + feitos + " arquivos, " +
+                  Math.round(bytes / 1024) + " KB em memoria, " + (Date.now() - t0) + "ms");
+      return;
+    }
+    try {
+      const corpo = fs.readFileSync(path.join(RAIZ, rel));
+      if (corpo.length >= MIN_COMPRIMIR) {
+        for (const cod of ["br", "gzip"]) {
+          const c = comprimir(rel + "@" + VERSAO, cod, corpo);
+          if (c) bytes += c.length;
+        }
+        feitos++;
+      }
+    } catch (e) { /* arquivo sumiu no meio: o pedido real recomprime */ }
+    setImmediate(proximo);
+  };
+  setImmediate(proximo);
+}
+
 // ---------- Perfil público: GET /u/<usuario> ----------
 // HTML pronto do servidor (robô de preview do LinkedIn/WhatsApp não roda JS).
 // Perfil inexistente e perfil fechado devolvem a MESMA resposta, pra a página
@@ -1779,4 +1825,7 @@ http
       responderJson(res, 400, { erro: e.message || "erro" });
     }
   })
-  .listen(PORTA, () => console.log(`CLImb no ar: http://localhost:${PORTA}`));
+  .listen(PORTA, () => {
+    console.log(`CLImb no ar: http://localhost:${PORTA}`);
+    aquecerCompressao(); // depois do listen: nao atrasa o primeiro atendimento
+  });
