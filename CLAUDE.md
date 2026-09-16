@@ -160,6 +160,89 @@ consulta rápida por termo, as lições são a introdução no fluxo. Não apose
   `multi: true`. Distribuição por domínio segue os pesos do exame (CLF-C02:
   conceitos 24%, segurança 30%, tecnologia 34%, cobrança 12%).
 
+## Desempenho e SEO — o que NÃO pode regredir
+
+Tudo abaixo foi **medido** (PageSpeed de 13 a 16/09/2026) e custou trabalho.
+Cada regra existe porque a violação dela já aconteceu e apareceu na nota.
+Contexto e números: memória `medir-performance`.
+
+### Carregamento
+
+- **Todo `<script>` novo entra com `defer`** e no fim do `<body>`. Sem defer o
+  parser para em cada arquivo (eram 1.440 ms). `defer` preserva a ordem — o
+  contrato da lista continua valendo.
+- **`document.write` é proibido** e nada pode depender de rodar durante o parse.
+- Arquivo que só serve DENTRO de tela aberta por clique (banco de dados, desenho
+  de tela) não entra no `index.html`: entra em `js/sob-demanda.js`, que carrega
+  o grupo no primeiro uso. **Não adie arquivo que cria botão no boot** — o botão
+  chegaria atrasado e isso é CLS.
+- Pré-carregar em `requestIdleCallback` **mede pior que não fazer nada** (LCP
+  7,8 s contra 6,6 s): o ocioso chega logo depois do load e disputa banda. Se
+  precisar pré-carregar, espere um sinal de uso (mouse no botão, tecla no
+  terminal) — é o que o `sob-demanda.js` faz.
+
+### A tela não pode tremer (CLS)
+
+- **Caixa preenchida por JS precisa de altura reservada no CSS.** A caixa de XP
+  nascia com 14px e ia a 56px, empurrando o `<main>`: sozinha, 0,358 de CLS.
+- O miolo espera a montagem terminar e aparece pronto (`js/pronto.js` +
+  `body:not(.app-pronto) ... visibility:hidden`). Ao mexer nisso:
+  - o sinal de "montou" é o DOM ficar **quieto por 150 ms**, e a contagem só
+    começa **depois da primeira mudança** — silêncio antes de montar não é fim;
+  - **nunca libere dentro de `requestAnimationFrame`**: com a tela invisível o
+    navegador não pinta, não gera quadro, e o rAF nunca dispara (isso travou a
+    tela até o teto de 2 s e custou o FCP de 0,3 s → 2,2 s);
+  - o teto de 2 s e o `<noscript>` do `index.html` são rede de segurança: tela
+    em branco é pior que tela tremida. Não remova nenhum dos dois.
+- Escreveu no DOM depois da montagem? Reescrever texto igual **conta como
+  mudança** e segura a tela. Só escreva quando o valor mudou.
+
+### Acessibilidade (está em 100 — mantenha)
+
+- **Nunca use `opacity` para apagar texto.** Ela derruba o contraste do que está
+  embaixo: `.streak` zerada, atividade travada e `.item-meta` estavam entre
+  1,9:1 e 4,2:1. O "apagado" vem de COR, e a cor tem de passar 4,5:1 nos **dois
+  temas**.
+- Par elemento/role tem de ser válido: `<aside role="navigation">` é inválido
+  (por isso a lista lateral é `<nav>`); filho de `role="list"` precisa de
+  `role="listitem"`.
+- **Overlay de tela cheia esconde o resto do app** (`aria-hidden` + `inert`),
+  senão o leitor de tela lê o que ninguém está vendo — e o axe audita aquilo.
+
+### Servidor
+
+- A compressão é **síncrona** e trava o event loop. O cache existe e é
+  **pré-aquecido no boot** (`aquecerCompressao`), um `setImmediate` por arquivo.
+  Não tire: sem ele, quem acorda a máquina paga a compressão de ~100 arquivos e
+  o resto entra na fila (foi assim que o `robots.txt` deu timeout e o SEO caiu
+  pra 92 com o arquivo intacto).
+
+### Página pública nova (SEO)
+
+Toda rota que o Google pode indexar nasce com: `<title>` único, `meta
+description` própria, `rel=canonical` absoluto, HTML **montado no servidor**
+(não por JS) e entrada no `sitemap.xml`.
+
+- **Não publique página com menos de ~400 palavras de conteúdo próprio.** As 53
+  lições de `/aprender` saíram com ~240 (25% template repetido) e o Google
+  rastreou sem indexar nenhuma. Página rasa não é neutra: ela ensina o buscador
+  a ignorar o domínio.
+- O material para engordar **já existe no repo** (450 verbetes de `MANUAIS`,
+  descrição e dicas de 690 atividades, `PORQUE`): use-o antes de escrever texto
+  novo. É conteúdo único — ninguém mais tem a saída simulada e a mensagem de
+  erro real do comando.
+- Página órfã não vale: toda página nova precisa de **link interno** apontando
+  pra ela de algum lugar que já é rastreado.
+
+### Antes de dizer que melhorou
+
+Meça **A e B na mesma máquina, no mesmo momento**, com a máquina do Fly já
+quente (o TTFB do despertar é 700–930 ms e domina o resultado). E confira o
+edge antes: `curl -s -D - -o /dev/null https://climb.dev.br/robots.txt | grep
+fly-request-id` tem de terminar em `-gru` — com VPN ligada o tráfego ia por
+Paris e **toda** medição saía errada. O número absoluto que vale como "a nota
+do site" é o do PageSpeed, não o do Lighthouse local.
+
 ## Segurança / dados
 
 - Nunca commitar `.env`, tokens, `quest-dados.json*`, `painel/config.json`,
