@@ -125,23 +125,16 @@ header {
 .botao.perigo:hover { background: rgba(255, 92, 92, 0.12); }
 
 /* ---------- Montagem (ver js/pronto.js) ----------
-   O MIOLO fica invisivel ate terminar de se montar e entao aparece pronto.
+   A interface fica invisivel ate terminar de se montar e entao aparece pronta.
    visibility (e nao display/opacity) de proposito: o espaco continua ocupado,
    entao nada "cresce" na hora de aparecer — e o que esta invisivel nao conta
-   pro CLS.
-
-   So o <main>, e isso e escolha medida (15/09): segurando TAMBEM header e
-   rodape o CLS ficava em 0,006, mas a primeira pintura so acontecia quando o
-   app inteiro estava montado — 2,2 s em producao, contra 0,3 s antes. Header e
-   rodape ja tem altura reservada (a caixa de XP e o min-height do footer, mais
-   abaixo), entao pintam cedo SEM tremer: a marca aparece de imediato e o CLS
-   fica em ~0,05, dentro da faixa boa. O miolo, que e o que se remonta inteiro,
-   continua esperando.
-
-   A rede de seguranca do pronto.js garante que isto nunca fica preso: no pior
-   caso a classe entra sozinha em 2 s (o TETO), e quem esta sem JavaScript tem
-   o <noscript> do index.html. */
-body:not(.app-pronto) main { visibility: hidden; }
+   pro CLS. A rede de seguranca do pronto.js garante que isto nunca fica
+   preso: no pior caso a classe entra sozinha em 2 s (o TETO do pronto.js), e
+   quem esta sem JavaScript tem o <noscript> do index.html. */
+body:not(.app-pronto) header,
+body:not(.app-pronto) main,
+body:not(.app-pronto) footer,
+body:not(.app-pronto) .aviso-marca { visibility: hidden; }
 
 /* A barra de rolagem some quando a capa/um modal poe overflow:hidden no body,
    e a pagina inteira escorrega pro lado. Reservar a calha resolve na raiz. */
