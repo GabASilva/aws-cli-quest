@@ -333,8 +333,16 @@
     overlay.querySelector("#cawsNav").addEventListener("click", aoClicar);
   }
 
+  // As subtelas dos servicos (window.cawsSubtela) vem sob demanda — ver
+  // js/sob-demanda.js. Sem elas o Console ate abre, mas cada servico cairia na
+  // tela simples, entao buscamos ANTES de montar. A flag evita laco.
+  let subtelasPedidas = false;
   function abrir() {
     if (!conta()) { avisar("Carregando…"); return; }
+    if (!subtelasPedidas && typeof window.cawsSubtela !== "function" && typeof window.carregarGrupo === "function") {
+      subtelasPedidas = true;
+      return window.carregarGrupo("console").then(abrir, abrir);
+    }
     view = { tela: "home", bucket: null, prefixo: "" };
     overlay.classList.add("aberto");
     document.body.classList.add("console-aberto");

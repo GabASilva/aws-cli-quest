@@ -162,7 +162,16 @@
     injetarEstilo();
   }
 
+  // O banco de questoes nao vem mais no carregamento da pagina (ver
+  // js/sob-demanda.js): sao ~74 KiB que so servem aqui dentro. Buscamos na
+  // primeira abertura e reentramos. A flag existe pra isto nao virar laco se o
+  // carregamento acabar sem preencher o banco.
+  let bancoPedido = false;
   function abrir() {
+    if (!bancoPedido && !(window.SIMULADOS_CLF || []).length && typeof window.carregarGrupo === "function") {
+      bancoPedido = true;
+      return window.carregarGrupo("simulados").then(abrir, abrir);
+    }
     view = "home";
     overlay.classList.add("aberto");
     document.body.classList.add("sim-aberto");
