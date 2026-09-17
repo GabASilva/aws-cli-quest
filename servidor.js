@@ -1538,8 +1538,14 @@ function servirEstatico(req, res, rota) {
   const arquivo = path.normalize(path.join(RAIZ, relativo));
   const ext = path.extname(arquivo).toLowerCase();
   if (!arquivo.startsWith(RAIZ) || relativo.includes("\0") || PROIBIDO.test(relativo) || !EXT_PUBLICAS.has(ext)) {
-    res.writeHead(403, HEADERS_SEG);
-    res.end("403");
+    // 404, não 403. São dois motivos:
+    //  - pro buscador, 403 quer dizer "existe, mas você não pode ver" e entra
+    //    no relatório como erro a resolver; 404 é só "não existe". Quem chegava
+    //    em /sobre (sem .html) ou numa URL com barra sobrando levava 403;
+    //  - pra quem sonda o servidor, 403 confirma que o caminho existe. 404 não
+    //    diz nada — não revelar é melhor que revelar e negar.
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", ...HEADERS_SEG });
+    res.end("404");
     return;
   }
   const temVersao = /[?&]v=/.test(req.url || ""); // pediram a URL versionada?
@@ -1817,9 +1823,13 @@ http
     const rota = decodeURIComponent(req.url.split("?")[0]);
     try {
       registrarMetrica();
-      // setHeader antes de qualquer writeHead: o Node mescla os dois, e nada
-      // mais no servidor define X-Robots-Tag.
-      if (!ehHostCanonico(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      // O X-Robots-Tag do host nao-canonico entra DEPOIS do redirect (ver
+      // abaixo), e nao aqui. Mandar "noindex, nofollow" junto com um 301 e
+      // contraditorio: o `nofollow` pede pro buscador NAO seguir o proprio
+      // redirecionamento que a resposta esta mandando seguir. Em 17/09/2026 o
+      // Search Console avisou "Pagina com redirecionamento" — o noindex no 301
+      // era parte do problema. O 301 agora vai limpo; o noindex fica pro que
+      // realmente PARA no host antigo (POST e /api/, que nao redirecionam).
 
       // HSTS: manda o navegador NUNCA mais tentar http neste dominio.
       //
@@ -1842,6 +1852,18 @@ http
         res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
       }
       if (redirecionarParaCanonico(req, res, rota)) return;
+      if (!ehHostCanonico(req)) res.setHeader("X-Robots-Tag", "noindex, nofollow");
+
+      // Barra no fim viraria uma segunda URL com o mesmo conteudo (/aprender e
+      // /aprender/ respondiam 200 as duas). Uma 301 pra forma sem barra deixa
+      // uma URL so — e ainda conserta o 403 que /simulado-aws-clf-c02/ dava.
+      if (rota.length > 1 && rota.endsWith("/") && !rota.startsWith("/api/")) {
+        const limpa = rota.replace(/\/+$/, "");
+        const busca = req.url.indexOf("?") >= 0 ? req.url.slice(req.url.indexOf("?")) : "";
+        res.writeHead(301, { Location: encodeURI(limpa) + busca, "Cache-Control": "no-store", ...HEADERS_SEG });
+        res.end();
+        return;
+      }
 
       if (rota === "/api/saude") return responderJson(res, 200, { ok: true });
       if (rota === "/api/eventos" && req.method === "GET") return responderJson(res, 200, { eventos: eventosAtivos().map((e) => ({ id: e.id, titulo: e.titulo, mensagem: e.mensagem, tipo: e.tipo, fim: e.fim })) });
