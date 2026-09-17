@@ -2000,4 +2000,35 @@ http
   .listen(PORTA, () => {
     console.log(`CLImb no ar: http://localhost:${PORTA}`);
     aquecerCompressao(); // depois do listen: nao atrasa o primeiro atendimento
+    manterAcordado();    // só em produção e só das 08h às 22h (ver abaixo)
   });
+
+// ---------- Ficar de pé no horário de uso (08:00–22:00 BRT) ----------
+// A máquina dorme com min_machines_running = 0, e o primeiro acesso depois
+// disso paga 700–930 ms só de TTFB (medido em 16/09/2026). De dia isso cai no
+// colo de quem chega pelo Google.
+//
+// O autostop é decidido pelo Fly Proxy por TRÁFEGO, e health check não conta
+// (a máquina dorme normalmente com o bloco de checks de pé). Então o que segura
+// ela acordada é uma requisição que ENTRE pelo proxy — por isso o pedido vai
+// pro endereço público, e não pra localhost: bater em 127.0.0.1 não passaria
+// pelo proxy e não contaria como tráfego.
+//
+// O .github/workflows/manter-acordado.yml é o gatilho que ACORDA a máquina no
+// começo da janela; este intervalo é o que a mantém de pé entre os gatilhos,
+// porque o cron do GitHub atrasa em horário de pico. Fora da janela ninguém
+// pinga e ela volta a dormir, acordando sozinha se alguém acessar.
+const JANELA_INICIO_BRT = 8;   // 08:00
+const JANELA_FIM_BRT = 22;     // 22:00
+function manterAcordado() {
+  if (!PROD) return; // em dev não existe proxy nem autostop
+  const PING_MIN = 4; // menor que o tempo de ociosidade que o Fly usa pra parar
+  setInterval(() => {
+    // O container roda em UTC; o Brasil é UTC-3 fixo desde o fim do horário de
+    // verão em 2019, então a conta é direta e não muda no ano.
+    const horaBrt = (new Date().getUTCHours() + 24 - 3) % 24;
+    if (horaBrt < JANELA_INICIO_BRT || horaBrt >= JANELA_FIM_BRT) return;
+    const url = "https://" + hostCanonico() + "/api/saude";
+    fetch(url, { method: "GET" }).catch(() => { /* rede oscilou: a próxima tenta */ });
+  }, PING_MIN * 60000).unref();
+}
