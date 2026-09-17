@@ -495,7 +495,10 @@ async function iniciar() {
   try { semSessao = !localStorage.getItem("awsCliQuest.token"); } catch (e) { semSessao = false; }
   if (semSessao) {
     carregarJogo();
-    atualizarBotaoConta();
+    // SEM atualizarBotaoConta() aqui: neste ponto o apiIniciar() ainda não
+    // rodou, então api.online é false e o botão viraria "Conta (offline)" —
+    // foi o que aconteceu na v142, pra TODO visitante. O index.html já traz
+    // "👤 Entrar" escrito, que é o estado certo até a nuvem responder.
     renderCabecalho();
     renderSidebar();
     renderCard();
@@ -526,11 +529,13 @@ async function iniciar() {
   } else if (!semSessao) {
     carregarJogo();
   }
-  // O botao de conta so e reescrito se o que ele diz mudou: com o backend no ar
-  // e ninguem logado ele ja diz "Entrar" desde o caminho rapido, e reescrever
-  // texto igual ainda conta como mexer no DOM — o que faria o pronto.js achar
-  // que a montagem continua e segurar a tela ate a resposta da rede.
-  if (veioDaNuvem || !semSessao || !api.online) atualizarBotaoConta();
+  // Aqui SEMPRE: é o primeiro momento em que api.online e api.usuario são
+  // conhecidos. A v142 condicionava esta chamada e a condição nunca dava certo
+  // pra quem chega sem sessão (`veioDaNuvem || !semSessao || !api.online`, tudo
+  // falso com o backend no ar), então o botão ficava preso em "Conta (offline)"
+  // e o site parecia fora do ar. Uma escrita de texto num botão é barata; o
+  // pronto.js aguenta.
+  atualizarBotaoConta();
   if (veioDaNuvem || !semSessao) {
     renderCabecalho();
     renderSidebar();
