@@ -18,6 +18,8 @@ const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
 const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades nas páginas públicas
+const semGabarito = require("./lib/sem-gabarito.js"); // o cliente não recebe dica nem solução do que é pago
+const licencaServidor = require("./lib/licenca-servidor.js"); // quem pode ver o quê, decidido aqui
 const pagSimulado = require("./lib/pagina-simulado.js"); // página pública do simulado
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
@@ -708,6 +710,21 @@ async function tratarApi(req, res, rota) {
   }
 
   // GET /api/eu  (Authorization: Bearer <token>)
+  // GET /api/gabarito  (autenticado + licença) — dicas e solução das atividades
+  // pagas. É o único caminho pra elas: o JavaScript de conteúdo vai sem esses
+  // campos (ver prepararGabarito). Sem plano responde 402, e o cliente
+  // simplesmente segue sem as dicas do que não comprou.
+  if (rota === "/api/gabarito" && req.method === "GET") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
+    const u = bd.usuarios[nome];
+    if (!licencaPublica(u).pro) {
+      return responderJson(res, 402, { erro: "Este conteúdo faz parte do plano Pro." });
+    }
+    res.setHeader("Cache-Control", "no-store"); // é conteúdo de quem pagou: não fica em cache
+    return responderJson(res, 200, { gabarito: GABARITO_PAGO || {} });
+  }
+
   if (rota === "/api/eu" && req.method === "GET") {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
@@ -1275,6 +1292,46 @@ function calcularVersao() {
 }
 const VERSAO = calcularVersao();
 
+// ---------- Gabarito fora do cliente ----------
+// Os arquivos de js/ com atividades são servidos SEM `dicas` e SEM `solucao`;
+// esses campos voltam por dois canais (ver lib/sem-gabarito.js e
+// js/gabarito-cliente.js): /js/gabarito.js com as atividades abertas, e
+// GET /api/gabarito, autenticado, com as pagas.
+//
+// Até 17/09/2026 um `curl` em /js/servicos-fase2.js devolvia 41 soluções de
+// trilhas pagas — sem login. O bloqueio morava no js/licenca.js, que roda no
+// navegador de quem está olhando.
+let TEXTO_SEM_GABARITO = new Map(); // "js/x.js" -> texto servido
+let GABARITO_ABERTO = null;         // script público, pronto
+let GABARITO_PAGO = null;           // objeto, vai por /api/gabarito
+function prepararGabarito() {
+  try {
+    const conteudo = conteudoApp.carregar(RAIZ);
+    const abertos = licencaServidor.idsAbertos(conteudo.desafios, RAIZ);
+    let cortados = 0;
+    for (const f of conteudoApp.ARQUIVOS) {
+      const bruto = fs.readFileSync(path.join(RAIZ, "js", f), "utf8");
+      const r = semGabarito.tirarGabarito(bruto);
+      if (!r.removidos) continue;
+      TEXTO_SEM_GABARITO.set("js/" + f, Buffer.from(r.texto, "utf8"));
+      cortados += r.removidos;
+    }
+    GABARITO_ABERTO = Buffer.from(semGabarito.scriptDeGabarito(
+      semGabarito.gabaritoDe(conteudo.desafios.filter((d) => abertos.has(d.id))), "aberto"), "utf8");
+    GABARITO_PAGO = semGabarito.gabaritoDe(conteudo.desafios.filter((d) => !abertos.has(d.id)));
+    console.log(`Gabarito fora do cliente: ${cortados} campos cortados de ` +
+      `${TEXTO_SEM_GABARITO.size} arquivos; ${conteudo.desafios.length - abertos.size} atividades pagas ` +
+      `só com licença, ${abertos.size} abertas no /js/gabarito.js`);
+  } catch (e) {
+    // Falhar ALTO: se isto quebrar em silêncio, o servidor volta a entregar
+    // todas as soluções pra qualquer visitante — que é o defeito que existe
+    // justamente pra não existir.
+    console.error("ERRO GRAVE ao preparar o gabarito — o servidor NÃO vai subir:", e.message);
+    process.exit(1);
+  }
+}
+prepararGabarito();
+
 // ---------- Pre-aquecimento do cache de compressao ----------
 // O cache acima so enche conforme os arquivos vao sendo pedidos, e a maquina do
 // Fly DORME: cada vez que ela acorda o processo e novo e o cache esta vazio.
@@ -1307,7 +1364,12 @@ function aquecerCompressao() {
       return;
     }
     try {
-      const corpo = fs.readFileSync(path.join(RAIZ, rel));
+      // O texto SEM gabarito, quando existe, é o que será servido — e a chave
+      // do cache é a mesma. Ler do disco aqui punha a versão ORIGINAL (com as
+      // soluções) no cache comprimido: quem aceitasse gzip recebia o gabarito
+      // completo, enquanto um curl sem compressão parecia limpo. Foi assim que
+      // isto vazou em 17/09, e só apareceu porque o teste rodou no navegador.
+      const corpo = TEXTO_SEM_GABARITO.get(rel) || fs.readFileSync(path.join(RAIZ, rel));
       if (corpo.length >= MIN_COMPRIMIR) {
         for (const cod of ["br", "gzip"]) {
           const c = comprimir(rel + "@" + VERSAO, cod, corpo);
@@ -1485,6 +1547,28 @@ function hostBasePublico() {
 
 // Sitemap GERADO, não arquivo estático: com 50+ lições, um sitemap escrito à
 // mão nasce desatualizado na primeira lição nova.
+// O gabarito das atividades ABERTAS. É igual pra todo mundo, então entra no
+// mesmo esquema de cache do resto (URL versionada = imutável).
+function servirGabaritoAberto(req, res) {
+  if (!GABARITO_ABERTO) { res.writeHead(503, HEADERS_SEG); res.end(""); return; }
+  let corpo = GABARITO_ABERTO;
+  const cabecalhos = {
+    "Content-Type": "text/javascript; charset=utf-8",
+    "Cache-Control": /[?&]v=/.test(req.url || "") && PROD
+      ? "public, max-age=31536000, immutable" : "no-cache",
+    Vary: "Accept-Encoding",
+    ...HEADERS_SEG,
+  };
+  const cod = escolherCodificacao(req);
+  if (cod) {
+    const z = comprimir("gabarito-aberto@" + VERSAO, cod, corpo);
+    if (z) { cabecalhos["Content-Encoding"] = cod; corpo = z; }
+  }
+  cabecalhos["Content-Length"] = corpo.length;
+  res.writeHead(200, cabecalhos);
+  res.end(corpo);
+}
+
 function servirSitemap(res) {
   const base = hostBasePublico();
   const urls = [
@@ -1549,7 +1633,16 @@ function servirEstatico(req, res, rota) {
     return;
   }
   const temVersao = /[?&]v=/.test(req.url || ""); // pediram a URL versionada?
-  fs.readFile(arquivo, (erro, conteudo) => {
+
+  // Arquivo de conteúdo vai SEM dica e sem solução (ver prepararGabarito).
+  // Serve da memória: o texto é o mesmo pra todo mundo, então entra no mesmo
+  // cache e na mesma compressão dos outros.
+  const semGab = TEXTO_SEM_GABARITO.get(relativo);
+  if (semGab) return entregar(null, semGab);
+
+  fs.readFile(arquivo, entregar);
+
+  function entregar(erro, conteudo) {
     if (erro) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", ...HEADERS_SEG });
       res.end("404 — " + relativo);
@@ -1601,7 +1694,7 @@ function servirEstatico(req, res, rota) {
 
     res.writeHead(200, cabecalhos);
     res.end(corpo);
-  });
+  }
 }
 
 // ---------- Métricas de uso (leve, em memória + histórico no bd) ----------
@@ -1870,6 +1963,7 @@ http
       if (rota.startsWith("/api/admin/")) return await tratarAdmin(req, res, rota);
       if (rota.startsWith("/api/")) return await tratarApi(req, res, rota);
       if (rota.startsWith("/u/")) return servirPerfilPublico(req, res, rota);
+      if (rota === "/js/gabarito.js") return servirGabaritoAberto(req, res);
       if (rota === "/sitemap.xml") return servirSitemap(res);
       if (rota === ROTA_SIMULADO && SIMULADO_PUB) {
         return servirHtml(res, pagSimulado.paginaSimulado(SIMULADO_PUB, { base: hostBasePublico() }));

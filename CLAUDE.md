@@ -243,6 +243,45 @@ fly-request-id` tem de terminar em `-gru` — com VPN ligada o tráfego ia por
 Paris e **toda** medição saía errada. O número absoluto que vale como "a nota
 do site" é o do PageSpeed, não o do Lighthouse local.
 
+## Gabarito fora do cliente (o que é pago não desce pro navegador)
+
+O app é client-side, então até 17/09/2026 um `curl` em `/js/servicos-fase2.js`
+devolvia 41 soluções de trilhas pagas — sem login. O bloqueio morava no
+`js/licenca.js`, que roda no navegador de quem está olhando.
+
+Agora o servidor **corta `dicas` e `solucao` de todo o JavaScript de conteúdo**
+(`lib/sem-gabarito.js`) e devolve por dois canais:
+
+- `/js/gabarito.js` — as atividades **abertas** (trilhas grátis, as 3 primeiras
+  de cada trilha e o Desafio do dia). Público e cacheável.
+- `GET /api/gabarito` — as **pagas**. Exige token e licença Pro, responde 402
+  sem plano, e vai por `fetch` com `Authorization` (nunca `<script src>` com
+  token na URL, que vaza em log e Referer).
+
+Ao mexer em atividade, no servidor ou na regra de acesso:
+
+- **`node teste/gabarito.js` TEM que passar**, junto do fumaça e do análise. Ele
+  confere as quatro coisas que já quebraram: sintaxe depois do corte, vazamento
+  no objeto, o ciclo remover→devolver reproduzindo o conteúdo, e a **contagem**
+  da solução no texto servido.
+- A regra de quem-vê-o-quê é lida do `js/licenca.js` pelo
+  `lib/licenca-servidor.js`. **Não duplique a lista** `SERVICOS_GRATIS` — abrir
+  uma trilha lá passa a valer no servidor sozinho.
+- Arquivo de atividade novo entra em `ARQUIVOS` de `lib/conteudo-app.js` (mesma
+  lista do `teste/analise.js`). Fora dela, o gabarito dele **vaza**.
+- O `js/gabarito.js` fica DEPOIS do último arquivo de conteúdo no `index.html`
+  (hoje `missoes.js`). Antes dele, o merge alcançou 217 das 293 abertas —
+  trilha grátis sem dica é produto quebrado.
+- Cortar o gabarito NÃO protege sozinho: o `aquecerCompressao` também tem de
+  usar o texto cortado. Na primeira versão ele lia do disco e punha o original
+  no cache comprimido — quem aceitava gzip recebia tudo, e um `curl` sem
+  compressão parecia limpo. **Teste no navegador, não só com curl.**
+- O `validar` FICA no cliente, de propósito: 35 dos 556 validadores usam
+  helpers do escopo do próprio arquivo, e serializá-los quebraria 6% das
+  atividades. Sem dica e sem solução, o validador só confere — não entrega.
+- Efeito colateral aceito: quem é Pro e abre o app **sem rede** não recebe o
+  gabarito das pagas (antes vinha no pacote). O app funciona, as dicas não.
+
 ## Segurança / dados
 
 - Nunca commitar `.env`, tokens, `quest-dados.json*`, `painel/config.json`,

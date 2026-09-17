@@ -252,6 +252,15 @@
   <script defer src="js/json-yaml-2.js"></script>
   <script defer src="js/lab-vpc.js"></script>
   <script defer src="js/missoes.js"></script>
+  <!-- Dica e solução não vêm dentro dos arquivos de conteúdo (ver
+       lib/sem-gabarito.js): chegam por /js/gabarito.js, com as atividades
+       abertas, e por GET /api/gabarito, com as pagas, que exige licença.
+       AQUI e não antes: tem arquivo de atividade carregando depois do api.js
+       (cobertura-*, linux-lab, lab-vpc, missoes...). Na primeira tentativa este
+       par ficou antes deles e o gabarito só alcançou 217 das 293 abertas —
+       trilha grátis sem dica é produto quebrado. -->
+  <script defer src="js/gabarito-cliente.js"></script>
+  <script defer src="js/gabarito.js"></script>
   <script defer src="js/quase-la.js"></script>
   <script defer src="js/licenca.js"></script>
   <script defer src="js/seguranca.js"></script>
