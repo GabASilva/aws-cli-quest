@@ -51,7 +51,7 @@
   <!-- Sem JavaScript a classe .app-pronto nunca entra e a tela ficaria
        invisivel pra sempre (ver js/pronto.js). Aqui ela volta a aparecer. -->
   <noscript><style>
-    body header, body main, body footer, body .aviso-marca { visibility: visible !important; }
+    body header, body main, body footer, body .rodape-licoes, body .aviso-marca { visibility: visible !important; }
   </style></noscript>
 </head>
 <body>
@@ -92,6 +92,27 @@
     <span>💡 Manuais: <strong>aws help</strong> · <strong>aws s3 help</strong> — arquivos locais: <strong>ls</strong> — atalhos: <strong>climb --help</strong></span>
     <button class="botao perigo" id="btnResetar">Resetar progresso</button>
   </footer>
+  <!-- Links diretos pras licoes mais procuradas.
+       POR QUE ESTAO AQUI: em 17/09/2026 o Search Console mostrou as 52 paginas
+       de /aprender como "Detectada, mas nao indexada" — o Google achou as URLs
+       pelo sitemap e NUNCA foi buscar nenhuma. Nao e problema de conteudo (ele
+       nao leu); e prioridade de rastreamento. Esta home e a unica pagina que
+       ele rastreia de verdade (aparece como "Pagina de referencia" no relatorio),
+       entao e daqui que sai a autoridade pras que estao na fila. Um link no
+       rodape apontando so pro indice nao bastava: agora as principais tem
+       caminho direto, com o nome do servico no texto do link. -->
+  <nav class="rodape-licoes" aria-label="Lições de AWS mais procuradas">
+    Aprenda:
+    <a href="/aprender/s3">Amazon S3</a> ·
+    <a href="/aprender/ec2">EC2</a> ·
+    <a href="/aprender/iam">IAM</a> ·
+    <a href="/aprender/lambda">Lambda</a> ·
+    <a href="/aprender/vpc">VPC</a> ·
+    <a href="/aprender/dynamodb">DynamoDB</a> ·
+    <a href="/aprender/cloudwatch">CloudWatch</a> ·
+    <a href="/aprender/rds">RDS</a> ·
+    <a href="/aprender">ver as 53 lições</a>
+  </nav>
   <p class="aviso-marca">
     <a href="/sobre.html" style="color:var(--laranja)">O que o CLImb ensina</a> ·
     <!-- link real (não só sitemap): página órfã, que nada aponta, o buscador

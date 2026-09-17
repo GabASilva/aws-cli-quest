@@ -134,11 +134,28 @@ header {
 body:not(.app-pronto) header,
 body:not(.app-pronto) main,
 body:not(.app-pronto) footer,
+body:not(.app-pronto) .rodape-licoes,
 body:not(.app-pronto) .aviso-marca { visibility: hidden; }
 
 /* A barra de rolagem some quando a capa/um modal poe overflow:hidden no body,
    e a pagina inteira escorrega pro lado. Reservar a calha resolve na raiz. */
 html { scrollbar-gutter: stable; }
+
+/* Linha de lições no rodapé da home (ver o comentário no index.html): existe
+   pro buscador ter caminho direto da home — que ele rastreia — pras páginas que
+   ele só tinha detectado. Discreta de propósito: é rodapé, não navegação do
+   app, e some junto com o resto até .app-pronto. */
+.rodape-licoes {
+  flex-shrink: 0;
+  padding: 8px 20px 0;
+  background: var(--painel);
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  text-align: center;
+}
+.rodape-licoes a { color: var(--laranja); text-decoration: none; }
+.rodape-licoes a:hover { text-decoration: underline; }
 
 /* ---------- Layout principal ---------- */
 main {
