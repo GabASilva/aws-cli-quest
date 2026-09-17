@@ -162,16 +162,40 @@
     injetarEstilo();
   }
 
-  // O banco de questoes nao vem mais no carregamento da pagina (ver
-  // js/sob-demanda.js): sao ~74 KiB que so servem aqui dentro. Buscamos na
-  // primeira abertura e reentramos. A flag existe pra isto nao virar laco se o
-  // carregamento acabar sem preencher o banco.
-  let bancoPedido = false;
+  // O banco de questoes nao vem no carregamento da pagina, e nem como arquivo:
+  // ele exige conta e chega por GET /api/simulados/banco. Antes, os 345
+  // gabaritos baixavam com um curl em /js/simulados-clf-1.js — o simulado ja
+  // era "pra quem tem conta", mas o conteudo nao seguia a regra.
+  let bancoPedido = null;
+  function buscarBanco() {
+    if (bancoPedido) return bancoPedido;
+    if (typeof api === "undefined" || !api.token) return Promise.resolve(false);
+    bancoPedido = fetch("/api/simulados/banco", { headers: { Authorization: "Bearer " + api.token } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (dados) {
+        if (!dados || !dados.questoes) return false;
+        window.SIMULADOS_CLF = dados.questoes;
+        window.SIMULADOS_FONTES = dados.fontes || {};
+        window.SIMULADOS_FONTE_POR_ID = dados.fontePorId || {};
+        window.SIMULADOS_FONTE_FALLBACK = dados.fonteFallback || {};
+        return true;
+      })
+      .catch(function () { bancoPedido = null; return false; });
+    return bancoPedido;
+  }
+
   function abrir() {
-    if (!bancoPedido && !(window.SIMULADOS_CLF || []).length && typeof window.carregarGrupo === "function") {
-      bancoPedido = true;
-      return window.carregarGrupo("simulados").then(abrir, abrir);
+    // a arte do gabarito comentado continua vindo por arquivo (é desenho)
+    if (typeof window.carregarGrupo === "function") {
+      window.carregarGrupo("simulados").catch(function () { /* segue sem diagrama */ });
     }
+    if (!(window.SIMULADOS_CLF || []).length && typeof api !== "undefined" && api.token) {
+      return buscarBanco().then(abrirAgora, abrirAgora);
+    }
+    return abrirAgora();
+  }
+
+  function abrirAgora() {
     view = "home";
     overlay.classList.add("aberto");
     document.body.classList.add("sim-aberto");

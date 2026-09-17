@@ -21,13 +21,12 @@
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   const GRUPOS = {
-    // Banco de questões + fontes + os diagramas do gabarito comentado. O
-    // simulados.js lê tudo por window.SIMULADOS_* na hora de renderizar.
-    simulados: [
-      "js/simulados-clf-1.js", "js/simulados-clf-2.js", "js/simulados-clf-3.js",
-      "js/simulados-clf-4.js", "js/simulados-clf-5.js", "js/simulados-clf-6.js",
-      "js/simulados-fontes.js", "js/simulados-arte.js",
-    ],
+    // Só a arte do gabarito comentado (desenho, não conteúdo). O BANCO de
+    // questões e as fontes NÃO entram aqui: eles exigem conta e vêm por
+    // GET /api/simulados/banco — ver buscarBanco() no js/simulados.js. Antes
+    // desta mudança, os 345 gabaritos baixavam com um curl em
+    // /js/simulados-clf-1.js, sem login.
+    simulados: ["js/simulados-arte.js"],
     // As subtelas do Console emulado (window.cawsSubtela), usadas só depois de
     // o Console estar aberto.
     console: ["js/console-subtelas.js"],

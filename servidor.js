@@ -714,6 +714,24 @@ async function tratarApi(req, res, rota) {
   // pagas. É o único caminho pra elas: o JavaScript de conteúdo vai sem esses
   // campos (ver prepararGabarito). Sem plano responde 402, e o cliente
   // simplesmente segue sem as dicas do que não comprou.
+  // GET /api/simulados/banco  (autenticado) — as 345 questões com gabarito.
+  // O simulado já era "pra quem tem conta" (js/simulados-limite.js), mas o
+  // banco era servido a qualquer anônimo: os arquivos js/simulados-clf-*.js
+  // baixavam com um curl, gabarito e explicação incluídos. Agora o conteúdo
+  // acompanha a regra de uso — e o Gabriel fica sabendo quem está estudando.
+  if (rota === "/api/simulados/banco" && req.method === "GET") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Os simulados são pra quem tem conta. Criar é grátis." });
+    if (!SIMULADO_PUB) return responderJson(res, 503, { erro: "banco de questões indisponível" });
+    res.setHeader("Cache-Control", "no-store");
+    return responderJson(res, 200, {
+      questoes: SIMULADO_PUB.questoes,
+      fontes: SIMULADO_PUB.fontes,
+      fontePorId: SIMULADO_PUB.fontePorId,
+      fonteFallback: SIMULADO_PUB.fonteFallback || {},
+    });
+  }
+
   if (rota === "/api/gabarito" && req.method === "GET") {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Sessão expirada. Faça login de novo." });
@@ -1226,7 +1244,10 @@ const MIMES = {
 // "existe mas voce nao pode ver" em vez de "nao existe".
 const EXT_PUBLICAS = new Set([".html", ".js", ".css", ".png", ".svg", ".ico", ".jpg", ".jpeg", ".webp", ".woff2", ".txt", ".xml"]);
 // nunca servir código de servidor, scripts de admin, dados, configs etc.
-const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|lib\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
+// O banco de questões do simulado não é servido como arquivo: ele sai por
+// GET /api/simulados/banco, que exige conta (ver a rota). Sem esta linha, os
+// 345 gabaritos continuariam baixando com um curl em /js/simulados-clf-1.js.
+const PROIBIDO = /(^|\/)(servidor\.js|scripts\/|teste\/|lib\/|node_modules\/|\.git|\.env|fly\.toml|dockerfile|\.dockerignore)|(^|\/)js\/simulados-(clf-\d+|fontes)\.js$|\.(bak|json|toml|md|pem|lock)$|quest-dados/i;
 
 const PROD = !!process.env.DADOS_DIR; // no Fly o Dockerfile define DADOS_DIR
 

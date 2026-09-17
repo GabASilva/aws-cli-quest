@@ -282,6 +282,25 @@ Ao mexer em atividade, no servidor ou na regra de acesso:
 - Efeito colateral aceito: quem é Pro e abre o app **sem rede** não recebe o
   gabarito das pagas (antes vinha no pacote). O app funciona, as dicas não.
 
+### O banco do simulado também não é arquivo
+
+As 345 questões (com gabarito e explicação) saem por **`GET /api/simulados/banco`**,
+que exige conta — a mesma regra que o `js/simulados-limite.js` já aplicava pra
+usar o simulado. Antes, `/js/simulados-clf-1.js` baixava com um `curl`.
+
+- Os arquivos `js/simulados-clf-*.js` e `js/simulados-fontes.js` estão no
+  `PROIBIDO` do servidor: respondem **404**, de propósito. Banco novo segue o
+  mesmo padrão de nome, ou ele passa a ser servido ao público.
+- `js/simulados-arte.js` continua público: é desenho do gabarito comentado, não
+  conteúdo.
+- Questão nova entra no `ARQUIVOS` de `lib/pagina-simulado.js` (é de lá que a
+  rota lê), e a página pública `/simulado-aws-clf-c02` continua mostrando as 12
+  de amostra — essa vitrine é intencional.
+- **Editar um `js/` sem reiniciar o servidor local engana:** o cache de
+  compressão é chaveado por `caminho@VERSAO`, a VERSÃO é calculada no boot, e
+  você recebe o arquivo velho. Em produção não acontece (cada deploy muda a
+  VERSÃO), mas em teste custou meia hora.
+
 ## Segurança / dados
 
 - Nunca commitar `.env`, tokens, `quest-dados.json*`, `painel/config.json`,
