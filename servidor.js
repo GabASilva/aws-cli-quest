@@ -2018,6 +2018,8 @@ http
 // começo da janela; este intervalo é o que a mantém de pé entre os gatilhos,
 // porque o cron do GitHub atrasa em horário de pico. Fora da janela ninguém
 // pinga e ela volta a dormir, acordando sozinha se alguém acessar.
+let _pingOk = 0;
+let _pingFalha = 0;
 const JANELA_INICIO_BRT = 8;   // 08:00
 const JANELA_FIM_BRT = 22;     // 22:00
 function manterAcordado() {
@@ -2029,6 +2031,25 @@ function manterAcordado() {
     const horaBrt = (new Date().getUTCHours() + 24 - 3) % 24;
     if (horaBrt < JANELA_INICIO_BRT || horaBrt >= JANELA_FIM_BRT) return;
     const url = "https://" + hostCanonico() + "/api/saude";
-    fetch(url, { method: "GET" }).catch(() => { /* rede oscilou: a próxima tenta */ });
+    const t0 = Date.now();
+    fetch(url, { method: "GET" })
+      .then((r) => {
+        _pingOk++;
+        // Um log a cada ~1h (15 pings de 4 min), pra dar pra conferir no
+        // `flyctl logs` que a janela está viva sem encher o log.
+        if (_pingOk % 15 === 1) {
+          console.log(`ping da janela: ${r.status} em ${Date.now() - t0}ms (ok ${_pingOk}, falhas ${_pingFalha})`);
+        }
+      })
+      .catch((e) => {
+        // NUNCA silenciar isto. A primeira versão tinha catch vazio, e quando a
+        // máquina dormiu em pleno horário de uso (19/09, 14:15 BRT, TTFB de
+        // 2,7 s) não havia uma linha de log pra dizer se o ping estava falhando
+        // ou se o Fly parava a máquina mesmo com tráfego.
+        _pingFalha++;
+        if (_pingFalha <= 3 || _pingFalha % 15 === 0) {
+          console.error(`ping da janela FALHOU (${_pingFalha}): ${e && e.message}`);
+        }
+      });
   }, PING_MIN * 60000).unref();
 }
