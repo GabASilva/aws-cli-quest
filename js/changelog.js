@@ -24,6 +24,16 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-21",
+      data: "21 set 2026",
+      titulo: "📨 SQS e SNS agora são trilhas de verdade — 22 atividades novas",
+      itens: [
+        "<b>📨 A trilha de SQS dobrou de tamanho: de 10 para 21 atividades</b> — o mesmo tamanho da de EC2, que é a mais bem resolvida do curso. O problema não era faltar comando: era que cada um aparecia <i>uma vez só</i>. Agora, depois que você aprende um comando, ele volta num cenário diferente — o app de entrega que não pode travar, os três vídeos esperando conversão, a impressora 3D puxando a próxima peça e confirmando o serviço, a fila FIFO da baixa de estoque. Praticar é o que fixa; ler uma vez não é.",
+        "<b>📣 E a de SNS foi de 9 para 20</b>, com o <i>fan-out</i> — o padrão em que um aviso só alimenta vários sistemas ao mesmo tempo — ganhando o espaço que ele tem na vida real: o pagamento aprovado que avisa estoque e logística de uma vez, sem você mandar mensagem pra fila nenhuma. Tem também o plantonista inscrito por e-mail, o cliente que prefere SMS e a auditoria de quem ainda recebe os avisos internos.",
+        "<b>🧠 Cada comando agora entra pelo problema, não pela sintaxe.</b> A primeira atividade de cada bloco mostra <i>onde</i> aquele comando aparece no trabalho de verdade e quais flags andam junto com ele; as seguintes são o mesmo comando em outra situação. E nenhuma dica é copiada de outra atividade — se o texto se repete, você para de ler, e aí a dica não serve pra nada.",
+      ],
+    },
+    {
       versao: "2026-09-15",
       data: "15 set 2026",
       titulo: "⚡ O CLImb abre na hora — e parou de tremer enquanto carrega",
