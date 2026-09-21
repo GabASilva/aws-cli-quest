@@ -58,7 +58,7 @@ window.rodarPelaCadeia = function (linha) {
   return { ok: !_term.erro, saida: _term.linhas.join(" | "), cmd: _term.cmd };
 };
 `;
-const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "desafios-pratica-2.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "ecr-completo.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
+const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "desafios-pratica-2.js", "sqs-completo.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "ecr-completo.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -158,6 +158,22 @@ const teste = `
         if (m) { handle = m.handle; break; }
       }
       linha = linha.replace(/<receipt-handle>/g, handle);
+    }
+    // Lote: os comandos *-batch precisam de DOIS comprovantes. Procura de trás
+    // pra frente porque a fila que interessa é a que a própria atividade
+    // acabou de criar, não uma de dez atividades atrás.
+    if (linha.includes("<handle-1>") || linha.includes("<handle-2>")) {
+      let par = [];
+      const filas = Object.values((conta.sqs || {}).filas || {}).reverse();
+      for (const f of filas) {
+        const hs = (f.mensagens || []).filter((x) => x.handle).map((x) => x.handle);
+        if (hs.length >= 2) { par = hs.slice(0, 2); break; }
+      }
+      linha = linha.replace(/<handle-1>/g, par[0] || "").replace(/<handle-2>/g, par[1] || "");
+    }
+    if (linha.includes("<task-handle>")) {
+      const t = Object.keys(((conta.sqs || {}).tarefasMove) || {});
+      linha = linha.replace(/<task-handle>/g, t.length ? t[t.length - 1] : "");
     }
     // consulta de log (Insights): pega o id da ultima consulta iniciada
     if (linha.includes("<consulta-id>") && conta.logs) { const _q = Object.keys(conta.logs.consultas || {}); if (_q.length) linha = linha.replace(/<consulta-id>/g, _q[_q.length - 1]); }    if (linha.includes("<waf-id>") && conta.waf) { const _w = Object.values(conta.waf.acls); if (_w.length) linha = linha.replace(/<waf-id>/g, _w[_w.length - 1].id); }

@@ -141,6 +141,21 @@ function resolver(linha) {
     }
     linha = linha.replace(/<receipt-handle>/g, handle);
   }
+  // Lote: os comandos *-batch precisam de DOIS comprovantes. De trás pra
+  // frente porque a fila que interessa é a que a própria atividade criou.
+  // (mesma substituição do teste/fumaca.js — mexeu num, mexa no outro)
+  if (linha.includes("<handle-1>") || linha.includes("<handle-2>")) {
+    let par = [];
+    for (const f of Object.values((conta.sqs || {}).filas || {}).reverse()) {
+      const hs = (f.mensagens || []).filter((x) => x.handle).map((x) => x.handle);
+      if (hs.length >= 2) { par = hs.slice(0, 2); break; }
+    }
+    linha = linha.replace(/<handle-1>/g, par[0] || "").replace(/<handle-2>/g, par[1] || "");
+  }
+  if (linha.includes("<task-handle>")) {
+    const t = Object.keys(((conta.sqs || {}).tarefasMove) || {});
+    linha = linha.replace(/<task-handle>/g, t.length ? t[t.length - 1] : "");
+  }
   // fases 6-9
   if (linha.includes("<lb-arn>") && conta.elb) { const _l = Object.values(conta.elb.lbs); if (_l.length) linha = linha.replace(/<lb-arn>/g, _l[_l.length - 1].arn); }
   if (linha.includes("<tg-arn>") && conta.elb) { const _t = Object.values(conta.elb.tgs); if (_t.length) linha = linha.replace(/<tg-arn>/g, _t[_t.length - 1].arn); }
