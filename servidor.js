@@ -2000,56 +2000,19 @@ http
   .listen(PORTA, () => {
     console.log(`CLImb no ar: http://localhost:${PORTA}`);
     aquecerCompressao(); // depois do listen: nao atrasa o primeiro atendimento
-    manterAcordado();    // só em produção e só das 08h às 22h (ver abaixo)
   });
 
-// ---------- Ficar de pé no horário de uso (08:00–22:00 BRT) ----------
-// A máquina dorme com min_machines_running = 0, e o primeiro acesso depois
-// disso paga 700–930 ms só de TTFB (medido em 16/09/2026). De dia isso cai no
-// colo de quem chega pelo Google.
+// ---------- Por que NÃO existe auto-ping aqui (medido em 21/09/2026) ----------
+// Existiu um `manterAcordado()` que batia no endereço público a cada 4 minutos
+// pra segurar a máquina de pé das 08h às 22h. Ele FUNCIONAVA — o log mostrou
+// `ping da janela: 200 em 110ms (ok 1, falhas 0)` — e mesmo assim o Fly parava
+// a máquina de 1 a 4 minutos depois de cada ping, dizendo "has excess capacity".
 //
-// O autostop é decidido pelo Fly Proxy por TRÁFEGO, e health check não conta
-// (a máquina dorme normalmente com o bloco de checks de pé). Então o que segura
-// ela acordada é uma requisição que ENTRE pelo proxy — por isso o pedido vai
-// pro endereço público, e não pra localhost: bater em 127.0.0.1 não passaria
-// pelo proxy e não contaria como tráfego.
+// O motivo: o autostop do Fly Proxy é decidido por CARGA, não por "teve
+// requisição agora". Uma requisição de 110 ms a cada 4 min dá concorrência ~0,
+// então 1 máquina é sempre excesso. Encurtar o intervalo não muda essa conta —
+// só uma conexão aberta o tempo todo mudaria, e isso é gambiarra.
 //
-// O .github/workflows/manter-acordado.yml é o gatilho que ACORDA a máquina no
-// começo da janela; este intervalo é o que a mantém de pé entre os gatilhos,
-// porque o cron do GitHub atrasa em horário de pico. Fora da janela ninguém
-// pinga e ela volta a dormir, acordando sozinha se alguém acessar.
-let _pingOk = 0;
-let _pingFalha = 0;
-const JANELA_INICIO_BRT = 8;   // 08:00
-const JANELA_FIM_BRT = 22;     // 22:00
-function manterAcordado() {
-  if (!PROD) return; // em dev não existe proxy nem autostop
-  const PING_MIN = 4; // menor que o tempo de ociosidade que o Fly usa pra parar
-  setInterval(() => {
-    // O container roda em UTC; o Brasil é UTC-3 fixo desde o fim do horário de
-    // verão em 2019, então a conta é direta e não muda no ano.
-    const horaBrt = (new Date().getUTCHours() + 24 - 3) % 24;
-    if (horaBrt < JANELA_INICIO_BRT || horaBrt >= JANELA_FIM_BRT) return;
-    const url = "https://" + hostCanonico() + "/api/saude";
-    const t0 = Date.now();
-    fetch(url, { method: "GET" })
-      .then((r) => {
-        _pingOk++;
-        // Um log a cada ~1h (15 pings de 4 min), pra dar pra conferir no
-        // `flyctl logs` que a janela está viva sem encher o log.
-        if (_pingOk % 15 === 1) {
-          console.log(`ping da janela: ${r.status} em ${Date.now() - t0}ms (ok ${_pingOk}, falhas ${_pingFalha})`);
-        }
-      })
-      .catch((e) => {
-        // NUNCA silenciar isto. A primeira versão tinha catch vazio, e quando a
-        // máquina dormiu em pleno horário de uso (19/09, 14:15 BRT, TTFB de
-        // 2,7 s) não havia uma linha de log pra dizer se o ping estava falhando
-        // ou se o Fly parava a máquina mesmo com tráfego.
-        _pingFalha++;
-        if (_pingFalha <= 3 || _pingFalha % 15 === 0) {
-          console.error(`ping da janela FALHOU (${_pingFalha}): ${e && e.message}`);
-        }
-      });
-  }, PING_MIN * 60000).unref();
-}
+// Resolvido com `min_machines_running = 1` no fly.toml, que é a única forma
+// suportada de garantir máquina de pé. Antes de ressuscitar o ping: ele já foi
+// tentado, e a medição que o condenou está no commit que o removeu.

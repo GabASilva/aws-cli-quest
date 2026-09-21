@@ -12,16 +12,25 @@ primary_region = "gru"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+
+  # 1, e nao 0, desde 21/09/2026 — a maquina NAO dorme mais.
+  #
+  # Ela dormia, e o primeiro acesso pagava 2,4 s de arranque, inclusive em pleno
+  # horario de uso. A tentativa anterior de segurar so das 08h as 22h foi um
+  # auto-ping de 4 em 4 min: ele respondia 200 em 110 ms, sem uma falha, e mesmo
+  # assim o Fly parava a maquina de 1 a 4 min depois ("has excess capacity").
+  # O autostop do Fly Proxy e decidido por CARGA, nao por "teve requisicao
+  # agora" — o log que mediu isso esta no comentario do fim do servidor.js.
+  #
+  # Custo: ~US$ 1,94/mes de compute (24 h/dia) contra os ~US$ 1,12 da janela de
+  # 14 h que nunca funcionou. Pra voltar a deixar dormir, e so pôr 0 aqui.
+  min_machines_running = 1
 
   # Sem isto, um processo TRAVADO (que nao morre, so para de responder) fica de
   # pe indefinidamente: o Fly so reinicia o que morre. O /api/saude ja existia
-  # e nao toca o banco, entao a checagem e barata.
-  #
-  # NOTA sobre custo: o autostop e decidido pelo Fly Proxy por trafego, e maquina
-  # parada nao e verificada — entao isto NAO deveria impedir a maquina de dormir.
-  # Se o custo estimado no painel de admin subir nos proximos dias, foi esta
-  # suposicao que falhou; ai e so remover este bloco.
+  # e nao toca o banco, entao a checagem e barata. Com min_machines_running = 1
+  # o check roda o tempo todo, que e exatamente o que se quer de um processo
+  # que agora fica sempre de pe.
   [[http_service.checks]]
     interval = "30s"
     timeout = "4s"
