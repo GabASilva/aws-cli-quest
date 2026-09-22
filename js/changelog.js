@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-22",
+      data: "22 set 2026",
+      titulo: "🔎 Ler log virou trilha de verdade — e agora o log vira alarme sozinho",
+      itens: [
+        "<b>🔎 O <code>aws logs</code> foi de 7 para 26 comandos</b>, e não foi por acaso: analisamos o que as vagas de nuvem realmente pedem, e \"análise de logs\" é a atribuição escrita com todas as letras nas vagas de suporte e de SRE. Eram 16 atividades novas na trilha de CloudWatch, que passou de 30 para 46.",
+        "<b>🔔 A ponte que quase ninguém ensina: log ➜ métrica ➜ alarme.</b> Hoje, num time sem isso, alguém só descobre que a aplicação quebrou se estiver <i>olhando</i> o log — o que não funciona de madrugada. Agora você aprende a criar um <b>filtro de métrica</b>, que faz cada linha com ERROR virar +1 numa métrica do CloudWatch, e a pendurar um alarme nela. É essa corrente que substitui alguém encarando a tela.",
+        "<b>💸 E o item nº 1 de qualquer faxina de custo: retenção.</b> Grupo de log criado sem política de retenção guarda <b>para sempre</b> — e você paga armazenamento eterno por log que ninguém vai ler. Três atividades novas tratam disso, incluindo a lista fechada de valores que a AWS aceita (365 vale, 300 não) e o caso em que a auditoria exige justamente o contrário.",
+        "<b>⌨️ Mais: <code>tail</code>, o <code>tail -f</code> da nuvem</b> — o comando que quem está depurando usa o dia inteiro, e o único do <code>aws logs</code> em que o nome do grupo é posicional. E também streams (grupo guarda stream, stream guarda evento), envio do log em tempo real pra uma Lambda, exportação pro S3 pra guardar barato por anos, e etiqueta pra saber de qual time é aquele custo.",
+      ],
+    },
+    {
       versao: "2026-09-21",
       data: "21 set 2026",
       titulo: "📨 SQS e SNS agora são trilhas de verdade — 22 atividades novas",
