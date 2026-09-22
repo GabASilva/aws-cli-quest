@@ -58,7 +58,7 @@ window.rodarPelaCadeia = function (linha) {
   return { ok: !_term.erro, saida: _term.linhas.join(" | "), cmd: _term.cmd };
 };
 `;
-const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "ssm-completo.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "desafios-pratica-2.js", "sqs-completo.js", "cloudwatch-metricas.js", "logs-insights.js", "logs-completo.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "ecr-completo.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
+const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "ssm-completo.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "desafios-pratica-2.js", "sqs-completo.js", "iam-completo.js", "cloudwatch-metricas.js", "logs-insights.js", "logs-completo.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "ecr-completo.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "missoes.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
   .join("\n");
 
@@ -183,6 +183,18 @@ const teste = `
     if (linha.includes("<sessao-id>")) {
       const abertas = Object.values(((conta.ssm || {}).sessoes) || {}).filter((s) => s.estado === "Connected");
       linha = linha.replace(/<sessao-id>/g, abertas.length ? abertas[abertas.length - 1].id : "");
+    }
+    // IAM: a chave MAIS VELHA ainda ativa, e a que já foi inativada — a
+    // rotação é create → update(Inactive) → delete, e cada passo aponta pra uma.
+    if (linha.includes("<chave-antiga>") || linha.includes("<chave-inativa>")) {
+      let velha = "", inativa = "";
+      for (const u of Object.values(((conta.iam || {}).usuarios) || {})) {
+        for (const k of (u.chaves || [])) {
+          if (!velha && k.status === "Active") velha = k.id;
+          if (!inativa && k.status === "Inactive") inativa = k.id;
+        }
+      }
+      linha = linha.replace(/<chave-antiga>/g, velha).replace(/<chave-inativa>/g, inativa);
     }
     // consulta de log (Insights): pega o id da ultima consulta iniciada
     if (linha.includes("<consulta-id>") && conta.logs) { const _q = Object.keys(conta.logs.consultas || {}); if (_q.length) linha = linha.replace(/<consulta-id>/g, _q[_q.length - 1]); }    if (linha.includes("<waf-id>") && conta.waf) { const _w = Object.values(conta.waf.acls); if (_w.length) linha = linha.replace(/<waf-id>/g, _w[_w.length - 1].id); }

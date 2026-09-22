@@ -165,6 +165,17 @@ function resolver(linha) {
     const abertas = Object.values(((conta.ssm || {}).sessoes) || {}).filter((s) => s.estado === "Connected");
     linha = linha.replace(/<sessao-id>/g, abertas.length ? abertas[abertas.length - 1].id : "");
   }
+  // IAM: a chave mais velha ainda ativa, e a que já foi inativada
+  if (linha.includes("<chave-antiga>") || linha.includes("<chave-inativa>")) {
+    let velha = "", inativa = "";
+    for (const u of Object.values(((conta.iam || {}).usuarios) || {})) {
+      for (const k of (u.chaves || [])) {
+        if (!velha && k.status === "Active") velha = k.id;
+        if (!inativa && k.status === "Inactive") inativa = k.id;
+      }
+    }
+    linha = linha.replace(/<chave-antiga>/g, velha).replace(/<chave-inativa>/g, inativa);
+  }
   // fases 6-9
   if (linha.includes("<lb-arn>") && conta.elb) { const _l = Object.values(conta.elb.lbs); if (_l.length) linha = linha.replace(/<lb-arn>/g, _l[_l.length - 1].arn); }
   if (linha.includes("<tg-arn>") && conta.elb) { const _t = Object.values(conta.elb.tgs); if (_t.length) linha = linha.replace(/<tg-arn>/g, _t[_t.length - 1].arn); }
