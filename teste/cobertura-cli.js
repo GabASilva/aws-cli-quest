@@ -104,7 +104,7 @@ function lerSimulador() {
 function metaDe(total) {
   if (total <= 30) return ["completa", "cobrir o servico inteiro"];
   if (total <= 80) return ["nucleo", "cobrir o nucleo, pular o que so aparece em caso raro"];
-  return ["seletiva", "cobrir o que um profissional usa; o resto e ruido"];
+  return ["seletiva", "por enquanto so o que a profissao usa — a meta final e 100%, mas nesta ordem"];
 }
 
 function gerar(vault, real, climb) {
@@ -188,7 +188,12 @@ function gerar(vault, real, climb) {
     "|---|---|---|",
     "| **completa** | ate 30 comandos | cobrir o servico inteiro |",
     "| **nucleo** | 31 a 80 | cobrir o nucleo, pular o caso raro |",
-    "| **seletiva** | mais de 80 | cobrir o que um profissional usa |",
+    "| **seletiva** | mais de 80 | por enquanto so o que a profissao usa |",
+    "",
+    "> **A meta final e 100% de TODOS os comandos** — decisao do Gabriel em",
+    "> 22/09/2026. A tabela acima e ordem de trabalho, nao teto: primeiro engorda",
+    "> o curso pelo que as profissoes mais usam ([[trilhas-por-profissao]]),",
+    "> depois se fecha o resto servico por servico.",
     "",
     "## Como implementar UM comando",
     "",

@@ -165,6 +165,17 @@ function resolver(linha) {
     const abertas = Object.values(((conta.ssm || {}).sessoes) || {}).filter((s) => s.estado === "Connected");
     linha = linha.replace(/<sessao-id>/g, abertas.length ? abertas[abertas.length - 1].id : "");
   }
+  // EC2: IP elástico recém-alocado, o que está parado, e o NAT criado
+  if (linha.includes("<eip-id>") || linha.includes("<eip-parado>")) {
+    const eips = Object.values(((conta.ec2 || {}).enderecos) || {});
+    const ultimo = eips.length ? eips[eips.length - 1].id : "";
+    const parado = (eips.find((e) => !e.instancia) || {}).id || "";
+    linha = linha.replace(/<eip-id>/g, ultimo).replace(/<eip-parado>/g, parado);
+  }
+  if (linha.includes("<nat-id>")) {
+    const n = Object.keys(((conta.ec2 || {}).nats) || {});
+    linha = linha.replace(/<nat-id>/g, n.length ? n[n.length - 1] : "");
+  }
   // IAM: a chave mais velha ainda ativa, e a que já foi inativada
   if (linha.includes("<chave-antiga>") || linha.includes("<chave-inativa>")) {
     let velha = "", inativa = "";
