@@ -156,6 +156,15 @@ function resolver(linha) {
     const t = Object.keys(((conta.sqs || {}).tarefasMove) || {});
     linha = linha.replace(/<task-handle>/g, t.length ? t[t.length - 1] : "");
   }
+  // SSM: o id do ultimo envio do Run Command e o da sessao ainda aberta
+  if (linha.includes("<comando-id>")) {
+    const k = Object.keys(((conta.ssm || {}).comandos) || {});
+    linha = linha.replace(/<comando-id>/g, k.length ? k[k.length - 1] : "");
+  }
+  if (linha.includes("<sessao-id>")) {
+    const abertas = Object.values(((conta.ssm || {}).sessoes) || {}).filter((s) => s.estado === "Connected");
+    linha = linha.replace(/<sessao-id>/g, abertas.length ? abertas[abertas.length - 1].id : "");
+  }
   // fases 6-9
   if (linha.includes("<lb-arn>") && conta.elb) { const _l = Object.values(conta.elb.lbs); if (_l.length) linha = linha.replace(/<lb-arn>/g, _l[_l.length - 1].arn); }
   if (linha.includes("<tg-arn>") && conta.elb) { const _t = Object.values(conta.elb.tgs); if (_t.length) linha = linha.replace(/<tg-arn>/g, _t[_t.length - 1].arn); }
