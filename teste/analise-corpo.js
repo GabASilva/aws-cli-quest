@@ -165,6 +165,16 @@ function resolver(linha) {
     const abertas = Object.values(((conta.ssm || {}).sessoes) || {}).filter((s) => s.estado === "Connected");
     linha = linha.replace(/<sessao-id>/g, abertas.length ? abertas[abertas.length - 1].id : "");
   }
+  // Containers: a tarefa do ECS que está rodando e o update do EKS
+  if (linha.includes("<tarefa-id>")) {
+    const t = Object.values(((conta.ecs || {}).execucoes) || {});
+    const viva = t.filter((x) => x.estado === "RUNNING").pop() || t[t.length - 1];
+    linha = linha.replace(/<tarefa-id>/g, viva ? viva.id : "");
+  }
+  if (linha.includes("<update-id>")) {
+    const u = Object.keys(((conta.eks || {}).atualizacoes) || {});
+    linha = linha.replace(/<update-id>/g, u.length ? u[u.length - 1] : "");
+  }
   // EC2: IP elástico recém-alocado, o que está parado, e o NAT criado
   if (linha.includes("<eip-id>") || linha.includes("<eip-parado>")) {
     const eips = Object.values(((conta.ec2 || {}).enderecos) || {});
