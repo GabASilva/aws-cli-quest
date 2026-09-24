@@ -584,7 +584,7 @@
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-availability-zones")),
     d("ec2c-status1", "ec2", 2, 80, "A máquina está de pé mesmo?",
       "Chamado aberto: <i>\"o site caiu\"</i>. Antes de entrar na máquina, olhe as <b>duas checagens de saúde</b> que a AWS faz — a do hardware e a do sistema. <small>(a pegadinha: por padrão esse comando só mostra máquina LIGADA; a parada some da lista)</small>",
-      ["Não é o describe-instances: existe um comando só de STATUS.", "Se a máquina estiver parada e você quiser vÃª-la assim mesmo, use --include-all-instances."],
+      ["Não é o describe-instances: existe um comando só de STATUS.", "Se a máquina estiver parada e você quiser vê-la assim mesmo, use --include-all-instances."],
       ["aws ec2 describe-instance-status --include-all-instances"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-instance-status")),
   ]);
@@ -609,7 +609,7 @@
       (c) => enderecos(c).some((e) => !!e.instancia)),
     d("ec2c-ip2", "ec2", 3, 110, "O IP parado que ninguém viu na fatura",
       "Faxina de custo: reserve um segundo IP elástico simulando uma migração antiga, liste os enderecos pra <b>achar o que está sem máquina</b> e <b>libere</b> ele. <small>(ao contrário do que parece, IP associado é de graça — o que a AWS cobra é o parado)</small>",
-      ["Na listagem, o que está parado é o que aparece SEM InstanceId.", "Liberar e `release-address`, e ele exige o AllocationId.", "A AWS recusa liberar um IP que ainda estÃ¡ associado — solte antes se for o caso."],
+      ["Na listagem, o que está parado é o que aparece SEM InstanceId.", "Liberar e `release-address`, e ele exige o AllocationId.", "A AWS recusa liberar um IP que ainda está associado — solte antes se for o caso."],
       ["aws ec2 allocate-address --domain vpc",
         "aws ec2 describe-addresses",
         "aws ec2 release-address --allocation-id <eip-parado>"],
@@ -654,7 +654,7 @@
   // ----- NAT gateway entra na trilha de VPC, que é onde ele faz sentido -----
   at("cob-vpc-6", [
     d("ec2c-nat1", "vpc", 3, 140, "A sub-rede privada precisa baixar pacote",
-      "O banco estÃ¡ numa sub-rede <b>privada</b> — inalcançável de fora, como tem que ser. Mas ele precisa <b>sair</b> pra baixar atualização de segurança. Isso é trabalho do <b>NAT gateway</b>: reserve um IP elástico e crie o NAT numa sub-rede sua.",
+      "O banco está numa sub-rede <b>privada</b> — inalcançável de fora, como tem que ser. Mas ele precisa <b>sair</b> pra baixar atualização de segurança. Isso é trabalho do <b>NAT gateway</b>: reserve um IP elástico e crie o NAT numa sub-rede sua.",
       ["O NAT vai numa sub-rede PUBLICA e serve a privada — é por isso que ele precisa de um IP elástico próprio.", "São dois comandos: reservar o IP e criar o NAT apontando pra sub-rede e pra alocação.", "Cuidado com a conta: o NAT cobra por hora E por GB que passa."],
       ["aws ec2 allocate-address --domain vpc",
         "aws ec2 create-nat-gateway --subnet-id <subnet-id> --allocation-id <eip-id>"],

@@ -326,6 +326,63 @@ try {
   problemas.push("não consegui comparar NIVEIS com lib/perfil-publico.js: " + e.message);
 }
 
+// ---------- UTF-8 gravado duas vezes ("estÃ¡" no lugar de "está") ----------
+// Em 24/09/2026 um perl sem `use utf8` gravou o acento duas vezes em 15 textos
+// e passou no node --check, no fumaça e no gabarito. O sinal é inconfundível:
+// "Ã" seguido de um caractere da faixa U+0080–U+00BF.
+{
+  const MOJIBAKE = /Ã[\u0080-¿]/;
+  for (const d of DESAFIOS) {
+    const txt = [d.titulo, d.descricao].concat(d.dicas || []).join(" ");
+    if (MOJIBAKE.test(txt)) problemas.push(`acento gravado duas vezes (mojibake) em ${d.id}: "${(txt.match(/.{0,20}Ã[\u0080-¿].{0,10}/) || [""])[0]}"`);
+  }
+  for (const [k, v] of Object.entries(typeof MANUAIS !== "undefined" ? MANUAIS : {})) {
+    if (MOJIBAKE.test(String(v))) problemas.push(`acento gravado duas vezes (mojibake) no manual ${k}`);
+  }
+}
+
+// ---------- FIXAÇÃO: o molde boot.dev, medido ----------
+// Pedido do Gabriel (21/09/2026): cada comando com uma atividade que ensina o
+// caso de uso E uma ou duas de fixação, e cada atividade introduzindo UM
+// comando novo (regra 1 do CLAUDE.md). A revisão de 24/09 achou 90% dos
+// comandos das levas novas praticados uma vez só — e nenhum teste acusava,
+// porque o fumaça confere se a atividade FUNCIONA, não se ela ENSINA.
+//
+// É estrito só nas famílias de id abaixo (o conteúdo antigo entra como
+// contagem, pra virar fila de trabalho sem travar ninguém).
+// >>> Toda leva nova de atividades: ponha o prefixo dela aqui. <<<
+const LEVAS_ESTRITAS = ["psqs", "psns", "sqsc", "logsc", "ssmc", "iamc", "ec2c", "s3c", "ctn"];
+{
+  const ehEstrita = (id) => LEVAS_ESTRITAS.some((p) => String(id).indexOf(p + "-") === 0);
+  const usoPorCmd = {};
+  const introduzidoPor = {};
+  const vistosPorTrilha = {};
+  const duplas = [];
+  for (const d of DESAFIOS) {
+    if (d.tipo === "projeto") continue;
+    const vistos = (vistosPorTrilha[d.servico] = vistosPorTrilha[d.servico] || new Set());
+    const cmds = new Set();
+    for (const l of d.solucao || []) {
+      const m = String(l).match(/^aws\s+(\S+)\s+(\S+)/);
+      if (m) cmds.add(m[1] + " " + m[2]);
+    }
+    const ineditos = [];
+    for (const k of cmds) {
+      usoPorCmd[k] = (usoPorCmd[k] || 0) + 1;
+      if (!vistos.has(k)) { ineditos.push(k); vistos.add(k); if (!introduzidoPor[k]) introduzidoPor[k] = d.id; }
+    }
+    if (ineditos.length >= 2) duplas.push({ id: d.id, estrita: ehEstrita(d.id), ineditos });
+  }
+  const umaVez = Object.keys(usoPorCmd).filter((k) => usoPorCmd[k] === 1);
+  const umaVezEstrita = umaVez.filter((k) => ehEstrita(introduzidoPor[k]));
+  const duplasEstritas = duplas.filter((x) => x.estrita);
+  console.log("\n=== FIXAÇÃO (molde boot.dev) ===");
+  console.log(`curso inteiro: ${umaVez.length} comandos praticados UMA vez só · ${duplas.length} atividades introduzindo 2+ comandos inéditos`);
+  console.log(`levas estritas (${LEVAS_ESTRITAS.join(", ")}): ${umaVezEstrita.length} sem fixação · ${duplasEstritas.length} com 2+ inéditos`);
+  for (const k of umaVezEstrita) avisos.push(`sem fixação: "aws ${k}" só aparece em ${introduzidoPor[k]}`);
+  for (const x of duplasEstritas) avisos.push(`${x.id} introduz ${x.ineditos.length} comandos de uma vez: ${x.ineditos.join(" + ")}`);
+}
+
 // ---------- Resumo ----------
 console.log("\n=== PROBLEMAS (" + problemas.length + ") ===");
 problemas.forEach((p) => console.log("✗ " + p));

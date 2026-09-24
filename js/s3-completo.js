@@ -203,7 +203,7 @@
     "head-bucket": (conta, pos, flags) => {
       const [nome] = bucketDe(conta, flags, "HeadBucket");
       avisarClimb("Resposta vazia é SUCESSO aqui: o bucket existe e você tem acesso. É o teste de permissão mais barato que existe — em script, vale mais que qualquer list.");
-      return okSilencioso("Bucket \"" + nome + "\" existe e esta acessível.");
+      return okSilencioso("Bucket \"" + nome + "\" existe e está acessível.");
     },
     "get-bucket-location": (conta, pos, flags) => {
       bucketDe(conta, flags, "GetBucketLocation");
@@ -257,7 +257,7 @@
         throw new ErroCli("An error occurred (InvalidStorageClass) when calling the CopyObject operation: classe inválida: " + classe + ".");
       }
       bd.objetos[chave] = { tamanho: bo.objetos[chaveOrigem].tamanho, enviadoEm: typeof dataFormatada === "function" ? dataFormatada() : new Date().toISOString(), classe: classe };
-      avisarClimb("A copia acontece DENTRO da AWS: o arquivo não desce pra sua máquina e não sobe de novo. Em arquivo grande isso é a diferença entre segundos e horas — e entre pagar transferência ou não.");
+      avisarClimb("A cópia acontece DENTRO da AWS: o arquivo não desce pra sua máquina e não sobe de novo. Em arquivo grande isso é a diferença entre segundos e horas — e entre pagar transferência ou não.");
       return js({ CopyObjectResult: { ETag: "\"" + hexAleatorio(32) + "\"", LastModified: new Date().toISOString() } });
     },
     "delete-objects": (conta, pos, flags) => {
@@ -289,7 +289,7 @@
       if (String(obj.classe || "STANDARD").indexOf("GLACIER") < 0 && obj.classe !== "DEEP_ARCHIVE") {
         throw new ErroCli(
           "An error occurred (InvalidObjectState) when calling the RestoreObject operation: Restore is not allowed for the object's current storage class.\n" +
-          "Só faz sentido restaurar o que está em GLACIER ou DEEP_ARCHIVE — o resto já esta disponível."
+          "Só faz sentido restaurar o que está em GLACIER ou DEEP_ARCHIVE — o resto já está disponível."
         );
       }
       const dias = campo([String(exigirFlag(flags, "restore-request"))].concat((pos || []).map(String)).join(" "), "Days") || "1";
@@ -335,7 +335,7 @@
       bd.objetos = bd.objetos || {};
       bd.objetos[chaveFinal] = bo.objetos[o.chave];
       delete bo.objetos[o.chave];
-      avisarClimb("Não existe \"renomear\" no S3: o mv é uma copia seguida de um apagar. Por isso renomear um arquivo de 5 GB não é instantâneo — e por isso o nome da chave importa desde o começo.");
+      avisarClimb("Não existe \"renomear\" no S3: o mv é uma cópia seguida de um apagar. Por isso renomear um arquivo de 5 GB não é instantâneo — e por isso o nome da chave importa desde o começo.");
       return "move: " + origem + " to " + destino;
     },
     presign: (conta, pos, flags) => {
@@ -473,7 +473,7 @@
       ["aws s3 mv s3://docs-fiscais/relatorio.csv s3://docs-fiscais/fechamento-2026.csv"],
       (c) => !!obj(c, "docs-fiscais", "fechamento-2026.csv") && !obj(c, "docs-fiscais", "relatorio.csv")),
     d("s3c-presign1", "s3", 2, 90, "O cliente quer o PDF, mas o bucket e privado",
-      "O contrato estÃ¡ num bucket privado e o cliente precisa baixar — e tornar o bucket público só por causa disso seria um erro grave. Crie <b>contratos-2026</b>, suba o <b>relatorio.csv</b> e gere um <b>link temporário</b> que expira em <b>900</b> segundos.",
+      "O contrato está num bucket privado e o cliente precisa baixar — e tornar o bucket público só por causa disso seria um erro grave. Crie <b>contratos-2026</b>, suba o <b>relatorio.csv</b> e gere um <b>link temporário</b> que expira em <b>900</b> segundos.",
       ["Existe um comando do `aws s3` que assina uma URL temporária pro objeto.", "O prazo vai em `--expires-in`, em segundos (o máximo da AWS são 7 dias).", "Repare: quem tiver o link acessa — o link E o segredo."],
       ["aws s3 mb s3://contratos-2026",
         "aws s3 cp relatorio.csv s3://contratos-2026/",
@@ -520,7 +520,7 @@
         "aws s3api head-bucket --bucket contratos-2026"],
       (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "head-bucket")),
     d("s3c-copy1", "s3", 3, 120, "Copie 4 GB sem baixar 4 GB",
-      "Você precisa de uma copia do <b>relatorio.csv</b> do <b>contratos-2026</b> dentro do <b>logs-aplicacao</b>, como <b>backup-contrato.csv</b>. Faça a copia acontecer <b>dentro da AWS</b> — sem o arquivo passar pela sua máquina.",
+      "Você precisa de uma cópia do <b>relatorio.csv</b> do <b>contratos-2026</b> dentro do <b>logs-aplicacao</b>, como <b>backup-contrato.csv</b>. Faça a cópia acontecer <b>dentro da AWS</b> — sem o arquivo passar pela sua máquina.",
       ["O `s3api copy-object` manda a AWS copiar internamente: nada desce e nada sobe.", "Repare no formato do `--copy-source`: e `<bucket>/<chave>`, SEM o s3:// na frente.", "O `--bucket` e o `--key` aqui são o DESTINO."],
       ["aws s3api copy-object --bucket logs-aplicacao --key backup-contrato.csv --copy-source contratos-2026/relatorio.csv"],
       (c) => !!obj(c, "logs-aplicacao", "backup-contrato.csv")),
@@ -530,14 +530,14 @@
       ["aws s3api put-bucket-tagging --bucket logs-aplicacao --tagging 'TagSet=[{Key=Time,Value=plataforma}]'",
         "aws s3api get-bucket-tagging --bucket logs-aplicacao"],
       (c) => (((bkt(c, "logs-aplicacao") || {}).tags) || {}).Time === "plataforma"),
-    d("s3c-loc1", "s3", 3, 90, "Em que região esse bucket estÃ¡?",
+    d("s3c-loc1", "s3", 3, 90, "Em que região esse bucket está?",
       "Antes de ligar uma aplicação nova nele, descubra <b>onde</b> o <b>logs-aplicacao</b> fica. <small>(transferência entre regiões custa, e latência do outro lado do mundo aparece no tempo de resposta)</small>",
       ["Existe um `get-…` só pra isso no s3api.", "Curiosidade real: se a resposta vier `null`, o bucket está em us-east-1 — é assim mesmo na AWS."],
       ["aws s3api get-bucket-location --bucket logs-aplicacao"],
       (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "get-bucket-location")),
     d("s3c-rest1", "s3", 3, 130, "Precisamos daquele arquivo de três anos atrás",
       "O jurídico pediu um arquivo que já desceu pro Glacier. Copie o <b>relatorio.csv</b> pro <b>logs-aplicacao</b> como <b>antigo.csv</b> já na classe <b>GLACIER</b> e peça a <b>restauração</b> por <b>7</b> dias. <small>(não é instantâneo — leva horas, e depois do prazo some de novo)</small>",
-      ["Dá pra nascer direto na classe fria usando `--storage-class` no copy-object.", "Restaurar pede quantos dias a copia fica disponível: `--restore-request Days=<n>`.", "Tentar restaurar algo que não está em Glacier devolve InvalidObjectState — o arquivo já esta disponível."],
+      ["Dá pra nascer direto na classe fria usando `--storage-class` no copy-object.", "Restaurar pede quantos dias a cópia fica disponível: `--restore-request Days=<n>`.", "Tentar restaurar algo que não está em Glacier devolve InvalidObjectState — o arquivo já está disponível."],
       ["aws s3api copy-object --bucket logs-aplicacao --key antigo.csv --copy-source contratos-2026/relatorio.csv --storage-class GLACIER",
         "aws s3api restore-object --bucket logs-aplicacao --key antigo.csv --restore-request Days=7"],
       (c) => ((obj(c, "logs-aplicacao", "antigo.csv") || {}).restaurando) === 7),

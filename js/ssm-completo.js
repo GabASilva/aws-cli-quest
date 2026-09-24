@@ -61,7 +61,7 @@
       throw new ErroCli(
         "An error occurred (InvalidInstanceId) when calling the " + op + " operation: Instances [[" + id + "]] not in a valid state for account " + (conta.contaId || "123456789012") + ".\n" +
         "Na AWS de verdade esse erro quase sempre quer dizer uma de três coisas: a máquina não existe, o agente do SSM não está rodando nela, ou ela não tem uma role com a política AmazonSSMManagedInstanceCore.\n" +
-        "Veja quem estÃ¡ registrado com: aws ssm describe-instance-information"
+        "Veja quem está registrado com: aws ssm describe-instance-information"
       );
     }
     return achada;
@@ -94,7 +94,7 @@
   }
 
   Object.assign(SERVICOS.ssm, {
-    // ---------- quem estÃ¡ registrado ----------
+    // ---------- quem está registrado ----------
     "describe-instance-information": (conta) => {
       st(conta);
       const lista = instanciasDa(conta).filter((i) => i.estado === "running");
@@ -495,7 +495,7 @@
   at("cob-ssm-1", [
     d("ssmc-inv1", "ssm", 2, 80, "A máquina não aparece na lista",
       "Chamado clássico do suporte: <i>\"não consigo abrir sessão na instância\"</i>. Antes de qualquer coisa, veja <b>quais máquinas o SSM enxerga</b> — se ela não estiver nessa lista, o problema não é a sessão.",
-      ["A pergunta não é sobre a EC2: é sobre quem estÃ¡ REGISTRADO no Systems Manager.", "Repare no PingStatus da resposta: Online quer dizer que o agente estÃ¡ conversando."],
+      ["A pergunta não é sobre a EC2: é sobre quem está REGISTRADO no Systems Manager.", "Repare no PingStatus da resposta: Online quer dizer que o agente está conversando."],
       ["aws ssm describe-instance-information"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "describe-instance-information")),
     d("ssmc-doc1", "ssm", 2, 70, "O que o SSM já sabe fazer sozinho",

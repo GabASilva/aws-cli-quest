@@ -568,7 +568,7 @@
   at("eks-6", [
     d("ctn-eks1", "eks", 3, 120, "Os pods estão Pending: faltou máquina",
       "O time subiu mais replicas e metade dos pods ficou <b>Pending</b> — não é problema do Kubernetes, e falta de no. Veja o grupo de nos <b>nos-app</b> do cluster <b>cluster-k8s</b> e aumente a escala pra <b>minSize=2, maxSize=6, desiredSize=4</b>.",
-      ["Primeiro olhe como estÃ¡, com o `describe-nodegroup`.", "Mudar a escala e `update-nodegroup-config`, e a configuração vai em `--scaling-config`.", "A forma e `minSize=<n>,maxSize=<n>,desiredSize=<n>` — e o desejado precisa caber entre os dois."],
+      ["Primeiro olhe como está, com o `describe-nodegroup`.", "Mudar a escala e `update-nodegroup-config`, e a configuração vai em `--scaling-config`.", "A forma e `minSize=<n>,maxSize=<n>,desiredSize=<n>` — e o desejado precisa caber entre os dois."],
       ["aws eks describe-nodegroup --cluster-name cluster-k8s --nodegroup-name nos-app",
         "aws eks update-nodegroup-config --cluster-name cluster-k8s --nodegroup-name nos-app --scaling-config minSize=2,maxSize=6,desiredSize=4"],
       (c) => (((ngDe(c, "cluster-k8s", "nos-app") || {}).escala) || {}).desiredSize === 4),

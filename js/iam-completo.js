@@ -110,7 +110,7 @@
     "get-user": (conta, pos, flags) => {
       const s = st(conta);
       if (flags["user-name"] === undefined) {
-        avisarClimb("Sem --user-name o get-user descreve QUEM ESTA CHAMANDO. No terminal de verdade é o jeito rápido de saber com qual credencial você estÃ¡ logado.");
+        avisarClimb("Sem --user-name o get-user descreve QUEM ESTA CHAMANDO. No terminal de verdade é o jeito rápido de saber com qual credencial você está logado.");
         return js({ User: { UserName: "climb", UserId: "AIDACLIMB" + hexAleatorio(8).toUpperCase(), Arn: arnIam(conta, "user", "climb"), CreateDate: new Date().toISOString() } });
       }
       const [nome, u] = usuarioDe(conta, flags, "GetUser");
@@ -522,7 +522,7 @@
 
   at("iam-2", [
     d("iamc-get1", "iam", 1, 50, "Com qual credencial eu estou?",
-      "Antes de mexer em qualquer coisa numa conta que não é sua, a primeira pergunta é: <b>quem sou eu aqui?</b> Veja o detalhe do usuário <b>ana</b> — e repare que, sem informar o nome, o mesmo comando responde quem estÃ¡ chamando.",
+      "Antes de mexer em qualquer coisa numa conta que não é sua, a primeira pergunta é: <b>quem sou eu aqui?</b> Veja o detalhe do usuário <b>ana</b> — e repare que, sem informar o nome, o mesmo comando responde quem está chamando.",
       ["É o `get-…` do usuário, irmão do `list-users` que você acabou de usar.", "Sem --user-name ele descreve a própria credencial — guarde esse truque."],
       ["aws iam get-user --user-name ana"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-user")),

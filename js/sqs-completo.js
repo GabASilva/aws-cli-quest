@@ -620,4 +620,66 @@
       (c, cmd, ok) => ok && ehCmd(cmd, "sqs", "remove-permission") &&
         !(((fila(c, "pedidos-app") || {}).permissoes) || []).some((p) => p.rotulo === "time-dados")),
   ]);
+
+  // ============================================================
+  // FIXAÇÃO (revisão de 24/09/2026)
+  // Cada comando acima era praticado UMA vez. Aqui cada família volta num
+  // cenário novo, sem introduzir comando inédito — é o "1 ou 2 de fixação" do
+  // molde que o Gabriel pediu. O analise.js agora mede isso (seção FIXAÇÃO).
+  // ============================================================
+  at("sqsc-tag3", [
+    d("sqsc-fix-tag", "sqs", 2, 80, "A fila de teste que entrou no relatório de produção",
+      "O financeiro achou no relatório uma fila de cobrança etiquetada como produção, mas ela é só de teste. Crie <b>cobrancas-recorrentes</b>, etiquete com <b>Time=financeiro</b> e <b>Ambiente=producao</b>, confira as etiquetas e depois tire a <b>Ambiente</b>, que está mentindo.",
+      ["São os três comandos de etiqueta que você acabou de ver, na ordem: pôr, conferir, tirar.", "Pra tirar, a flag recebe só a CHAVE — o valor não entra."],
+      ["aws sqs create-queue --queue-name cobrancas-recorrentes",
+        "aws sqs tag-queue --queue-url " + U("cobrancas-recorrentes") + " --tags Time=financeiro,Ambiente=producao",
+        "aws sqs list-queue-tags --queue-url " + U("cobrancas-recorrentes"),
+        "aws sqs untag-queue --queue-url " + U("cobrancas-recorrentes") + " --tag-keys Ambiente"],
+      (c, cmd, ok) => {
+        const t = ((fila(c, "cobrancas-recorrentes") || {}).tags) || {};
+        return ok && ehCmd(cmd, "sqs", "untag-queue") && t.Time === "financeiro" && t.Ambiente === undefined;
+      }),
+  ]);
+  at("sqsc-lote4", [
+    d("sqsc-fix-lote", "sqs", 3, 110, "Miniaturas: estica o prazo de duas e confirma as duas",
+      "O gerador de miniaturas puxou três fotos, percebeu que duas são enormes e vai precisar de mais tempo nelas. Crie <b>fila-thumbnails</b>, mande <b>foto-a</b>, <b>foto-b</b> e <b>foto-c</b> num lote, puxe as três, estique o prazo de duas pra <b>300</b> segundos e, quando terminar, confirme essas duas de uma vez.",
+      ["Tudo aqui você já fez: envio em lote, receive com --max-number-of-messages, e as versões em lote de mudar visibilidade e de apagar.", "As duas operações em lote usam os MESMOS comprovantes — primeiro estica, depois confirma.", "No fim sobra uma mensagem na fila: a foto que ninguém confirmou."],
+      ["aws sqs create-queue --queue-name fila-thumbnails",
+        "aws sqs send-message-batch --queue-url " + U("fila-thumbnails") + " --entries Id=1,MessageBody=foto-a Id=2,MessageBody=foto-b Id=3,MessageBody=foto-c",
+        "aws sqs receive-message --queue-url " + U("fila-thumbnails") + " --max-number-of-messages 3",
+        "aws sqs change-message-visibility-batch --queue-url " + U("fila-thumbnails") + " --entries Id=1,ReceiptHandle=<handle-1>,VisibilityTimeout=300 Id=2,ReceiptHandle=<handle-2>,VisibilityTimeout=300",
+        "aws sqs delete-message-batch --queue-url " + U("fila-thumbnails") + " --entries Id=1,ReceiptHandle=<handle-1> Id=2,ReceiptHandle=<handle-2>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "sqs", "delete-message-batch") && msgs(c, "fila-thumbnails").length === 1),
+  ]);
+  at("sqsc-dlq2", [
+    d("sqsc-fix-dlq", "sqs", 3, 120, "E-mails que nunca saem",
+      "O disparador de e-mail trava em endereço inválido e fica tentando pra sempre. Monte a proteção que você já conhece: DLQ <b>emails-dlq</b>, fila <b>emails-envio</b> apontando pra ela com no máximo <b>3</b> tentativas — e confirme pelo lado da DLQ quem despeja nela.",
+      ["É o mesmo desenho da fila de pedidos, com outro limite de tentativas.", "A confirmação é feita a partir da DLQ, não da fila de origem."],
+      ["aws sqs create-queue --queue-name emails-dlq",
+        "aws sqs create-queue --queue-name emails-envio",
+        "aws sqs set-queue-attributes --queue-url " + U("emails-envio") + " --attributes RedrivePolicy={\"deadLetterTargetArn\":\"" + A("emails-dlq") + "\",\"maxReceiveCount\":\"3\"}",
+        "aws sqs list-dead-letter-source-queues --queue-url " + U("emails-dlq")],
+      (c, cmd, ok) => ok && ehCmd(cmd, "sqs", "list-dead-letter-source-queues") &&
+        String(attr(c, "emails-envio", "RedrivePolicy") || "").indexOf("emails-dlq") >= 0),
+  ]);
+  at("sqsc-move3", [
+    d("sqsc-fix-move", "sqs", 3, 120, "Devolva os e-mails — e pare no meio",
+      "O endereço inválido foi corrigido e o e-mail preso na <b>emails-dlq</b> pode voltar. Mande <b>email-cliente-9</b> pra DLQ, inicie a devolução, acompanhe — e cancele quando o time avisar que ainda falta um ajuste no template.",
+      ["Os três comandos da devolução, na ordem em que aparecem no dia a dia: iniciar, acompanhar, cancelar.", "Iniciar e acompanhar pedem o ARN da DLQ; cancelar pede o comprovante da tarefa."],
+      ["aws sqs send-message --queue-url " + U("emails-dlq") + " --message-body email-cliente-9",
+        "aws sqs start-message-move-task --source-arn " + A("emails-dlq"),
+        "aws sqs list-message-move-tasks --source-arn " + A("emails-dlq"),
+        "aws sqs cancel-message-move-task --task-handle <task-handle>"],
+      (c) => Object.values(((c.sqs || {}).tarefasMove) || {}).some((t) => t.origem === "emails-dlq" && t.estado === "CANCELLED")),
+  ]);
+  at("sqsc-perm2", [
+    d("sqsc-fix-perm", "sqs", 3, 110, "Acesso do parceiro só enquanto durar o contrato",
+      "A transportadora parceira (conta <b>444455556666</b>) vai mandar eventos de entrega pra você por um mês. Crie <b>eventos-parceiro</b>, libere só o envio com o rótulo <b>parceiro-logistica</b> e, fechado o contrato, revogue.",
+      ["Liberar e revogar são o par que você acabou de usar — a revogação é pelo rótulo.", "Libere só SendMessage: o parceiro não precisa ler nem apagar nada."],
+      ["aws sqs create-queue --queue-name eventos-parceiro",
+        "aws sqs add-permission --queue-url " + U("eventos-parceiro") + " --label parceiro-logistica --aws-account-ids 444455556666 --actions SendMessage",
+        "aws sqs remove-permission --queue-url " + U("eventos-parceiro") + " --label parceiro-logistica"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "sqs", "remove-permission") && !!fila(c, "eventos-parceiro") &&
+        !(((fila(c, "eventos-parceiro") || {}).permissoes) || []).some((p) => p.rotulo === "parceiro-logistica")),
+  ]);
 })();
