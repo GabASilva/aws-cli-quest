@@ -170,6 +170,15 @@ function resolver(linha) {
     const a = Object.keys(((conta.ssm || {}).automacoes) || {});
     linha = linha.replace(/<automacao-id>/g, a.length ? a[a.length - 1] : "");
   }
+  // EC2: associacao do IP elastico (pra soltar) e a ultima imagem criada
+  if (linha.includes("<eip-assoc>")) {
+    const com = Object.values(((conta.ec2 || {}).enderecos) || {}).filter((e) => e.associacao);
+    linha = linha.replace(/<eip-assoc>/g, com.length ? com[com.length - 1].associacao : "");
+  }
+  if (linha.includes("<ami-id>")) {
+    const im = Object.keys(((conta.ec2 || {}).imagens) || {});
+    linha = linha.replace(/<ami-id>/g, im.length ? im[im.length - 1] : "");
+  }
   // Containers: a tarefa do ECS que está rodando e o update do EKS
   if (linha.includes("<tarefa-id>")) {
     const t = Object.values(((conta.ecs || {}).execucoes) || {});
