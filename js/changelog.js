@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-24",
+      data: "24 set 2026",
+      titulo: "🔁 Cada comando novo agora volta pra ser praticado — 94 atividades de reforço",
+      itens: [
+        "<b>🔁 Aprender uma vez não fixa.</b> Revisamos os comandos que entraram nas últimas semanas e a maioria aparecia <i>numa atividade só</i>: você digitava, passava, e nunca mais via. Agora cada comando novo volta logo depois, num problema diferente. O curso passou de 815 para <b>909 atividades</b>, e as novas são quase todas desse tipo.",
+        "<b>✂️ Um comando novo por vez.</b> Várias atividades pediam dois ou três comandos inéditos de uma vez, e aí fica difícil saber qual deles você não entendeu. Elas foram divididas: <b>logs, Systems Manager, IAM, EC2, S3, ECS, ECR e EKS</b> agora ensinam um comando por atividade, e o reforço vem na sequência.",
+        "<b>📦 Containers de ponta a ponta:</b> • a tarefa que morreu e o <code>--desired-status STOPPED</code>, que acha a tarefa que \"sumiu\" da lista; • o <code>env</code> dentro do contêiner pra ver se a variável chegou; • escalar o nodegroup pra cima no pico e <b>devolver as máquinas</b> depois; • upgrade do EKS em dois degraus; e • no ECR, ler e remover a regra de limpeza do repositório.",
+        "<b>🩹 Arrumações:</b> • algumas atividades novas apareciam no <b>fim da trilha</b>, depois do projeto, em vez de junto da lição delas, e voltaram pro lugar certo; • o <code>put-bucket-tagging</code> do S3 agora <b>substitui</b> as etiquetas, como na AWS de verdade, em vez de somar; e • corrigimos acentos que tinham saído trocados em textos das trilhas.",
+      ],
+    },
+    {
       versao: "2026-09-22",
       data: "22 set 2026",
       titulo: "🧰 O CLImb passou a ensinar o que a vaga de nuvem pede — 79 atividades novas",
