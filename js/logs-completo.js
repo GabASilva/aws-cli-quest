@@ -472,6 +472,9 @@
   }
   const ARN = (n) => "arn:aws:logs:us-east-1:123456789012:log-group:" + n;
   const grupo = (c, n) => ((c.logs || {}).grupos || {})[n];
+  // Helper fora do d(...) de propósito: índice no nível 0 de um d() vira null
+  // no corte de gabarito (ver a memória armadilhas-de-ambiente).
+  const eventosDo = (c, g, s) => ((((grupo(c, g) || {}).streams) || {})[s] || { eventos: [] }).eventos;
 
   // --- operar o grupo: retenção, streams e etiqueta ---
   at("cw-9", [
@@ -492,34 +495,73 @@
         "aws logs delete-retention-policy --log-group-name /app/lambda"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-retention-policy") &&
         !!grupo(c, "/app/lambda") && (grupo(c, "/app/lambda") || {}).retencao === undefined),
-    d("logsc-str1", "cloudwatch", 2, 80, "Quem ainda está escrevendo nesse log?",
-      "Três servidores mandam log pro mesmo grupo e um deles parou de responder. Crie o grupo <b>/frota/web</b>, crie os streams <b>servidor-01</b> e <b>servidor-02</b> e <b>liste os streams</b> — é essa lista que mostra quem escreveu por último.",
-      ["Grupo guarda stream, stream guarda evento: são dois niveis, não um.", "Depois de criar, liste com o `describe-…` da mesma família."],
+    // Revisão de 24/09: str1, str2 e tag1 introduziam DOIS comandos cada. Agora
+    // cada uma introduz um, e a seguinte introduz o outro usando o primeiro de
+    // novo — que vira a fixação dele.
+    d("logsc-str1", "cloudwatch", 2, 80, "Um servidor novo entra na frota",
+      "Três servidores vão mandar log pro mesmo grupo, e cada um precisa do SEU canal dentro dele. Crie o grupo <b>/frota/web</b> e, dentro dele, o stream do primeiro servidor: <b>servidor-01</b>.",
+      ["Grupo guarda stream, stream guarda evento: são dois níveis, não um.", "Criar o canal é `create-log-stream`, e ele pede o grupo E o nome do stream."],
       ["aws logs create-log-group --log-group-name /frota/web",
-        "aws logs create-log-stream --log-group-name /frota/web --log-stream-name servidor-01",
-        "aws logs create-log-stream --log-group-name /frota/web --log-stream-name servidor-02",
+        "aws logs create-log-stream --log-group-name /frota/web --log-stream-name servidor-01"],
+      (c) => !!(((grupo(c, "/frota/web") || {}).streams || {})["servidor-01"])),
+    d("logsc-str1b", "cloudwatch", 2, 80, "Quem ainda está escrevendo nesse log?",
+      "O segundo servidor entrou e um deles parou de responder. Crie o stream <b>servidor-02</b> no <b>/frota/web</b> e <b>liste os streams</b> do grupo — é essa lista que mostra quem escreveu por último.",
+      ["O stream novo se cria igual ao anterior.", "Pra listar, existe o `describe-…` da mesma família; com `--order-by LastEventTime --descending` o primeiro é quem escreveu por último."],
+      ["aws logs create-log-stream --log-group-name /frota/web --log-stream-name servidor-02",
         "aws logs describe-log-streams --log-group-name /frota/web"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-log-streams") &&
         Object.keys(((grupo(c, "/frota/web") || {}).streams) || {}).length >= 2),
-    d("logsc-str2", "cloudwatch", 2, 90, "Escreva e leia de volta",
-      "Antes de ligar a aplicação de verdade, teste o caminho: escreva a linha <b>deploy concluido</b> no stream <b>servidor-01</b> do <b>/frota/web</b> e leia ela de volta. <small>(o timestamp vai em milissegundos desde 1970 — no terminal seria <code>$(date +%s)000</code>)</small>",
-      ["São dois comandos irmãos: um `put-…` e um `get-…`.", "O evento vai na forma abreviada `timestamp=<ms>,message=<texto>`.", "Pra ler, você precisa dizer o grupo E o stream — o get-log-events le UM stream, não o grupo inteiro."],
-      ["aws logs put-log-events --log-group-name /frota/web --log-stream-name servidor-01 --log-events timestamp=1789000000000,message=deploy-concluido",
-        "aws logs get-log-events --log-group-name /frota/web --log-stream-name servidor-01"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "get-log-events") &&
-        ((((grupo(c, "/frota/web") || {}).streams) || {})["servidor-01"] || { eventos: [] }).eventos.length >= 1),
+    d("logsc-str2", "cloudwatch", 2, 80, "Escreva no canal do servidor",
+      "Antes de ligar a aplicação de verdade, teste o caminho de escrita: grave a linha <b>deploy-concluido</b> no stream <b>servidor-01</b> do <b>/frota/web</b>. <small>(o timestamp vai em milissegundos desde 1970 — no terminal seria <code>$(date +%s)000</code>)</small>",
+      ["Escrever evento é `put-log-events`, e ele pede grupo e stream.", "O evento vai na forma abreviada `timestamp=<ms>,message=<texto>`."],
+      ["aws logs put-log-events --log-group-name /frota/web --log-stream-name servidor-01 --log-events timestamp=1789000000000,message=deploy-concluido"],
+      (c) => eventosDo(c, "/frota/web", "servidor-01").length >= 1),
+    d("logsc-str2b", "cloudwatch", 2, 90, "Leia de volta o que o servidor escreveu",
+      "O <b>servidor-02</b> vai reiniciar de madrugada e deixou um aviso no log. Grave <b>reinicio-agendado</b> no stream dele e <b>leia</b> o stream de volta.",
+      ["Primeiro a escrita, igual à anterior, no outro stream.", "Ler é o `get-…` irmão — e ele lê UM stream, não o grupo inteiro: diga os dois."],
+      ["aws logs put-log-events --log-group-name /frota/web --log-stream-name servidor-02 --log-events timestamp=1789000060000,message=reinicio-agendado",
+        "aws logs get-log-events --log-group-name /frota/web --log-stream-name servidor-02"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "get-log-events") && eventosDo(c, "/frota/web", "servidor-02").length >= 1),
     d("logsc-tag1", "cloudwatch", 2, 70, "De qual time é esse log?",
-      "O relatório de custo mostra o CloudWatch inteiro num bolo só. Etiquete o <b>/frota/web</b> com <b>Time=plataforma</b> e confira lendo as etiquetas de volta.",
+      "O relatório de custo mostra o CloudWatch inteiro num bolo só. Etiquete o <b>/frota/web</b> com <b>Time=plataforma</b>.",
       ["Cuidado: este comando é um dos poucos do `aws logs` que NÃO aceita --log-group-name.", "Ele pede o ARN do grupo, que tem a forma `arn:aws:logs:<região>:<conta>:log-group:<nome>`."],
-      ["aws logs tag-resource --resource-arn " + ARN("/frota/web") + " --tags Time=plataforma",
-        "aws logs list-tags-for-resource --resource-arn " + ARN("/frota/web")],
+      ["aws logs tag-resource --resource-arn " + ARN("/frota/web") + " --tags Time=plataforma"],
       (c) => ((grupo(c, "/frota/web") || {}).tags || {}).Time === "plataforma"),
+    d("logsc-tag1b", "cloudwatch", 2, 70, "Confira o que ficou etiquetado",
+      "O financeiro pediu também o centro de custo. Acrescente <b>Custo=cc-1020</b> ao <b>/frota/web</b> e leia as etiquetas de volta pra ter certeza de que as duas estão lá.",
+      ["Acrescentar etiqueta é o mesmo comando de antes — ele soma, não substitui.", "Pra ler, existe o `list-tags-for-resource`, que também pede o ARN."],
+      ["aws logs tag-resource --resource-arn " + ARN("/frota/web") + " --tags Custo=cc-1020",
+        "aws logs list-tags-for-resource --resource-arn " + ARN("/frota/web")],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "list-tags-for-resource") &&
+        ((grupo(c, "/frota/web") || {}).tags || {}).Custo === "cc-1020"),
     d("logsc-tag2", "cloudwatch", 2, 60, "O time mudou de nome",
       "A equipe <b>plataforma</b> virou <b>infra</b> e a etiqueta velha agora mente no relatório. Remova a etiqueta <b>Time</b> do <b>/frota/web</b>.",
       ["Remover é por CHAVE, não por par chave=valor.", "A flag é `--tag-keys`, e o ARN continua sendo obrigatório."],
       ["aws logs untag-resource --resource-arn " + ARN("/frota/web") + " --tag-keys Time"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "untag-resource") &&
         ((grupo(c, "/frota/web") || {}).tags || {}).Time === undefined),
+    // Fixação: o mesmo ciclo num grupo novo, sem comando inédito.
+    d("logsc-fix-str", "cloudwatch", 2, 90, "A API também entra na frota",
+      "A API ganhou log próprio. Monte o caminho completo no grupo <b>/frota/api</b>: o stream <b>api-01</b>, a conferência de que ele existe, uma linha <b>healthcheck-ok</b> gravada e lida de volta.",
+      ["É a sequência que você fez no /frota/web: grupo, stream, listar, escrever, ler.", "Nada novo aqui — o ponto é fazer sem olhar a atividade anterior."],
+      ["aws logs create-log-group --log-group-name /frota/api",
+        "aws logs create-log-stream --log-group-name /frota/api --log-stream-name api-01",
+        "aws logs describe-log-streams --log-group-name /frota/api",
+        "aws logs put-log-events --log-group-name /frota/api --log-stream-name api-01 --log-events timestamp=1789000120000,message=healthcheck-ok",
+        "aws logs get-log-events --log-group-name /frota/api --log-stream-name api-01"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "get-log-events") && eventosDo(c, "/frota/api", "api-01").length >= 1),
+    d("logsc-fix-tag", "cloudwatch", 2, 90, "Dono e prazo pro grupo novo",
+      "Grupo novo sem dono e sem prazo é o começo de toda fatura esquecida. No <b>/frota/api</b>: etiquete <b>Time=api</b>, confira, e — como o time ainda vai se reorganizar — tire a etiqueta. Depois ponha <b>30</b> dias de retenção e, a pedido da auditoria, volte pra 'nunca expira'.",
+      ["Etiqueta: pôr, conferir e tirar — todos pelo ARN do grupo.", "Retenção: o `put-…` com a lista fechada de valores e o `delete-…` que devolve o 'nunca expira'."],
+      ["aws logs tag-resource --resource-arn " + ARN("/frota/api") + " --tags Time=api",
+        "aws logs list-tags-for-resource --resource-arn " + ARN("/frota/api"),
+        "aws logs untag-resource --resource-arn " + ARN("/frota/api") + " --tag-keys Time",
+        "aws logs put-retention-policy --log-group-name /frota/api --retention-in-days 30",
+        "aws logs delete-retention-policy --log-group-name /frota/api"],
+      (c, cmd, ok) => {
+        const g = grupo(c, "/frota/api") || {};
+        return ok && ehCmd(cmd, "logs", "delete-retention-policy") && g.retencao === undefined && ((g.tags || {}).Time === undefined);
+      }),
   ]);
 
   // --- ler ao vivo, logo depois do filter-log-events ---
@@ -558,29 +600,68 @@
       ["aws logs describe-metric-filters --log-group-name /climb/app"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-metric-filters") &&
         String(cmd.flags["log-group-name"] || "") === "/climb/app"),
+    d("logsc-fix-mf", "cloudwatch", 3, 120, "Conte também os timeouts",
+      "O plantão quer saber não só de erro, mas de <b>timeout</b> — que é o sintoma que aparece antes do erro. Crie no <b>/api/erros</b> o filtro <b>conta-timeouts</b>, que transforma cada linha com <b>Timeout</b> em +1 na métrica <b>Timeouts</b> do namespace <b>Climb</b>, e confira os filtros do grupo.",
+      ["É o mesmo filtro de métrica do /climb/app, com outro padrão e outra métrica.", "A conferência é por grupo, com o `describe-…` dos filtros."],
+      ["aws logs put-metric-filter --log-group-name /api/erros --filter-name conta-timeouts --filter-pattern Timeout --metric-transformations metricName=Timeouts,metricNamespace=Climb,metricValue=1",
+        "aws logs describe-metric-filters --log-group-name /api/erros"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-metric-filters") &&
+        !!(((grupo(c, "/api/erros") || {}).filtros || {})["conta-timeouts"])),
     d("logsc-sub1", "cloudwatch", 3, 140, "O log precisa sair em tempo real",
       "A segurança quer cada linha de ERROR do <b>/api/erros</b> chegando numa função que abre incidente — <b>na hora</b>, sem ninguém consultar nada. Crie a assinatura <b>erros-pra-lambda</b> apontando pra <b>arn:aws:lambda:us-east-1:123456789012:function:trata-erro</b>.",
       ["Filtro de MÉTRICA vira número; assinatura manda a LINHA pra fora. São coisas diferentes.", "O destino é um ARN de Lambda, Kinesis ou Firehose — não um nome.", "Um grupo aceita no máximo 2 assinaturas: é limite da AWS, não do simulador."],
       ["aws logs put-subscription-filter --log-group-name /api/erros --filter-name erros-pra-lambda --filter-pattern ERROR --destination-arn arn:aws:lambda:us-east-1:123456789012:function:trata-erro"],
       (c) => !!(((grupo(c, "/api/erros") || {}).assinaturas || {})["erros-pra-lambda"])),
+    // Revisão de 24/09: sub2 e exp1 introduziam 2 e 3 comandos de uma vez.
     d("logsc-sub2", "cloudwatch", 3, 90, "Pra onde esse log está indo?",
-      "Antes de desligar qualquer coisa, descubra o óbvio: <b>o /api/erros está sendo despejado em algum lugar?</b> Liste as assinaturas dele e depois <b>remova</b> a <b>erros-pra-lambda</b>, que o time de segurança aposentou.",
-      ["Primeiro olhe, depois apague — assinatura esquecida manda dado (e custo) pra fora sem ninguém saber.", "O comando de apagar pede o grupo e o nome do filtro."],
-      ["aws logs describe-subscription-filters --log-group-name /api/erros",
-        "aws logs delete-subscription-filter --log-group-name /api/erros --filter-name erros-pra-lambda"],
+      "Antes de desligar qualquer coisa, descubra o óbvio: <b>o /api/erros está sendo despejado em algum lugar?</b> Liste as assinaturas dele.",
+      ["Primeiro olhe, depois apague — assinatura esquecida manda dado (e custo) pra fora sem ninguém saber.", "É o `describe-…` das assinaturas, por grupo."],
+      ["aws logs describe-subscription-filters --log-group-name /api/erros"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-subscription-filters") &&
+        String(cmd.flags["log-group-name"] || "") === "/api/erros"),
+    d("logsc-sub2b", "cloudwatch", 3, 90, "O time de segurança aposentou a Lambda",
+      "A função que abria incidente foi substituída, e a assinatura <b>erros-pra-lambda</b> continua mandando log pra ela. <b>Remova</b> a assinatura do <b>/api/erros</b>.",
+      ["Remover pede o grupo e o nome do filtro.", "O log continua sendo guardado no grupo — só para de sair em tempo real."],
+      ["aws logs delete-subscription-filter --log-group-name /api/erros --filter-name erros-pra-lambda"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-subscription-filter") &&
         !(((grupo(c, "/api/erros") || {}).assinaturas || {})["erros-pra-lambda"])),
-    d("logsc-exp1", "cloudwatch", 3, 130, "Guardar sete anos sem pagar CloudWatch",
-      "A auditoria exige guardar o log por anos, mas guardar no CloudWatch esse tempo é caro. A saída é o combo de sempre: retenção curta lá, arquivo no S3. Crie o bucket <b>arquivo-logs-auditoria</b> e exporte o <b>/api/erros</b> pra ele.",
-      ["Primeiro o destino precisa existir — a exportação falha se o bucket não estiver lá.", "O recorte de tempo é obrigatório e vai em milissegundos: `--from` e `--to`.", "O `--destination` recebe o NOME do bucket, não a URL s3://."],
-      ["aws s3 mb s3://arquivo-logs-auditoria",
-        "aws logs create-export-task --log-group-name /api/erros --from 1788000000000 --to 1789000000000 --destination arquivo-logs-auditoria",
+    d("logsc-fix-sub", "cloudwatch", 3, 130, "O SIEM também quer o log da API",
+      "A segurança montou um SIEM e quer as linhas de ERROR do <b>/frota/api</b> chegando num Firehose. Crie a assinatura <b>api-pro-siem</b> apontando pra <b>arn:aws:firehose:us-east-1:123456789012:deliverystream/siem-seguranca</b>, confira, e — como o SIEM ainda está em teste — remova no fim.",
+      ["É o ciclo completo que você acabou de fazer: criar, listar, remover.", "O destino agora é um Firehose, não uma Lambda — o comando é o mesmo, só muda o ARN."],
+      ["aws logs put-subscription-filter --log-group-name /frota/api --filter-name api-pro-siem --filter-pattern ERROR --destination-arn arn:aws:firehose:us-east-1:123456789012:deliverystream/siem-seguranca",
+        "aws logs describe-subscription-filters --log-group-name /frota/api",
+        "aws logs delete-subscription-filter --log-group-name /frota/api --filter-name api-pro-siem"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-subscription-filter") &&
+        String(cmd.flags["log-group-name"] || "") === "/frota/api" &&
+        !(((grupo(c, "/frota/api") || {}).assinaturas || {})["api-pro-siem"])),
+    d("logsc-exp1", "cloudwatch", 3, 90, "O arquivo morto precisa de endereço",
+      "A auditoria exige guardar o log por anos, mas guardar no CloudWatch esse tempo é caro. A saída é o combo de sempre: retenção curta lá, arquivo no S3. O primeiro passo é o lugar do arquivo: crie o bucket <b>arquivo-logs-auditoria</b>.",
+      ["O arquivo morto de log mora no S3, porque lá o GB guardado custa uma fração.", "Criar bucket é o `mb` do S3 de alto nível."],
+      ["aws s3 mb s3://arquivo-logs-auditoria"],
+      (c) => !!(((c.s3 || {}).buckets || {})["arquivo-logs-auditoria"])),
+    d("logsc-exp1b", "cloudwatch", 3, 120, "Mande o log do nginx pro arquivo",
+      "O log de acesso do nginx também precisa ser guardado, mas em bucket separado — o jurídico quer o de erro isolado. Crie <b>arquivo-nginx-logs</b> e exporte o <b>/nginx/acessos</b> pra ele.",
+      ["A exportação falha se o bucket não existir: crie antes.", "O recorte de tempo é obrigatório e vai em milissegundos: `--from` e `--to`.", "O `--destination` recebe o NOME do bucket, não a URL s3://."],
+      ["aws s3 mb s3://arquivo-nginx-logs",
+        "aws logs create-export-task --log-group-name /nginx/acessos --from 1788000000000 --to 1789000000000 --destination arquivo-nginx-logs"],
+      (c) => Object.values(((c.logs || {}).exportacoes) || {}).some((t) => t.grupo === "/nginx/acessos")),
+    d("logsc-exp1c", "cloudwatch", 3, 110, "Exportou mesmo? Confira",
+      "Agora exporte o <b>/api/erros</b> pro <b>arquivo-logs-auditoria</b> e <b>acompanhe as exportações</b> — exportação que falhou em silêncio é log que você acha que tem e não tem.",
+      ["A exportação é a mesma do nginx, com outro grupo e outro bucket.", "Pra acompanhar, existe um `describe-…` das tarefas de exportação, sem argumento."],
+      ["aws logs create-export-task --log-group-name /api/erros --from 1788000000000 --to 1789000000000 --destination arquivo-logs-auditoria",
         "aws logs describe-export-tasks"],
-      (c) => Object.values(((c.logs || {}).exportacoes) || {}).some((t) => t.grupo === "/api/erros")),
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-export-tasks") &&
+        Object.values(((c.logs || {}).exportacoes) || {}).some((t) => t.grupo === "/api/erros")),
     d("logsc-q1", "cloudwatch", 3, 100, "Quem deixou consulta rodando?",
       "O Insights cobra por dado varrido, e alguém reclamou do custo. Liste as consultas do <b>/climb/app</b> pra ver o que foi disparado ali e em que estado está.",
       ["Existe um `describe-…` próprio pras consultas do Insights.", "Dá pra estreitar por grupo com --log-group-name."],
       ["aws logs describe-queries --log-group-name /climb/app"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-queries")),
+    d("logsc-fix-mes", "cloudwatch", 3, 110, "O relatório de fim de mês",
+      "Fechamento do mês: o gestor quer duas respostas numa reunião de cinco minutos — <b>quais exportações rodaram</b> pro arquivo morto e <b>quais consultas do Insights terminaram</b> no <b>/climb/app</b>.",
+      ["Dois `describe-…` que você já conhece: o das exportações e o das consultas.", "As consultas dá pra filtrar pelo estado com `--status Complete`."],
+      ["aws logs describe-export-tasks",
+        "aws logs describe-queries --log-group-name /climb/app --status Complete"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-queries") && String(cmd.flags.status || "") === "Complete"),
   ]);
 })();
