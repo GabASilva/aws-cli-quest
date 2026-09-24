@@ -465,7 +465,14 @@
   }
   function at(anchorId, novos) {
     const i = DESAFIOS.findIndex((x) => x.id === anchorId);
-    if (i < 0) { for (const n of novos) DESAFIOS.push(n); return; }
+    if (i < 0) {
+      // Âncora que não existe na hora = arquivo carregando cedo demais. O
+      // analise.js lê esta lista e acusa como PROBLEMA (bug de 21 a 24/09/2026).
+      const g = typeof globalThis !== "undefined" ? globalThis : window;
+      (g.__ancorasPerdidas = g.__ancorasPerdidas || []).push(anchorId);
+      for (const n of novos) DESAFIOS.push(n);
+      return;
+    }
     DESAFIOS.splice(i + 1, 0, ...novos);
   }
   const param = (c, n) => ((c.ssm || {}).parametros || {})[n];

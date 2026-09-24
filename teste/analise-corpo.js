@@ -355,6 +355,17 @@ try {
   }
 }
 
+// ---------- Âncora perdida: bloco que caiu no fim da trilha ----------
+// Os arquivos de atividade inserem com at("id-ancora", [...]); se a âncora
+// ainda não existe quando o arquivo carrega, o bloco cai no FIM do DESAFIOS —
+// fora de ordem, e sem nenhum erro. Aconteceu de 21 a 24/09/2026 com tudo que
+// se ancorava em cob-* (as coberturas carregam depois). Os at() registram a
+// perda em __ancorasPerdidas; aqui ela vira problema.
+{
+  const perdidas = (typeof globalThis !== "undefined" && globalThis.__ancorasPerdidas) || [];
+  for (const a of perdidas) problemas.push(`âncora "${a}" não existia quando o bloco foi inserido — o arquivo carrega cedo demais (mova ele pra depois de quem cria "${a}")`);
+}
+
 // ---------- FIXAÇÃO: o molde boot.dev, medido ----------
 // Pedido do Gabriel (21/09/2026): cada comando com uma atividade que ensina o
 // caso de uso E uma ou duas de fixação, e cada atividade introduzindo UM
