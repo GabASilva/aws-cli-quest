@@ -184,6 +184,11 @@ const teste = `
       const abertas = Object.values(((conta.ssm || {}).sessoes) || {}).filter((s) => s.estado === "Connected");
       linha = linha.replace(/<sessao-id>/g, abertas.length ? abertas[abertas.length - 1].id : "");
     }
+    // SSM: a ultima automacao disparada (o get-automation-execution pede o id)
+    if (linha.includes("<automacao-id>")) {
+      const a = Object.keys(((conta.ssm || {}).automacoes) || {});
+      linha = linha.replace(/<automacao-id>/g, a.length ? a[a.length - 1] : "");
+    }
     // Containers: a tarefa do ECS que está rodando e o update do EKS
     if (linha.includes("<tarefa-id>")) {
       const t = Object.values(((conta.ecs || {}).execucoes) || {});
