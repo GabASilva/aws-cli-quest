@@ -129,7 +129,7 @@
     if (!validas.length) {
       throw new ErroCli(
         "An error occurred (AWS.SimpleQueueService.EmptyBatchRequest) when calling the " + op + " operation: There should be at least one entry in the request.\n" +
-        "Dica: cada entrada e uma estrutura abreviada, e vao separadas por espaco: Id=1,MessageBody=texto Id=2,MessageBody=outro"
+        "Dica: cada entrada é uma estrutura abreviada, e vão separadas por espaço: Id=1,MessageBody=texto Id=2,MessageBody=outro"
       );
     }
     if (validas.length > 10) {
@@ -194,8 +194,8 @@
         );
       } else if (attrs.VisibilityTimeout) {
         avisarClimb(
-          "Visibility timeout de " + attrs.VisibilityTimeout + "s: esse e o tempo que o consumidor tem pra processar e apagar a mensagem. " +
-          "Estourou o prazo, ela reaparece pra outro consumidor — e ai o mesmo trabalho roda duas vezes."
+          "Visibility timeout de " + attrs.VisibilityTimeout + "s: esse é o tempo que o consumidor tem pra processar e apagar a mensagem. " +
+          "Estourou o prazo, ela reaparece pra outro consumidor — e aí o mesmo trabalho roda duàs vezes."
         );
       }
       return okSilencioso("Atributos da fila \"" + nome + "\" atualizados: " + chaves.join(", ") + ".");
@@ -216,7 +216,7 @@
         ok.push({ Id: String(e.Id), MessageId: id, MD5OfMessageBody: hexAleatorio(32) });
       }
       avisarClimb(
-        entradas.length + " mensagens numa requisicao so. A SQS cobra POR REQUISICAO, nao por mensagem: " +
+        entradas.length + " mensagens numa requisicao só. A SQS cobra POR REQUISICAO, não por mensagem: " +
         "mandar de 10 em 10 custa um decimo do que mandar uma a uma."
       );
       return js({ Successful: ok, Failed: [] });
@@ -237,7 +237,7 @@
       if (!ok.length) {
         throw new ErroCli(
           "An error occurred (ReceiptHandleIsInvalid) when calling the DeleteMessageBatch operation: The input receipt handle is invalid.\n" +
-          "Dica: cada ReceiptHandle vem do 'aws sqs receive-message' — e cada um so vale uma vez."
+          "Dica: cada ReceiptHandle vem do 'aws sqs receive-message' — e cada um só vale uma vez."
         );
       }
       return js({ Successful: ok, Failed: falhou });
@@ -257,7 +257,7 @@
       if (segundos === 0) {
         m.recebida = false;
         m.handle = null;
-        avisarClimb("Visibilidade zerada: a mensagem volta pra fila AGORA, disponivel pro proximo consumidor. E o jeito de devolver um trabalho que voce nao vai conseguir terminar.");
+        avisarClimb("Visibilidade zerada: a mensagem volta pra fila AGORA, disponível pro próximo consumidor. É o jeito de devolver um trabalho que você não vai conseguir terminar.");
       } else {
         avisarClimb("Prazo esticado pra " + segundos + "s. Use isso quando o processamento demora mais que o previsto — sem esticar, a mensagem reaparece e outro consumidor faz o mesmo trabalho de novo.");
       }
@@ -290,7 +290,7 @@
         throw new ErroCli("An error occurred (InvalidParameterValue) when calling the TagQueue operation: The request must contain the parameter Tags.");
       }
       Object.assign(f.tags, tags);
-      avisarClimb("Etiqueta nao muda nada no funcionamento — muda o relatorio. E por Tag que o Cost Explorer separa quanto cada time ou projeto gastou.");
+      avisarClimb("Etiqueta não muda nada no funcionamento — muda o relatório. É por Tag que o Cost Explorer separa quanto cada time ou projeto gastou.");
       return okSilencioso("Fila \"" + nome + "\" etiquetada: " + Object.keys(tags).join(", ") + ".");
     },
     "untag-queue": (conta, pos, flags) => {
@@ -318,7 +318,7 @@
         if (rp && String(rp).indexOf(arn) >= 0) fontes.push(urlFila(conta, n));
       }
       if (!fontes.length) {
-        avisarClimb("Nenhuma fila usa \"" + nome + "\" como fila de mensagem morta. Quem define isso e a fila de ORIGEM, com set-queue-attributes RedrivePolicy.");
+        avisarClimb("Nenhuma fila usa \"" + nome + "\" como fila de mensagem morta. Quem define isso é a fila de ORIGEM, com set-queue-attributes RedrivePolicy.");
       }
       return js({ queueUrls: fontes });
     },
@@ -331,8 +331,8 @@
         comecouEm: typeof dataFormatada === "function" ? dataFormatada() : new Date().toISOString(),
       };
       avisarClimb(
-        "Tarefa de devolucao iniciada: as " + paradas + " mensagens que estavam em \"" + nome + "\" voltam pra fila de origem. " +
-        "E o caminho de volta da DLQ — consertado o bug, voce reprocessa sem escrever script nenhum."
+        "Tarefa de devolução iniciada: as " + paradas + " mensagens que estavam em \"" + nome + "\" voltam pra fila de origem. " +
+        "É o caminho de volta da DLQ — consertado o bug, você reprocessa sem escrever script nenhum."
       );
       return js({ TaskHandle: handle });
     },
@@ -341,7 +341,7 @@
       st(conta);
       const tarefas = Object.values(conta.sqs.tarefasMove).filter((t) => t.origem === nome);
       if (!tarefas.length) {
-        avisarClimb("Nenhuma tarefa de devolucao nessa fila. Comece uma com: aws sqs start-message-move-task --source-arn <arn-da-dlq>");
+        avisarClimb("Nenhuma tarefa de devolução nessa fila. Comece uma com: aws sqs start-message-move-task --source-arn <arn-da-dlq>");
         return "";
       }
       return js({ Results: tarefas.map((t) => ({
@@ -376,8 +376,8 @@
       }
       f.permissoes.push({ rotulo: rotulo, contas: contas, acoes: acoes });
       avisarClimb(
-        "Isso solta a fila pra OUTRA conta da AWS (" + contas.join(", ") + "), so nas acoes " + acoes.join(", ") + ". " +
-        "E o atalho da politica de recurso — util pra fan-out entre contas, e perigoso se voce liberar \"*\"."
+        "Isso solta a fila pra OUTRA conta da AWS (" + contas.join(", ") + "), só nas ações " + acoes.join(", ") + ". " +
+        "É o atalho da política de recurso — útil pra fan-out entre contas, e perigoso se você liberar \"*\"."
       );
       return okSilencioso("Permissao \"" + rotulo + "\" adicionada na fila \"" + nome + "\".");
     },
@@ -503,7 +503,7 @@
 
   // --- configuração da fila, logo depois de LER os atributos ---
   at("psqs-attr1", [
-    d("sqsc-set1", "sqs", 2, 80, "O mesmo pedido sendo cobrado duas vezes",
+    d("sqsc-set1", "sqs", 2, 80, "O mesmo pedido sendo cobrado duàs vezes",
       "O suporte relatou cobrança em duplicidade. A causa: processar o pagamento leva uns 90 segundos e o prazo padrão da fila é 30 — passou disso, a mensagem reaparece e outro consumidor cobra de novo. Crie <b>pagamentos-cartao</b> e ajuste o prazo pra <b>120</b> segundos.",
       ["Isso não se resolve no receive-message: é configuração da fila, com set-queue-attributes.", "O atributo é `VisibilityTimeout`, em segundos, e vai na forma `Chave=valor`."],
       ["aws sqs create-queue --queue-name pagamentos-cartao",

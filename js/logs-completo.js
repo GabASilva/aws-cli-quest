@@ -89,16 +89,16 @@
       }
       g.retencao = dias;
       avisarClimb(
-        "Agora o \"" + nome + "\" apaga sozinho o que passa de " + dias + " dias. Sem politica de retencao o grupo guarda " +
-        "PARA SEMPRE — e voce paga armazenamento pra sempre por log que ninguem vai ler. E o primeiro item de qualquer faxina de custo."
+        "Agora o \"" + nome + "\" apaga sozinho o que passa de " + dias + " dias. Sem política de retenção o grupo guarda " +
+        "PARA SEMPRE — e você paga armazenamento pra sempre por log que ninguém vai ler. É o primeiro item de qualquer faxina de custo."
       );
-      return okSilencioso("Retencao do grupo \"" + nome + "\" ajustada pra " + dias + " dias.");
+      return okSilencioso("Retenção do grupo \"" + nome + "\" ajustada pra " + dias + " dias.");
     },
     "delete-retention-policy": (conta, pos, flags) => {
       const [nome, g] = grupoDe(conta, flags, "DeleteRetentionPolicy");
       delete g.retencao;
-      avisarClimb("Sem politica de retencao, o grupo volta a guardar PARA SEMPRE (Never expire). As vezes e isso que a auditoria exige — mas e escolha, nao esquecimento.");
-      return okSilencioso("Retencao removida do grupo \"" + nome + "\": volta a nunca expirar.");
+      avisarClimb("Sem política de retenção, o grupo volta a guardar PARA SEMPRE (Never expire). Às vezes é isso que a auditoria exige — mas é escolha, não esquecimento.");
+      return okSilencioso("Retenção removida do grupo \"" + nome + "\": volta a nunca expirar.");
     },
 
     // ---------- streams: o nível de baixo ----------
@@ -109,7 +109,7 @@
         throw new ErroCli("An error occurred (ResourceAlreadyExistsException) when calling the CreateLogStream operation: The specified log stream already exists");
       }
       g.streams[stream] = { nome: stream, criadoEm: Date.now(), eventos: [] };
-      avisarClimb("Grupo guarda stream, stream guarda evento. Na pratica cada instancia, container ou execucao de Lambda escreve no SEU stream — e por isso que o grupo de uma Lambda tem centenas deles.");
+      avisarClimb("Grupo guarda stream, stream guarda evento. Na prática cada instância, container ou execução de Lambda escreve no SEU stream — é por isso que o grupo de uma Lambda tem centenas deles.");
       return okSilencioso("Stream \"" + stream + "\" criado em \"" + nome + "\".");
     },
     "describe-log-streams": (conta, pos, flags) => {
@@ -146,7 +146,7 @@
         s.eventos.push({ timestamp: Number(e.timestamp), message: String(e.message) });
       }
       s.eventos.sort((a, b) => a.timestamp - b.timestamp);
-      avisarClimb("O timestamp vai em MILISSEGUNDOS desde 1970 — na linha de comando de verdade voce gera com $(date +%s)000. Evento com data muito velha a AWS recusa.");
+      avisarClimb("O timestamp vai em MILISSEGUNDOS desde 1970 — na linha de comando de verdade você gera com $(date +%s)000. Evento com data muito velha a AWS recusa.");
       return js({ nextSequenceToken: "4956" + hexAleatorio(20) });
     },
     "get-log-events": (conta, pos, flags) => {
@@ -170,7 +170,7 @@
       st(conta);
       const nome = String((pos && pos[0]) || flags["log-group-name"] || "");
       if (!nome) {
-        throw new ErroCli("usage: aws logs tail <group_name> [--since 1h] [--filter-pattern ERROR]\nO nome do grupo e POSICIONAL aqui — nao leva --log-group-name.");
+        throw new ErroCli("usage: aws logs tail <group_name> [--since 1h] [--filter-pattern ERROR]\nO nome do grupo e POSICIONAL aqui — não leva --log-group-name.");
       }
       const [, g] = grupoDe(conta, flags, "Tail", nome);
       let linhas = (conta.logs.eventos[nome] || []).map((e) => ({ ts: e.ts, msg: e.mensagem, stream: "app/producao" }));
@@ -181,11 +181,11 @@
       if (padrao) linhas = linhas.filter((l) => String(l.msg).toLowerCase().indexOf(String(padrao).toLowerCase()) >= 0);
       linhas.sort((a, b) => a.ts - b.ts);
       if (!linhas.length) {
-        avisarClimb("Nenhum evento no periodo. O `tail` mostra o que JA esta la; com --follow ele fica aberto esperando o proximo (e ai voce sai com Ctrl+C).");
+        avisarClimb("Nenhum evento no período. O `tail` mostra o que JÁ está lá; com --follow ele fica aberto esperando o próximo (e aí você sai com Ctrl+C).");
         return "";
       }
       if (flags.follow !== undefined) {
-        avisarClimb("No terminal de verdade o --follow deixaria o comando ABERTO, imprimindo cada linha nova ate voce apertar Ctrl+C. Aqui ele mostra o que ja existe e volta.");
+        avisarClimb("No terminal de verdade o --follow deixaria o comando ABERTO, imprimindo cada linha nova até você apertar Ctrl+C. Aqui ele mostra o que já existe e volta.");
       }
       return linhas.slice(-25).map((l) =>
         new Date(l.ts).toISOString().replace("T", " ").slice(0, 19) + " " + l.stream + " " + l.msg
@@ -208,11 +208,11 @@
       }
       g.filtros[filtro] = { nome: filtro, padrao: padrao, transformacoes: trans, criadoEm: Date.now() };
       avisarClimb(
-        "Isto e a ponte que quase ninguem conhece: cada linha de \"" + nome + "\" que casar com o padrao vira +1 na metrica \"" +
-        trans[0].metricName + "\" do CloudWatch. E metrica tem alarme. E assim que 'apareceu ERROR no log' vira telefone tocando — " +
-        "sem isso alguem precisa estar OLHANDO o log pra descobrir."
+        "Isto é a ponte que quase ninguém conhece: cada linha de \"" + nome + "\" que casar com o padrão vira +1 na métrica \"" +
+        trans[0].metricName + "\" do CloudWatch. E métrica tem alarme. É assim que 'apareceu ERROR no log' vira telefone tocando — " +
+        "sem isso alguém precisa estar OLHANDO o log pra descobrir."
       );
-      return okSilencioso("Filtro de metrica \"" + filtro + "\" criado em \"" + nome + "\".");
+      return okSilencioso("Filtro de métrica \"" + filtro + "\" criado em \"" + nome + "\".");
     },
     "describe-metric-filters": (conta, pos, flags) => {
       const nomeFlag = flags["log-group-name"];
@@ -220,7 +220,7 @@
       const [nome, g] = grupoDe(conta, flags, "DescribeMetricFilters", String(nomeFlag));
       const lista = Object.values(g.filtros);
       if (!lista.length) {
-        avisarClimb("Nenhum filtro de metrica nesse grupo. O log esta sendo guardado, mas nada nele vira alarme.");
+        avisarClimb("Nenhum filtro de métrica nesse grupo. O log está sendo guardado, mas nada nele vira alarme.");
         return "";
       }
       return js({ metricFilters: lista.map((f) => ({
@@ -249,12 +249,12 @@
         throw new ErroCli("An error occurred (InvalidParameterException) when calling the PutSubscriptionFilter operation: destinationArn must be a valid ARN.");
       }
       if (Object.keys(g.assinaturas).length >= 2 && !g.assinaturas[filtro]) {
-        throw new ErroCli("An error occurred (LimitExceededException) when calling the PutSubscriptionFilter operation: Resource limit exceeded.\nUm grupo aceita no maximo 2 filtros de assinatura.");
+        throw new ErroCli("An error occurred (LimitExceededException) when calling the PutSubscriptionFilter operation: Resource limit exceeded.\nUm grupo aceita no máximo 2 filtros de assinatura.");
       }
       g.assinaturas[filtro] = { nome: filtro, padrao: padrao, destino: destino };
       avisarClimb(
-        "Agora cada linha que casar sai de \"" + nome + "\" em TEMPO REAL pro destino, sem ninguem consultar nada. " +
-        "E assim que log alimenta SIEM, alerta e pipeline de dados. Limite da AWS: 2 assinaturas por grupo."
+        "Agora cada linha que casar sai de \"" + nome + "\" em TEMPO REAL pro destino, sem ninguém consultar nada. " +
+        "É assim que log alimenta SIEM, alerta e pipeline de dados. Limite da AWS: 2 assinaturas por grupo."
       );
       return okSilencioso("Assinatura \"" + filtro + "\" criada em \"" + nome + "\".");
     },
@@ -262,7 +262,7 @@
       const [nome, g] = grupoDe(conta, flags, "DescribeSubscriptionFilters");
       const lista = Object.values(g.assinaturas);
       if (!lista.length) {
-        avisarClimb("Nenhuma assinatura nesse grupo: o log fica parado esperando alguem consultar.");
+        avisarClimb("Nenhuma assinatura nesse grupo: o log fica parado esperando alguém consultar.");
         return "";
       }
       return js({ subscriptionFilters: lista.map((f) => ({
@@ -298,15 +298,15 @@
         estado: "COMPLETED", nomeTarefa: flags["task-name"] ? String(flags["task-name"]) : "export-" + nome.replace(/[^a-z0-9]/gi, "-"),
       };
       avisarClimb(
-        "Exportar tira o log do CloudWatch e joga no S3, que e MUITO mais barato por GB guardado. " +
-        "E o combo de sempre: retencao curta no CloudWatch pro dia a dia, export pro S3 pro que a auditoria exige guardar por anos."
+        "Exportar tira o log do CloudWatch e joga no S3, que é MUITO mais barato por GB guardado. " +
+        "É o combo de sempre: retenção curta no CloudWatch pro dia a dia, export pro S3 pro que a auditoria exige guardar por anos."
       );
       return js({ taskId: id });
     },
     "describe-export-tasks": (conta) => {
       const lista = Object.values(st(conta).exportacoes);
       if (!lista.length) {
-        avisarClimb("Nenhuma exportacao ainda. Comece uma com: aws logs create-export-task --log-group-name <grupo> --from <ms> --to <ms> --destination <bucket>");
+        avisarClimb("Nenhuma exportação ainda. Comece uma com: aws logs create-export-task --log-group-name <grupo> --from <ms> --to <ms> --destination <bucket>");
         return "";
       }
       return js({ exportTasks: lista.map((t) => ({
@@ -323,7 +323,7 @@
       const [, g] = grupoDe(conta, flags, "TagResource", String(nome || "").replace(/:\*$/, ""));
       const tags = estruturas(juntarLista(exigirFlag(flags, "tags"), pos), "TagResource");
       Object.assign(g.tags, tags[0]);
-      avisarClimb("Aqui a etiqueta vai no ARN do grupo, nao no nome — repare que este comando pede --resource-arn. E por Tag que o relatorio de custo separa o log de cada time.");
+      avisarClimb("Aqui a etiqueta vai no ARN do grupo, não no nome — repare que este comando pede --resource-arn. É por Tag que o relatório de custo separa o log de cada time.");
       return okSilencioso("Grupo etiquetado: " + Object.keys(tags[0]).join(", ") + ".");
     },
     "untag-resource": (conta, pos, flags) => {
@@ -339,7 +339,7 @@
       const nome = String(arn.split(":log-group:")[1] || "").replace(/:\*$/, "");
       const [, g] = grupoDe(conta, flags, "ListTagsForResource", nome);
       if (!Object.keys(g.tags).length) {
-        avisarClimb("Grupo sem etiqueta: no relatorio de custo esse log nao tem dono.");
+        avisarClimb("Grupo sem etiqueta: no relatório de custo esse log não tem dono.");
         return "";
       }
       return js({ tags: g.tags });
@@ -475,26 +475,26 @@
 
   // --- operar o grupo: retenção, streams e etiqueta ---
   at("cw-9", [
-    d("logsc-ret1", "cloudwatch", 2, 80, "O log de 2023 que ninguem nunca leu",
-      "A fatura do CloudWatch subiu e a investigacao achou a causa: nenhum grupo tem politica de retencao, entao tudo fica guardado <b>para sempre</b>. Comece pelo <b>/nginx/acessos</b>, que e o mais volumoso: guarde <b>30</b> dias.",
-      ["Retencao nao se define na criacao do grupo — e um comando separado, e e por isso que quase todo mundo esquece.", "A flag e `--retention-in-days`, e ela nao aceita qualquer numero: a AWS tem uma lista fechada."],
+    d("logsc-ret1", "cloudwatch", 2, 80, "O log de 2023 que ninguém nunca leu",
+      "A fatura do CloudWatch subiu e a investigação achou a causa: nenhum grupo tem política de retenção, então tudo fica guardado <b>para sempre</b>. Comece pelo <b>/nginx/acessos</b>, que é o mais volumoso: guarde <b>30</b> dias.",
+      ["Retenção não se define na criação do grupo — é um comando separado, e é por isso que quase todo mundo esquece.", "A flag é `--retention-in-days`, e ela não aceita qualquer número: a AWS tem uma lista fechada."],
       ["aws logs put-retention-policy --log-group-name /nginx/acessos --retention-in-days 30"],
       (c) => (grupo(c, "/nginx/acessos") || {}).retencao === 30),
-    d("logsc-ret2", "cloudwatch", 2, 70, "O juridico pediu um ano",
-      "Log de erro da API e prova em disputa com cliente, e o juridico pediu <b>um ano</b> de guarda. Ajuste o <b>/api/erros</b> pra <b>365</b> dias. <small>(repare que 400 tambem vale, mas 300 nao — a lista e fechada)</small>",
-      ["Mesmo comando do exercicio anterior, outro prazo.", "Se errar o numero, a mensagem da AWS lista todos os valores aceitos — vale ler uma vez."],
+    d("logsc-ret2", "cloudwatch", 2, 70, "O jurídico pediu um ano",
+      "Log de erro da API e prova em disputa com cliente, e o jurídico pediu <b>um ano</b> de guarda. Ajuste o <b>/api/erros</b> pra <b>365</b> dias. <small>(repare que 400 também vale, mas 300 não — a lista e fechada)</small>",
+      ["Mesmo comando do exercicio anterior, outro prazo.", "Se errar o número, a mensagem da AWS lista todos os valores aceitos — vale ler uma vez."],
       ["aws logs put-retention-policy --log-group-name /api/erros --retention-in-days 365"],
       (c) => (grupo(c, "/api/erros") || {}).retencao === 365),
-    d("logsc-ret3", "cloudwatch", 2, 70, "Este aqui nao pode expirar nunca",
-      "Auditoria bateu na porta: o <b>/app/lambda</b> nao pode perder nada, nunca. Primeiro coloque <b>90</b> dias nele e depois <b>remova a politica</b>, devolvendo o grupo ao 'nunca expira'.",
-      ["Remover retencao nao e colocar um numero gigante: e um comando proprio.", "Apagar no AWS CLI e quase sempre `delete-…` do mesmo par que o `put-…`."],
+    d("logsc-ret3", "cloudwatch", 2, 70, "Este aqui não pode expirar nunca",
+      "Auditoria bateu na porta: o <b>/app/lambda</b> não pode perder nada, nunca. Primeiro coloque <b>90</b> dias nele e depois <b>remova a política</b>, devolvendo o grupo ao 'nunca expira'.",
+      ["Remover retenção não é colocar um número gigante: é um comando próprio.", "Apagar no AWS CLI é quase sempre `delete-…` do mesmo par que o `put-…`."],
       ["aws logs put-retention-policy --log-group-name /app/lambda --retention-in-days 90",
         "aws logs delete-retention-policy --log-group-name /app/lambda"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-retention-policy") &&
         !!grupo(c, "/app/lambda") && (grupo(c, "/app/lambda") || {}).retencao === undefined),
-    d("logsc-str1", "cloudwatch", 2, 80, "Quem ainda esta escrevendo nesse log?",
-      "Tres servidores mandam log pro mesmo grupo e um deles parou de responder. Crie o grupo <b>/frota/web</b>, crie os streams <b>servidor-01</b> e <b>servidor-02</b> e <b>liste os streams</b> — e essa lista que mostra quem escreveu por ultimo.",
-      ["Grupo guarda stream, stream guarda evento: sao dois niveis, nao um.", "Depois de criar, liste com o `describe-…` da mesma familia."],
+    d("logsc-str1", "cloudwatch", 2, 80, "Quem ainda estÃ¡ escrevendo nesse log?",
+      "Três servidores mandam log pro mesmo grupo e um deles parou de responder. Crie o grupo <b>/frota/web</b>, crie os streams <b>servidor-01</b> e <b>servidor-02</b> e <b>liste os streams</b> — é essa lista que mostra quem escreveu por último.",
+      ["Grupo guarda stream, stream guarda evento: são dois niveis, não um.", "Depois de criar, liste com o `describe-…` da mesma família."],
       ["aws logs create-log-group --log-group-name /frota/web",
         "aws logs create-log-stream --log-group-name /frota/web --log-stream-name servidor-01",
         "aws logs create-log-stream --log-group-name /frota/web --log-stream-name servidor-02",
@@ -502,21 +502,21 @@
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-log-streams") &&
         Object.keys(((grupo(c, "/frota/web") || {}).streams) || {}).length >= 2),
     d("logsc-str2", "cloudwatch", 2, 90, "Escreva e leia de volta",
-      "Antes de ligar a aplicacao de verdade, teste o caminho: escreva a linha <b>deploy concluido</b> no stream <b>servidor-01</b> do <b>/frota/web</b> e leia ela de volta. <small>(o timestamp vai em milissegundos desde 1970 — no terminal seria <code>$(date +%s)000</code>)</small>",
-      ["Sao dois comandos irmaos: um `put-…` e um `get-…`.", "O evento vai na forma abreviada `timestamp=<ms>,message=<texto>`.", "Pra ler, voce precisa dizer o grupo E o stream — o get-log-events le UM stream, nao o grupo inteiro."],
+      "Antes de ligar a aplicação de verdade, teste o caminho: escreva a linha <b>deploy concluido</b> no stream <b>servidor-01</b> do <b>/frota/web</b> e leia ela de volta. <small>(o timestamp vai em milissegundos desde 1970 — no terminal seria <code>$(date +%s)000</code>)</small>",
+      ["São dois comandos irmãos: um `put-…` e um `get-…`.", "O evento vai na forma abreviada `timestamp=<ms>,message=<texto>`.", "Pra ler, você precisa dizer o grupo E o stream — o get-log-events le UM stream, não o grupo inteiro."],
       ["aws logs put-log-events --log-group-name /frota/web --log-stream-name servidor-01 --log-events timestamp=1789000000000,message=deploy-concluido",
         "aws logs get-log-events --log-group-name /frota/web --log-stream-name servidor-01"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "get-log-events") &&
         ((((grupo(c, "/frota/web") || {}).streams) || {})["servidor-01"] || { eventos: [] }).eventos.length >= 1),
-    d("logsc-tag1", "cloudwatch", 2, 70, "De qual time e esse log?",
-      "O relatorio de custo mostra o CloudWatch inteiro num bolo so. Etiquete o <b>/frota/web</b> com <b>Time=plataforma</b> e confira lendo as etiquetas de volta.",
-      ["Cuidado: este comando e um dos poucos do `aws logs` que NAO aceita --log-group-name.", "Ele pede o ARN do grupo, que tem a forma `arn:aws:logs:<regiao>:<conta>:log-group:<nome>`."],
+    d("logsc-tag1", "cloudwatch", 2, 70, "De qual time é esse log?",
+      "O relatório de custo mostra o CloudWatch inteiro num bolo só. Etiquete o <b>/frota/web</b> com <b>Time=plataforma</b> e confira lendo as etiquetas de volta.",
+      ["Cuidado: este comando é um dos poucos do `aws logs` que NÃO aceita --log-group-name.", "Ele pede o ARN do grupo, que tem a forma `arn:aws:logs:<região>:<conta>:log-group:<nome>`."],
       ["aws logs tag-resource --resource-arn " + ARN("/frota/web") + " --tags Time=plataforma",
         "aws logs list-tags-for-resource --resource-arn " + ARN("/frota/web")],
       (c) => ((grupo(c, "/frota/web") || {}).tags || {}).Time === "plataforma"),
     d("logsc-tag2", "cloudwatch", 2, 60, "O time mudou de nome",
-      "A equipe <b>plataforma</b> virou <b>infra</b> e a etiqueta velha agora mente no relatorio. Remova a etiqueta <b>Time</b> do <b>/frota/web</b>.",
-      ["Remover e por CHAVE, nao por par chave=valor.", "A flag e `--tag-keys`, e o ARN continua sendo obrigatorio."],
+      "A equipe <b>plataforma</b> virou <b>infra</b> e a etiqueta velha agora mente no relatório. Remova a etiqueta <b>Time</b> do <b>/frota/web</b>.",
+      ["Remover é por CHAVE, não por par chave=valor.", "A flag é `--tag-keys`, e o ARN continua sendo obrigatório."],
       ["aws logs untag-resource --resource-arn " + ARN("/frota/web") + " --tag-keys Time"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "untag-resource") &&
         ((grupo(c, "/frota/web") || {}).tags || {}).Time === undefined),
@@ -525,13 +525,13 @@
   // --- ler ao vivo, logo depois do filter-log-events ---
   at("cw-20", [
     d("logsc-tail1", "cloudwatch", 2, 80, "O tail -f da nuvem",
-      "Reclamaram de erro no site agora ha pouco e voce quer ver o log <b>acontecendo</b>, nao montar consulta. Acompanhe a ultima hora do <b>/climb/app</b>.",
-      ["Este comando e diferente de todos os outros do `aws logs`: o nome do grupo e POSICIONAL, sem --log-group-name.", "O recorte de tempo e `--since`, que aceita 5m, 1h, 2d."],
+      "Reclamaram de erro no site agora há pouco e você quer ver o log <b>acontecendo</b>, não montar consulta. Acompanhe a última hora do <b>/climb/app</b>.",
+      ["Este comando é diferente de todos os outros do `aws logs`: o nome do grupo e POSICIONAL, sem --log-group-name.", "O recorte de tempo e `--since`, que aceita 5m, 1h, 2d."],
       ["aws logs tail /climb/app --since 1h"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "tail")),
-    d("logsc-tail2", "cloudwatch", 2, 80, "So o que interessa no meio do barulho",
-      "O log do <b>/climb/app</b> tem linha demais pra ler no olho. Acompanhe de novo, mas mostrando <b>so as linhas com ERROR</b>.",
-      ["Da pra filtrar sem sair do tail — e a mesma ideia do `grep`, so que do lado do servidor.", "A flag e `--filter-pattern`, igual a do filter-log-events."],
+    d("logsc-tail2", "cloudwatch", 2, 80, "Só o que interessa no meio do barulho",
+      "O log do <b>/climb/app</b> tem linha demais pra ler no olho. Acompanhe de novo, mas mostrando <b>só as linhas com ERROR</b>.",
+      ["Dá pra filtrar sem sair do tail — é a mesma ideia do `grep`, só que do lado do servidor.", "A flag é `--filter-pattern`, igual a do filter-log-events."],
       ["aws logs tail /climb/app --since 1h --filter-pattern ERROR"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "tail") && String(cmd.flags["filter-pattern"] || "") === "ERROR"),
   ]);
@@ -539,47 +539,47 @@
   // --- de log a alarme, e o log saindo pra fora (o clímax da trilha) ---
   at("cob-logs-1", [
     d("logsc-mf1", "cloudwatch", 3, 140, "Pare de olhar o log esperando erro",
-      "Hoje alguem so descobre que a aplicacao quebrou se estiver <b>olhando</b> o log. Isso nao escala e nao funciona de madrugada. Crie um filtro de metrica no <b>/climb/app</b> chamado <b>conta-erros</b> que transforme cada linha com <b>ERROR</b> em <b>+1</b> na metrica <b>ErrosApp</b> do namespace <b>Climb</b>.",
-      ["O que voce quer nao e buscar no log: e fazer o log VIRAR numero, porque numero tem alarme.", "Sao tres partes: o padrao que casa, o nome do filtro e a transformacao em metrica.", "A transformacao vai na forma `metricName=...,metricNamespace=...,metricValue=1`."],
+      "Hoje alguém só descobre que a aplicação quebrou se estiver <b>olhando</b> o log. Isso não escala e não funciona de madrugada. Crie um filtro de métrica no <b>/climb/app</b> chamado <b>conta-erros</b> que transforme cada linha com <b>ERROR</b> em <b>+1</b> na métrica <b>ErrosApp</b> do namespace <b>Climb</b>.",
+      ["O que você quer não é buscar no log: é fazer o log VIRAR número, porque número tem alarme.", "São três partes: o padrão que casa, o nome do filtro e a transformação em métrica.", "A transformação vai na forma `metricName=...,metricNamespace=...,metricValue=1`."],
       ["aws logs put-metric-filter --log-group-name /climb/app --filter-name conta-erros --filter-pattern ERROR --metric-transformations metricName=ErrosApp,metricNamespace=Climb,metricValue=1"],
       (c) => !!(((grupo(c, "/climb/app") || {}).filtros || {})["conta-erros"])),
     d("logsc-mf2", "cloudwatch", 3, 150, "Agora sim: o telefone toca sozinho",
-      "Com a metrica <b>ErrosApp</b> existindo, feche o circuito: crie o alarme <b>muitos-erros</b> que dispara quando ela passar de <b>10</b>. <small>(log ➜ metrica ➜ alarme: e essa corrente que substitui alguem olhando a tela)</small>",
-      ["O alarme nao sabe o que e log: ele so enxerga a metrica que o filtro criou.", "Use o mesmo nome e namespace que voce declarou na transformacao, senao o alarme fica sem dado."],
+      "Com a métrica <b>ErrosApp</b> existindo, feche o circuito: crie o alarme <b>muitos-erros</b> que dispara quando ela passar de <b>10</b>. <small>(log ➜ métrica ➜ alarme: é essa corrente que substitui alguém olhando a tela)</small>",
+      ["O alarme não sabe o que é log: ele só enxerga a métrica que o filtro criou.", "Use o mesmo nome e namespace que você declarou na transformação, senao o alarme fica sem dado."],
       ["aws cloudwatch put-metric-alarm --alarm-name muitos-erros --metric-name ErrosApp --namespace Climb --threshold 10 --comparison-operator GreaterThanThreshold"],
       // Os parenteses em volta do indice NAO sao enfeite: o corte de gabarito
       // (lib/sem-gabarito.js) troca por null os `[...]` que ficam no nivel 0 do
       // `d(...)`, achando que sao o array de dicas ou de solucao. Sem eles o
       // arquivo servido quebra — e so o teste/gabarito.js acusa.
       (c) => !!(((c.cloudwatch || {}).alarmes || {})["muitos-erros"])),
-    d("logsc-mf3", "cloudwatch", 3, 100, "O que desse log vira numero?",
-      "Antes de mexer em alarme, veja o que ja esta sendo extraido do <b>/climb/app</b>. Liste os filtros de metrica do grupo.",
-      ["A pergunta e por grupo: quais filtros existem aqui dentro.", "Resposta vazia significa log guardado e nada virando alarme."],
+    d("logsc-mf3", "cloudwatch", 3, 100, "O que desse log vira número?",
+      "Antes de mexer em alarme, veja o que já está sendo extraido do <b>/climb/app</b>. Liste os filtros de métrica do grupo.",
+      ["A pergunta é por grupo: quais filtros existem aqui dentro.", "Resposta vazia significa log guardado e nada virando alarme."],
       ["aws logs describe-metric-filters --log-group-name /climb/app"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-metric-filters") &&
         String(cmd.flags["log-group-name"] || "") === "/climb/app"),
     d("logsc-sub1", "cloudwatch", 3, 140, "O log precisa sair em tempo real",
-      "A seguranca quer cada linha de ERROR do <b>/api/erros</b> chegando numa funcao que abre incidente — <b>na hora</b>, sem ninguem consultar nada. Crie a assinatura <b>erros-pra-lambda</b> apontando pra <b>arn:aws:lambda:us-east-1:123456789012:function:trata-erro</b>.",
-      ["Filtro de METRICA vira numero; assinatura manda a LINHA pra fora. Sao coisas diferentes.", "O destino e um ARN de Lambda, Kinesis ou Firehose — nao um nome.", "Um grupo aceita no maximo 2 assinaturas: e limite da AWS, nao do simulador."],
+      "A segurança quer cada linha de ERROR do <b>/api/erros</b> chegando numa função que abre incidente — <b>na hora</b>, sem ninguém consultar nada. Crie a assinatura <b>erros-pra-lambda</b> apontando pra <b>arn:aws:lambda:us-east-1:123456789012:function:trata-erro</b>.",
+      ["Filtro de MÉTRICA vira número; assinatura manda a LINHA pra fora. São coisas diferentes.", "O destino é um ARN de Lambda, Kinesis ou Firehose — não um nome.", "Um grupo aceita no máximo 2 assinaturas: é limite da AWS, não do simulador."],
       ["aws logs put-subscription-filter --log-group-name /api/erros --filter-name erros-pra-lambda --filter-pattern ERROR --destination-arn arn:aws:lambda:us-east-1:123456789012:function:trata-erro"],
       (c) => !!(((grupo(c, "/api/erros") || {}).assinaturas || {})["erros-pra-lambda"])),
-    d("logsc-sub2", "cloudwatch", 3, 90, "Pra onde esse log esta indo?",
-      "Antes de desligar qualquer coisa, descubra o obvio: <b>o /api/erros esta sendo despejado em algum lugar?</b> Liste as assinaturas dele e depois <b>remova</b> a <b>erros-pra-lambda</b>, que o time de seguranca aposentou.",
-      ["Primeiro olhe, depois apague — assinatura esquecida manda dado (e custo) pra fora sem ninguem saber.", "O comando de apagar pede o grupo e o nome do filtro."],
+    d("logsc-sub2", "cloudwatch", 3, 90, "Pra onde esse log estÃ¡ indo?",
+      "Antes de desligar qualquer coisa, descubra o óbvio: <b>o /api/erros está sendo despejado em algum lugar?</b> Liste as assinaturas dele e depois <b>remova</b> a <b>erros-pra-lambda</b>, que o time de segurança aposentou.",
+      ["Primeiro olhe, depois apague — assinatura esquecida manda dado (e custo) pra fora sem ninguém saber.", "O comando de apagar pede o grupo e o nome do filtro."],
       ["aws logs describe-subscription-filters --log-group-name /api/erros",
         "aws logs delete-subscription-filter --log-group-name /api/erros --filter-name erros-pra-lambda"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-subscription-filter") &&
         !(((grupo(c, "/api/erros") || {}).assinaturas || {})["erros-pra-lambda"])),
     d("logsc-exp1", "cloudwatch", 3, 130, "Guardar sete anos sem pagar CloudWatch",
-      "A auditoria exige guardar o log por anos, mas guardar no CloudWatch esse tempo e caro. A saida e o combo de sempre: retencao curta la, arquivo no S3. Crie o bucket <b>arquivo-logs-auditoria</b> e exporte o <b>/api/erros</b> pra ele.",
-      ["Primeiro o destino precisa existir — a exportacao falha se o bucket nao estiver la.", "O recorte de tempo e obrigatorio e vai em milissegundos: `--from` e `--to`.", "O `--destination` recebe o NOME do bucket, nao a URL s3://."],
+      "A auditoria exige guardar o log por anos, mas guardar no CloudWatch esse tempo é caro. A saída é o combo de sempre: retenção curta lá, arquivo no S3. Crie o bucket <b>arquivo-logs-auditoria</b> e exporte o <b>/api/erros</b> pra ele.",
+      ["Primeiro o destino precisa existir — a exportação falha se o bucket não estiver lá.", "O recorte de tempo é obrigatório e vai em milissegundos: `--from` e `--to`.", "O `--destination` recebe o NOME do bucket, não a URL s3://."],
       ["aws s3 mb s3://arquivo-logs-auditoria",
         "aws logs create-export-task --log-group-name /api/erros --from 1788000000000 --to 1789000000000 --destination arquivo-logs-auditoria",
         "aws logs describe-export-tasks"],
       (c) => Object.values(((c.logs || {}).exportacoes) || {}).some((t) => t.grupo === "/api/erros")),
     d("logsc-q1", "cloudwatch", 3, 100, "Quem deixou consulta rodando?",
-      "O Insights cobra por dado varrido, e alguem reclamou do custo. Liste as consultas do <b>/climb/app</b> pra ver o que foi disparado ali e em que estado esta.",
-      ["Existe um `describe-…` proprio pras consultas do Insights.", "Da pra estreitar por grupo com --log-group-name."],
+      "O Insights cobra por dado varrido, e alguém reclamou do custo. Liste as consultas do <b>/climb/app</b> pra ver o que foi disparado ali e em que estado estÃ¡.",
+      ["Existe um `describe-…` próprio pras consultas do Insights.", "Dá pra estreitar por grupo com --log-group-name."],
       ["aws logs describe-queries --log-group-name /climb/app"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-queries")),
   ]);

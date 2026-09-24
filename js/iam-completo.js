@@ -68,7 +68,7 @@
     catch (e) {
       throw new ErroCli(
         "An error occurred (MalformedPolicyDocument) when calling the " + op + " operation: o documento precisa ser JSON valido.\n" +
-        "Na pratica quase ninguem digita JSON na linha de comando: usa-se " + flag + " file://<arquivo>.json (tem um pronto aqui — digite ls)."
+        "Na prática quase ninguém digita JSON na linha de comando: usa-se " + flag + " file://<arquivo>.json (tem um pronto aqui — digite ls)."
       );
     }
   }
@@ -110,7 +110,7 @@
     "get-user": (conta, pos, flags) => {
       const s = st(conta);
       if (flags["user-name"] === undefined) {
-        avisarClimb("Sem --user-name o get-user descreve QUEM ESTA CHAMANDO. No terminal de verdade e o jeito rapido de saber com qual credencial voce esta logado.");
+        avisarClimb("Sem --user-name o get-user descreve QUEM ESTA CHAMANDO. No terminal de verdade é o jeito rápido de saber com qual credencial você estÃ¡ logado.");
         return js({ User: { UserName: "climb", UserId: "AIDACLIMB" + hexAleatorio(8).toUpperCase(), Arn: arnIam(conta, "user", "climb"), CreateDate: new Date().toISOString() } });
       }
       const [nome, u] = usuarioDe(conta, flags, "GetUser");
@@ -132,7 +132,7 @@
       const [, r] = roleDe(conta, flags, "ListAttachedRolePolicies");
       const lista = r.politicas || [];
       if (!lista.length) {
-        avisarClimb("Role sem politica anexada: ela pode ser assumida, mas quem assumir nao consegue fazer NADA. E um erro comum — a role existe e parece certa.");
+        avisarClimb("Role sem política anexada: ela pode ser assumida, mas quem assumir não consegue fazer NADA. É um erro comum — a role existe e parece certa.");
         return "";
       }
       return js({ AttachedPolicies: lista.map((p) => ({ PolicyName: String(p).split("/").pop(), PolicyArn: p })) });
@@ -144,15 +144,15 @@
       if (u.chaves.length >= 2) {
         throw new ErroCli(
           "An error occurred (LimitExceeded) when calling the CreateAccessKey operation: Cannot exceed quota for AccessKeysPerUser: 2.\n" +
-          "O limite de 2 existe justamente pra caber a rotacao: a nova entra, a velha sai."
+          "O limite de 2 existe justamente pra caber a rotação: a nova entra, a velha sai."
         );
       }
       const id = "AKIA" + hexAleatorio(16).toUpperCase();
       const segredo = hexAleatorio(40);
       u.chaves.push({ id: id, segredo: segredo, status: "Active", criadoEm: new Date().toISOString() });
       avisarClimb(
-        "O SecretAccessKey aparece UMA VEZ e nunca mais — a AWS nao guarda copia. Perdeu, so criando outra. " +
-        "E nunca commite isso: chave em repositorio publico e varrida por robo em minutos."
+        "O SecretAccessKey aparece UMA VEZ e nunca mais — a AWS não guarda copia. Perdeu, só criando outra. " +
+        "E nunca commite isso: chave em repositório público e varrida por robô em minutos."
       );
       return js({ AccessKey: {
         UserName: nome, AccessKeyId: id, Status: "Active",
@@ -162,7 +162,7 @@
     "list-access-keys": (conta, pos, flags) => {
       const [nome, u] = usuarioDe(conta, flags, "ListAccessKeys");
       if (!u.chaves.length) {
-        avisarClimb("Usuario sem chave de acesso: ele so entra pelo console, nao pela CLI. Pra robo de deploy e o contrario — chave sim, console nao.");
+        avisarClimb("Usuário sem chave de acesso: ele só entra pelo console, não pela CLI. Pra robô de deploy é o contrário — chave sim, console não.");
         return "";
       }
       return js({ AccessKeyMetadata: u.chaves.map((k) => ({
@@ -181,8 +181,8 @@
       k.status = status;
       if (status === "Inactive") {
         avisarClimb(
-          "Este e o passo que quase todo mundo pula. INATIVAR primeiro e reversivel: se algum servico esquecido ainda usava essa chave, " +
-          "ele quebra e voce reativa em um comando. Apagar direto e irreversivel — e voce so descobre quem usava quando a producao cai."
+          "Este é o passo que quase todo mundo pula. INATIVAR primeiro e reversível: se algum serviço esquecido ainda usava essa chave, " +
+          "ele quebra e você reativa em um comando. Apagar direto é irreversível — e você só descobre quem usava quando a produção cai."
         );
       }
       return okSilencioso("Chave " + id + " agora esta " + status + ".");
@@ -193,7 +193,7 @@
       const i = u.chaves.findIndex((x) => x.id === id);
       if (i < 0) throw new ErroCli("An error occurred (NoSuchEntity) when calling the DeleteAccessKey operation: The Access Key with id " + id + " cannot be found.");
       if (u.chaves[i].status === "Active") {
-        avisarClimb("Voce apagou uma chave que ainda estava ATIVA. Funcionou, mas o caminho seguro e inativar, esperar, e so entao apagar.");
+        avisarClimb("Você apagou uma chave que ainda estava ATIVA. Funcionou, mas o caminho seguro e inativar, esperar, e só então apagar.");
       }
       u.chaves.splice(i, 1);
       return okSilencioso("Chave " + id + " apagada.");
@@ -210,7 +210,7 @@
       if (!s.relatorio) {
         throw new ErroCli(
           "An error occurred (ReportNotPresent) when calling the GetCredentialReport operation: Credential report not present.\n" +
-          "Peca a geracao antes: aws iam generate-credential-report"
+          "Peça a geracao antes: aws iam generate-credential-report"
         );
       }
       const linhas = ["user,arn,password_enabled,mfa_active,access_key_1_active,access_key_1_last_rotated"];
@@ -225,10 +225,10 @@
       }
       const csv = linhas.join("\n");
       avisarClimb(
-        "Repare no formato: o relatorio vem em CSV codificado em BASE64, entao no terminal de verdade voce encadeia\n" +
+        "Repare no formato: o relatório vem em CSV codificado em BASE64, então no terminal de verdade você encadeia\n" +
         "  aws iam get-credential-report --query Content --output text | base64 -d\n\n" +
         "Decodificado, ele fica assim:\n\n" + csv + "\n\n" +
-        "E o primeiro artefato de qualquer auditoria: quem nao tem MFA, quem tem chave velha e quem nunca usou o acesso."
+        "É o primeiro artefato de qualquer auditoria: quem não tem MFA, quem tem chave velha e quem nunca usou o acesso."
       );
       return js({ Content: b64(csv), ReportFormat: "text/csv", GeneratedTime: s.relatorio.geradoEm });
     },
@@ -240,8 +240,8 @@
       const doc = lerDocumento(exigirFlag(flags, "policy-document"), "--policy-document", "PutUserPolicy");
       u.inline[politica] = doc;
       avisarClimb(
-        "Politica INLINE vive dentro do usuario \"" + nome + "\" e morre junto com ele. A gerenciada e um objeto separado, com ARN proprio, " +
-        "que da pra anexar em varios. Regra pratica: inline so pra excecao de uma pessoa so; tudo que se repete vira gerenciada."
+        "Política INLINE vive dentro do usuário \"" + nome + "\" e morre junto com ele. A gerenciada é um objeto separado, com ARN próprio, " +
+        "que dá pra anexar em vários. Regra pratica: inline só pra exceção de uma pessoa só; tudo que se repete vira gerenciada."
       );
       return okSilencioso("Politica inline \"" + politica + "\" gravada em \"" + nome + "\".");
     },
@@ -251,7 +251,7 @@
       if (!u.inline[politica]) {
         throw new ErroCli(
           "An error occurred (NoSuchEntity) when calling the GetUserPolicy operation: The user policy with name " + politica + " cannot be found.\n" +
-          "Cuidado: este comando so enxerga politica INLINE. As gerenciadas aparecem em list-attached-user-policies."
+          "Cuidado: este comando só enxerga política INLINE. As gerenciadas aparecem em list-attached-user-policies."
         );
       }
       return js({ UserName: nome, PolicyName: politica, PolicyDocument: u.inline[politica] });
@@ -260,7 +260,7 @@
       const [, u] = usuarioDe(conta, flags, "ListUserPolicies");
       const nomes = Object.keys(u.inline);
       if (!nomes.length) {
-        avisarClimb("Nenhuma politica inline. Isso NAO quer dizer sem permissao: as gerenciadas saem no list-attached-user-policies — sao duas listas diferentes, e quem audita precisa olhar as duas.");
+        avisarClimb("Nenhuma política inline. Isso NÃO quer dizer sem permissão: as gerenciadas saem no list-attached-user-policies — são duas listas diferentes, e quem audita precisa olhar as duas.");
         return "";
       }
       return js({ PolicyNames: nomes });
@@ -279,10 +279,10 @@
       const doc = lerDocumento(exigirFlag(flags, "policy-document"), "--policy-document", "UpdateAssumeRolePolicy");
       r.trustDoc = doc;
       avisarClimb(
-        "Isto NAO muda o que a role pode fazer — muda QUEM pode virar ela. Sao duas politicas diferentes na mesma role: " +
-        "a de confianca (quem entra) e as anexadas (o que faz depois de entrar). Confundir as duas e o erro classico do 'AccessDenied ao assumir role'."
+        "Isto NÃO muda o que a role pode fazer — muda QUEM pode virar ela. São duas políticas diferentes na mesma role: " +
+        "a de confiança (quem entra) e as anexadas (o que faz depois de entrar). Confundir as duas é o erro clássico do 'AccessDenied ao assumir role'."
       );
-      return okSilencioso("Politica de confianca da role \"" + nome + "\" atualizada.");
+      return okSilencioso("Política de confiança da role \"" + nome + "\" atualizada.");
     },
 
     // ---------- a ponte entre role e máquina ----------
@@ -305,13 +305,13 @@
       if (p.roles.length) {
         throw new ErroCli(
           "An error occurred (LimitExceeded) when calling the AddRoleToInstanceProfile operation: Cannot exceed quota for InstanceSessionsPerInstanceProfile: 1.\n" +
-          "Um instance profile carrega UMA role. Se a maquina precisa de mais permissao, voce junta tudo numa role so."
+          "Um instance profile carrega UMA role. Se a máquina precisa de mais permissão, você junta tudo numa role só."
         );
       }
       p.roles.push(nomeRole);
       avisarClimb(
-        "Esta e a peca que liga role e maquina: EC2 nao recebe role direto, recebe um INSTANCE PROFILE que carrega a role. " +
-        "E e exatamente isto que falta quando a instancia nao aparece no `aws ssm describe-instance-information`."
+        "Esta é a peça que liga role e máquina: EC2 não recebe role direto, recebe um INSTANCE PROFILE que carrega a role. " +
+        "É exatamente isto que falta quando a instância não aparece no `aws ssm describe-instance-information`."
       );
       return okSilencioso("Role \"" + nomeRole + "\" adicionada ao perfil \"" + perfil + "\".");
     },
@@ -336,8 +336,8 @@
         MatchedStatements: [],
       }));
       avisarClimb(
-        "Responder \"essa pessoa pode fazer isso?\" sem testar em producao e o que este comando faz — e quase ninguem sabe que ele existe. " +
-        "`implicitDeny` quer dizer que nada permitiu (nao que algo proibiu): no IAM, o que nao e explicitamente permitido e negado."
+        "Responder \"essa pessoa pode fazer isso?\" sem testar em produção é o que este comando faz — e quase ninguém sabe que ele existe. " +
+        "`implicitDeny` quer dizer que nada permitiu (não que algo proibiu): no IAM, o que não é explicitamente permitido e negado."
       );
       return js({ EvaluationResults: resultados });
     },
@@ -349,8 +349,8 @@
       }
       u.boundary = arn;
       avisarClimb(
-        "Boundary e TETO, nao permissao: ele nao da nada a \"" + nome + "\" — so limita o maximo que as politicas dele conseguem alcancar. " +
-        "E assim que se delega a criacao de usuarios pra um time sem que ele possa criar alguem mais poderoso que ele mesmo."
+        "Boundary é TETO, não permissão: ele não da nada a \"" + nome + "\" — só limita o máximo que as políticas dele conseguem alcancar. " +
+        "É assim que se delega a criação de usuários pra um time sem que ele possa criar alguém mais poderoso que ele mesmo."
       );
       return okSilencioso("Permissions boundary aplicado em \"" + nome + "\".");
     },
@@ -365,8 +365,8 @@
         throw new ErroCli("An error occurred (NoSuchEntity) when calling the SetDefaultPolicyVersion operation: Policy " + arn + " version " + versao + " does not exist.");
       }
       p.defaultVersionId = versao;
-      avisarClimb("A versao padrao e a que VALE. As outras ficam guardadas — e por isso que voltar atras numa politica que quebrou tudo e um comando so, nao um resgate de backup.");
-      return okSilencioso("Versao padrao da politica \"" + nome + "\" agora e " + versao + ".");
+      avisarClimb("A versão padrão é a que VALE. As outras ficam guardadas — é por isso que voltar atrás numa política que quebrou tudo é um comando só, não um resgate de backup.");
+      return okSilencioso("Versão padrão da política \"" + nome + "\" agora e " + versao + ".");
     },
 
     // ---------- política de senha da conta ----------
@@ -386,15 +386,15 @@
         MaxPasswordAge: flags["max-password-age"] !== undefined ? Number(flags["max-password-age"]) : undefined,
         PasswordReusePrevention: flags["password-reuse-prevention"] !== undefined ? Number(flags["password-reuse-prevention"]) : undefined,
       };
-      avisarClimb("Isto vale pra conta INTEIRA, nao por usuario. E um dos itens que o Security Hub e a auditoria conferem primeiro.");
-      return okSilencioso("Politica de senha da conta atualizada.");
+      avisarClimb("Isto vale pra conta INTEIRA, não por usuário. É um dos itens que o Security Hub e a auditoria conferem primeiro.");
+      return okSilencioso("Política de senha da conta atualizada.");
     },
     "get-account-password-policy": (conta) => {
       const s = st(conta);
       if (!s.senha) {
         throw new ErroCli(
           "An error occurred (NoSuchEntity) when calling the GetAccountPasswordPolicy operation: The Password Policy with domain name " + CONTA_ID(conta) + " cannot be found.\n" +
-          "Conta sem politica de senha e achado de auditoria: defina uma com aws iam update-account-password-policy."
+          "Conta sem política de senha e achado de auditoria: defina uma com aws iam update-account-password-policy."
         );
       }
       return js({ PasswordPolicy: s.senha });
@@ -522,29 +522,29 @@
 
   at("iam-2", [
     d("iamc-get1", "iam", 1, 50, "Com qual credencial eu estou?",
-      "Antes de mexer em qualquer coisa numa conta que nao e sua, a primeira pergunta e: <b>quem sou eu aqui?</b> Veja o detalhe do usuario <b>ana</b> — e repare que, sem informar o nome, o mesmo comando responde quem esta chamando.",
-      ["E o `get-…` do usuario, irmao do `list-users` que voce acabou de usar.", "Sem --user-name ele descreve a propria credencial — guarde esse truque."],
+      "Antes de mexer em qualquer coisa numa conta que não é sua, a primeira pergunta é: <b>quem sou eu aqui?</b> Veja o detalhe do usuário <b>ana</b> — e repare que, sem informar o nome, o mesmo comando responde quem estÃ¡ chamando.",
+      ["É o `get-…` do usuário, irmão do `list-users` que você acabou de usar.", "Sem --user-name ele descreve a própria credencial — guarde esse truque."],
       ["aws iam get-user --user-name ana"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-user")),
   ]);
 
   at("piam-u3", [
-    d("iamc-key1", "iam", 2, 90, "O robo de deploy precisa de credencial",
-      "O usuario <b>ci-deploy</b> nao entra pelo console: ele roda num servidor e usa a CLI. Crie a <b>chave de acesso</b> dele. <small>(repare na resposta: o segredo aparece UMA vez — a AWS nao guarda copia)</small>",
-      ["Chave de acesso e um recurso do usuario, entao o comando pede --user-name.", "Guarde o AccessKeyId que volta: o segredo voce nunca mais ve."],
+    d("iamc-key1", "iam", 2, 90, "O robô de deploy precisa de credencial",
+      "O usuário <b>ci-deploy</b> não entra pelo console: ele roda num servidor e usa a CLI. Crie a <b>chave de acesso</b> dele. <small>(repare na resposta: o segredo aparece UMA vez — a AWS não guarda copia)</small>",
+      ["Chave de acesso é um recurso do usuário, então o comando pede --user-name.", "Guarde o AccessKeyId que volta: o segredo você nunca mais ve."],
       ["aws iam create-access-key --user-name ci-deploy"],
       (c) => chaves(c, "ci-deploy").length >= 1),
-    d("iamc-key2", "iam", 2, 70, "Quantas chaves esse robo tem?",
-      "Auditoria de rotina: liste as chaves do <b>ci-deploy</b> e veja o estado de cada uma. <small>(o limite da AWS e 2 por usuario — e existe justamente pra caber a rotacao)</small>",
-      ["O `list-…` das chaves, sempre por usuario.", "Repare que o segredo NAO volta nessa listagem. Nunca volta."],
+    d("iamc-key2", "iam", 2, 70, "Quantas chaves esse robô tem?",
+      "Auditoria de rotina: liste as chaves do <b>ci-deploy</b> e veja o estado de cada uma. <small>(o limite da AWS e 2 por usuário — e existe justamente pra caber a rotação)</small>",
+      ["O `list-…` das chaves, sempre por usuário.", "Repare que o segredo NÃO volta nessa listagem. Nunca volta."],
       ["aws iam list-access-keys --user-name ci-deploy"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-access-keys")),
   ]);
 
   at("iam-11", [
-    d("iamc-pw1", "iam", 2, 90, "Senha de seis caracteres nao passa na auditoria",
-      "A auditoria apontou que a conta nao tem regra de senha nenhuma. Defina: minimo de <b>14</b> caracteres, exigindo <b>simbolo</b> e <b>numero</b> — e depois confira o que ficou valendo.",
-      ["Isto vale pra conta INTEIRA, nao por usuario.", "As exigencias sao flags sem valor: `--require-symbols` e `--require-numbers`.", "Depois de gravar, existe o `get-…` correspondente pra conferir."],
+    d("iamc-pw1", "iam", 2, 90, "Senha de seis caracteres não passa na auditoria",
+      "A auditoria apontou que a conta não tem regra de senha nenhuma. Defina: mínimo de <b>14</b> caracteres, exigindo <b>símbolo</b> e <b>número</b> — e depois confira o que ficou valendo.",
+      ["Isto vale pra conta INTEIRA, não por usuário.", "As exigencias são flags sem valor: `--require-symbols` e `--require-numbers`.", "Depois de gravar, existe o `get-…` correspondente pra conferir."],
       ["aws iam update-account-password-policy --minimum-password-length 14 --require-symbols --require-numbers",
         "aws iam get-account-password-policy"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-account-password-policy") &&
@@ -552,9 +552,9 @@
   ]);
 
   at("cob-iam-3", [
-    d("iamc-ver1", "iam", 3, 110, "A politica nova quebrou tudo: volte a anterior",
-      "Publique uma versao nova da politica <b>acesso-s3</b> ja como padrao — e entao imagine que metade da aplicacao parou. Nao precisa de backup nem de recriar nada: <b>volte a versao padrao pra v1</b>. <small>(a versao padrao e a que VALE; as outras ficam guardadas)</small>",
-      ["Publicar versao nova e `create-policy-version`; a flag `--set-as-default` ja faz ela valer na hora.", "Voltar atras e outro comando, que so troca qual versao e a padrao.", "Os dois identificam a politica pelo ARN, nao pelo nome: `arn:aws:iam::123456789012:policy/<nome>`."],
+    d("iamc-ver1", "iam", 3, 110, "A política nova quebrou tudo: volte a anterior",
+      "Publique uma versão nova da política <b>acesso-s3</b> já como padrão — e então imagine que metade da aplicação parou. Não precisa de backup nem de recriar nada: <b>volte a versão padrão pra v1</b>. <small>(a versão padrão é a que VALE; as outras ficam guardadas)</small>",
+      ["Publicar versão nova e `create-policy-version`; a flag `--set-as-default` já faz ela valer na hora.", "Voltar atrás e outro comando, que só troca qual versão é a padrão.", "Os dois identificam a política pelo ARN, não pelo nome: `arn:aws:iam::123456789012:policy/<nome>`."],
       ["aws iam create-policy-version --policy-arn arn:aws:iam::123456789012:policy/acesso-s3 --policy-document file://politica-publica.json --set-as-default",
         "aws iam set-default-policy-version --policy-arn arn:aws:iam::123456789012:policy/acesso-s3 --version-id v1"],
       (c) => {
@@ -565,61 +565,61 @@
 
   at("cob-iam-5", [
     d("iamc-key3", "iam", 3, 130, "Rotacione a chave do jeito certo",
-      "A chave do <b>ci-deploy</b> tem oito meses e a politica da empresa manda rotacionar. A ordem importa: crie a nova, e so entao <b>inative</b> a antiga — sem apagar ainda, porque inativar e reversivel e apagar nao e.",
-      ["Sao dois comandos: um cria, o outro muda o ESTADO da antiga.", "O estado vai em `--status`, e so aceita Active ou Inactive.", "Se algum servico esquecido ainda usava a chave, ele quebra agora — e voce reativa em um comando. E esse o ponto."],
+      "A chave do <b>ci-deploy</b> tem oito meses e a política da empresa manda rotacionar. A ordem importa: crie a nova, e só então <b>inative</b> a antiga — sem apagar ainda, porque inativar é reversível e apagar não é.",
+      ["São dois comandos: um cria, o outro muda o ESTADO da antiga.", "O estado vai em `--status`, e só aceita Active ou Inactive.", "Se algum serviço esquecido ainda usava a chave, ele quebra agora — e você reativa em um comando. É esse o ponto."],
       ["aws iam create-access-key --user-name ci-deploy",
         "aws iam update-access-key --user-name ci-deploy --access-key-id <chave-antiga> --status Inactive"],
       (c) => chaves(c, "ci-deploy").some((k) => k.status === "Inactive")),
     d("iamc-key4", "iam", 3, 100, "Uma semana depois: apague a velha",
-      "Passou a semana, ninguem reclamou, nenhum log de erro. Agora sim: <b>apague</b> a chave inativa do <b>ci-deploy</b>.",
-      ["Apagar pede o mesmo par de informacoes: usuario e id da chave.", "Chave apagada nao volta — por isso a inativacao veio antes."],
+      "Passou a semana, ninguém reclamou, nenhum log de erro. Agora sim: <b>apague</b> a chave inativa do <b>ci-deploy</b>.",
+      ["Apagar pede o mesmo par de informacoes: usuário e id da chave.", "Chave apagada não volta — por isso a inativação veio antes."],
       ["aws iam delete-access-key --user-name ci-deploy --access-key-id <chave-inativa>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-access-key") &&
         !chaves(c, "ci-deploy").some((k) => k.status === "Inactive")),
     d("iamc-rep1", "iam", 3, 120, "O raio-x da conta",
-      "O time de seguranca pediu o levantamento: quem tem MFA, quem tem chave velha, quem nunca usou o acesso. Peca a geracao do <b>relatorio de credenciais</b> e busque ele. <small>(vem em base64 — no terminal de verdade voce encadeia com <code>| base64 -d</code>)</small>",
-      ["Sao dois comandos: um manda GERAR, o outro BUSCA o resultado.", "Nenhum dos dois leva argumento: o relatorio e da conta inteira."],
+      "O time de segurança pediu o levantamento: quem tem MFA, quem tem chave velha, quem nunca usou o acesso. Peça a geracao do <b>relatório de credenciais</b> e busque ele. <small>(vem em base64 — no terminal de verdade você encadeia com <code>| base64 -d</code>)</small>",
+      ["São dois comandos: um manda GERAR, o outro BUSCA o resultado.", "Nenhum dos dois leva argumento: o relatório e da conta inteira."],
       ["aws iam generate-credential-report",
         "aws iam get-credential-report"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-credential-report")),
-    d("iamc-inline1", "iam", 3, 120, "Uma excecao pra uma pessoa so",
-      "A <b>ana</b> precisa de um acesso temporario que nao vale pra mais ninguem do time. Criar politica gerenciada pra isso polui a conta: use uma politica <b>inline</b>, que vive dentro dela e some junto. Grave a <b>acesso-temp</b> e leia de volta.",
-      ["Inline se grava com `put-…`, nao com create — ela nao e um objeto separado.", "O documento vem de arquivo: use `file://politica-publica.json` (digite `ls` pra ver os arquivos)."],
+    d("iamc-inline1", "iam", 3, 120, "Uma exceção pra uma pessoa só",
+      "A <b>ana</b> precisa de um acesso temporário que não vale pra mais ninguém do time. Criar política gerenciada pra isso polui a conta: use uma política <b>inline</b>, que vive dentro dela e some junto. Grave a <b>acesso-temp</b> e leia de volta.",
+      ["Inline se grava com `put-…`, não com create — ela não é um objeto separado.", "O documento vem de arquivo: use `file://politica-publica.json` (digite `ls` pra ver os arquivos)."],
       ["aws iam put-user-policy --user-name ana --policy-name acesso-temp --policy-document file://politica-publica.json",
         "aws iam get-user-policy --user-name ana --policy-name acesso-temp"],
       (c) => !!(((usr(c, "ana") || {}).inline || {})["acesso-temp"])),
     d("iamc-inline2", "iam", 3, 100, "O auditor olha as DUAS listas",
-      "Auditar permissao de alguem exige olhar dois lugares: as politicas gerenciadas e as inline. Liste as <b>inline</b> da <b>ana</b> e, como o acesso temporario acabou, <b>remova</b> a <b>acesso-temp</b>.",
-      ["Sao duas listas diferentes: `list-user-policies` (inline) e `list-attached-user-policies` (gerenciadas).", "Ver uma vazia nao quer dizer que a pessoa nao tem permissao."],
+      "Auditar permissão de alguém exige olhar dois lugares: as políticas gerenciadas e as inline. Liste as <b>inline</b> da <b>ana</b> e, como o acesso temporário acabou, <b>remova</b> a <b>acesso-temp</b>.",
+      ["São duas listas diferentes: `list-user-policies` (inline) e `list-attached-user-policies` (gerenciadas).", "Ver uma vazia não quer dizer que a pessoa não tem permissão."],
       ["aws iam list-user-policies --user-name ana",
         "aws iam delete-user-policy --user-name ana --policy-name acesso-temp"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-user-policy") &&
         !(((usr(c, "ana") || {}).inline || {})["acesso-temp"])),
-    d("iamc-role1", "iam", 3, 100, "A role existe, mas nao faz nada",
-      "Chamado: <i>\"assumi a role e da AccessDenied em tudo\"</i>. Investigue a <b>papel-lambda</b>: veja o detalhe dela e depois <b>quais politicas estao anexadas</b> — lista vazia explica o chamado inteiro.",
-      ["Sao duas perguntas diferentes: como a role e, e o que ela pode fazer.", "O `get-role` traz a politica de CONFIANCA (quem entra); as anexadas saem noutro comando."],
+    d("iamc-role1", "iam", 3, 100, "A role existe, mas não faz nada",
+      "Chamado: <i>\"assumi a role e da AccessDenied em tudo\"</i>. Investigue a <b>papel-lambda</b>: veja o detalhe dela e depois <b>quais políticas estão anexadas</b> — lista vazia explica o chamado inteiro.",
+      ["São duas perguntas diferentes: como a role é, e o que ela pode fazer.", "O `get-role` traz a política de CONFIANÇA (quem entra); as anexadas saem noutro comando."],
       ["aws iam get-role --role-name papel-lambda",
         "aws iam list-attached-role-policies --role-name papel-lambda"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-attached-role-policies")),
     d("iamc-trust1", "iam", 3, 130, "Quem pode virar essa role?",
-      "A role <b>papel-lambda</b> vai passar a ser assumida tambem por outro servico. Atualize a <b>politica de confianca</b> dela com o arquivo <b>trust.json</b>. <small>(isto muda QUEM entra, nao o que a role faz depois de entrar)</small>",
-      ["Toda role tem DUAS politicas: a de confianca e as anexadas. Esta mexe na primeira.", "O comando e `update-assume-role-policy`, e o documento vem de `file://trust.json`."],
+      "A role <b>papel-lambda</b> vai passar a ser assumida também por outro serviço. Atualize a <b>política de confiança</b> dela com o arquivo <b>trust.json</b>. <small>(isto muda QUEM entra, não o que a role faz depois de entrar)</small>",
+      ["Toda role tem DUAS políticas: a de confiança e as anexadas. Esta mexe na primeira.", "O comando é `update-assume-role-policy`, e o documento vem de `file://trust.json`."],
       ["aws iam update-assume-role-policy --role-name papel-lambda --policy-document file://trust.json"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "update-assume-role-policy") && !!rol(c, "papel-lambda")),
-    d("iamc-prof1", "iam", 3, 140, "A peca que faltava pra maquina ter permissao",
-      "Lembra da instancia que nao aparecia no <b>aws ssm describe-instance-information</b>? Faltava isto: maquina EC2 nao recebe role direto — ela recebe um <b>instance profile</b> que carrega a role. Crie o perfil <b>perfil-ssm</b> e ponha a role <b>papel-lambda</b> dentro dele.",
-      ["Sao dois comandos: um cria o invólucro, o outro poe a role nele.", "Um perfil carrega UMA role — se a maquina precisa de mais permissao, voce junta tudo numa role so."],
+    d("iamc-prof1", "iam", 3, 140, "A peça que faltava pra máquina ter permissão",
+      "Lembra da instância que não aparecia no <b>aws ssm describe-instance-information</b>? Faltava isto: máquina EC2 não recebe role direto — ela recebe um <b>instance profile</b> que carrega a role. Crie o perfil <b>perfil-ssm</b> e ponha a role <b>papel-lambda</b> dentro dele.",
+      ["São dois comandos: um cria o invólucro, o outro poe a role nele.", "Um perfil carrega UMA role — se a máquina precisa de mais permissão, você junta tudo numa role só."],
       ["aws iam create-instance-profile --instance-profile-name perfil-ssm",
         "aws iam add-role-to-instance-profile --instance-profile-name perfil-ssm --role-name papel-lambda"],
       (c) => (((perfil(c, "perfil-ssm") || {}).roles) || []).length >= 1),
     d("iamc-sim1", "iam", 3, 140, "Ela pode apagar do S3?",
-      "Antes de liberar a <b>ana</b> pra mexer em producao, responda sem testar em producao: ela consegue <b>ler</b> e consegue <b>apagar</b> objeto no S3? Simule as duas acoes de uma vez.",
-      ["Existe um comando que AVALIA as politicas da pessoa sem executar nada — poucos sabem que ele existe.", "A pessoa vai em `--policy-source-arn` (o ARN dela), e as acoes em `--action-names`.", "Repare no resultado: `implicitDeny` quer dizer que NADA permitiu, nao que algo proibiu."],
+      "Antes de liberar a <b>ana</b> pra mexer em produção, responda sem testar em produção: ela consegue <b>ler</b> e consegue <b>apagar</b> objeto no S3? Simule as duas ações de uma vez.",
+      ["Existe um comando que AVALIA as políticas da pessoa sem executar nada — poucos sabem que ele existe.", "A pessoa vai em `--policy-source-arn` (o ARN dela), e as ações em `--action-names`.", "Repare no resultado: `implicitDeny` quer dizer que NADA permitiu, não que algo proibiu."],
       ["aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::123456789012:user/ana --action-names s3:GetObject s3:DeleteObject"],
       (c, cmd, ok) => ok && ehCmd(cmd, "iam", "simulate-principal-policy")),
     d("iamc-bound1", "iam", 3, 130, "Delegar sem entregar a conta",
-      "O time de plataforma vai criar usuarios sozinho, e voce precisa garantir que ninguem crie alguem mais poderoso que o proprio time. A ferramenta e o <b>permissions boundary</b>: um TETO que nao da permissao nenhuma, so limita o maximo. Aplique <b>AmazonS3ReadOnlyAccess</b> como teto da <b>ana</b>.",
-      ["Boundary nao e politica anexada: e limite. Mesmo com AdministratorAccess anexado, a pessoa nao passa do teto.", "O ARN da politica da AWS tem a forma `arn:aws:iam::aws:policy/<nome>`."],
+      "O time de plataforma vai criar usuários sozinho, e você precisa garantir que ninguém crie alguém mais poderoso que o próprio time. A ferramenta e o <b>permissions boundary</b>: um TETO que não da permissão nenhuma, só limita o máximo. Aplique <b>AmazonS3ReadOnlyAccess</b> como teto da <b>ana</b>.",
+      ["Boundary não é política anexada: é limite. Mesmo com AdministratorAccess anexado, a pessoa não passa do teto.", "O ARN da política da AWS tem a forma `arn:aws:iam::aws:policy/<nome>`."],
       ["aws iam put-user-permissions-boundary --user-name ana --permissions-boundary arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
       (c) => !!((usr(c, "ana") || {}).boundary)),
   ]);

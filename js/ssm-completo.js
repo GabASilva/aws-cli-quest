@@ -13,7 +13,7 @@
 //        registrado quem rodou o que, quando e com qual saida.
 //   SESSION MANAGER — terminal na maquina SEM porta 22 aberta, sem chave .pem
 //        e sem bastion. Toda empresa que fecha a 22 usa isto, e e o assunto do
-//        chamado mais comum do mundo: "minha instancia nao aparece na lista".
+//        chamado mais comum do mundo: "minha instância não aparece na lista".
 //   AUTOMATION — o runbook. O material de SRE fala nisso o tempo todo: alarme
 //        dispara, o runbook roda sozinho, ninguem acorda.
 //   INSTANCE INFORMATION — a resposta daquele chamado: a maquina so aparece se
@@ -44,11 +44,11 @@
     "AWS-RunShellScript": { tipo: "Command", plataforma: "Linux", descricao: "Roda um script de shell no Linux" },
     "AWS-RunPowerShellScript": { tipo: "Command", plataforma: "Windows", descricao: "Roda um script do PowerShell no Windows" },
     "AWS-UpdateSSMAgent": { tipo: "Command", plataforma: "Linux,Windows", descricao: "Atualiza o agente do SSM" },
-    "AWS-RestartEC2Instance": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Reinicia a instancia (runbook)" },
-    "AWS-StartEC2Instance": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Liga a instancia (runbook)" },
-    "AWS-StopEC2Instance": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Desliga a instancia (runbook)" },
+    "AWS-RestartEC2Instance": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Reinicia a instância (runbook)" },
+    "AWS-StartEC2Instance": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Liga a instância (runbook)" },
+    "AWS-StopEC2Instance": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Desliga a instância (runbook)" },
     "AWS-CreateSnapshot": { tipo: "Automation", plataforma: "Linux,Windows", descricao: "Tira snapshot do volume (runbook)" },
-    "SSM-SessionManagerRunShell": { tipo: "Session", plataforma: "Linux,Windows", descricao: "Preferencias da sessao do Session Manager" },
+    "SSM-SessionManagerRunShell": { tipo: "Session", plataforma: "Linux,Windows", descricao: "Preferencias da sessão do Session Manager" },
   };
 
   function instanciasDa(conta) {
@@ -60,8 +60,8 @@
     if (!achada) {
       throw new ErroCli(
         "An error occurred (InvalidInstanceId) when calling the " + op + " operation: Instances [[" + id + "]] not in a valid state for account " + (conta.contaId || "123456789012") + ".\n" +
-        "Na AWS de verdade esse erro quase sempre quer dizer uma de tres coisas: a maquina nao existe, o agente do SSM nao esta rodando nela, ou ela nao tem uma role com a politica AmazonSSMManagedInstanceCore.\n" +
-        "Veja quem esta registrado com: aws ssm describe-instance-information"
+        "Na AWS de verdade esse erro quase sempre quer dizer uma de três coisas: a máquina não existe, o agente do SSM não está rodando nela, ou ela não tem uma role com a política AmazonSSMManagedInstanceCore.\n" +
+        "Veja quem estÃ¡ registrado com: aws ssm describe-instance-information"
       );
     }
     return achada;
@@ -90,18 +90,18 @@
     if (/systemctl\s+status/.test(c)) return "● nginx.service - A high performance web server\n   Active: active (running) since Mon 2026-09-22 14:30:11 UTC; 5s ago";
     if (/^whoami/.test(c)) return "root";
     if (/^hostname/.test(c)) return "ip-10-0-1-47";
-    return "(comando executado; sem saida)";
+    return "(comando executado; sem saída)";
   }
 
   Object.assign(SERVICOS.ssm, {
-    // ---------- quem esta registrado ----------
+    // ---------- quem estÃ¡ registrado ----------
     "describe-instance-information": (conta) => {
       st(conta);
       const lista = instanciasDa(conta).filter((i) => i.estado === "running");
       if (!lista.length) {
         avisarClimb(
-          "Nenhuma maquina registrada no SSM. Na AWS de verdade este e O chamado mais comum do suporte: a instancia so aparece aqui " +
-          "se o AGENTE estiver rodando nela E ela tiver uma ROLE com a politica AmazonSSMManagedInstanceCore. Falta um dos dois em 9 de cada 10 casos."
+          "Nenhuma máquina registrada no SSM. Na AWS de verdade este e O chamado mais comum do suporte: a instância só aparece aqui " +
+          "se o AGENTE estiver rodando nela E ela tiver uma ROLE com a política AmazonSSMManagedInstanceCore. Falta um dos dois em 9 de cada 10 casos."
         );
         return "";
       }
@@ -131,7 +131,7 @@
       if (!DOCUMENTOS[documento]) {
         throw new ErroCli(
           "An error occurred (InvalidDocument) when calling the SendCommand operation: Document with name " + documento + " does not exist.\n" +
-          "Veja os disponiveis com: aws ssm list-documents"
+          "Veja os disponíveis com: aws ssm list-documents"
         );
       }
       if (DOCUMENTOS[documento].tipo !== "Command") {
@@ -160,8 +160,8 @@
         saidas: ids.map((i) => ({ instancia: i, saida: linhas.map(saidaDe).join("\n") })),
       };
       avisarClimb(
-        "Rodou em " + ids.length + (ids.length === 1 ? " maquina" : " maquinas") + " sem abrir SSH em nenhuma. E a diferenca entre operar e improvisar: " +
-        "fica registrado QUEM rodou, O QUE rodou, QUANDO e qual foi a saida — e o mesmo comando serve pra 1 ou pra 300 maquinas."
+        "Rodou em " + ids.length + (ids.length === 1 ? " maquina" : " maquinas") + " sem abrir SSH em nenhuma. É a diferença entre operar e improvisar: " +
+        "fica registrado QUEM rodou, O QUE rodou, QUANDO e qual foi a saída — e o mesmo comando serve pra 1 ou pra 300 máquinas."
       );
       return js({ Command: {
         CommandId: id, DocumentName: documento, InstanceIds: ids,
@@ -203,9 +203,9 @@
           fora.push(inv);
         }
       }
-      if (!fora.length) { avisarClimb("Nenhuma execucao encontrada. Confira o --command-id."); return ""; }
+      if (!fora.length) { avisarClimb("Nenhuma execução encontrada. Confira o --command-id."); return ""; }
       if (flags.details === undefined) {
-        avisarClimb("Sem --details voce ve so o estado de cada maquina. Com --details vem a SAIDA de cada uma junto.");
+        avisarClimb("Sem --details você ve só o estado de cada máquina. Com --details vem a SAÍDA de cada uma junto.");
       }
       return js({ CommandInvocations: fora });
     },
@@ -235,12 +235,12 @@
       const s = st(conta);
       const alvo = String(exigirFlag(flags, "target"));
       exigirInstancia(conta, alvo, "StartSession");
-      const id = "gabriel-" + hexAleatorio(17);
+      const id = "climb-" + hexAleatorio(17); // o usuario do simulador e "climb" (e o que iam get-user devolve)
       s.sessoes[id] = { id: id, alvo: alvo, estado: "Connected", quando: Date.now(), motivo: flags.reason ? String(flags.reason) : "" };
       avisarClimb(
-        "Terminal aberto na maquina SEM porta 22 liberada, sem chave .pem e sem bastion — o trafego sai pelo agente, de dentro pra fora. " +
-        "Fora do simulador este comando exige o plugin `session-manager-plugin` instalado na sua maquina; sem ele a AWS devolve " +
-        "\"SessionManagerPlugin is not found\", que e o primeiro tropeco de todo mundo."
+        "Terminal aberto na máquina SEM porta 22 liberada, sem chave .pem e sem bastion — o trafego sai pelo agente, de dentro pra fora. " +
+        "Fora do simulador este comando éxige o plugin `session-manager-plugin` instalado na sua máquina; sem ele a AWS devolve " +
+        "\"SessionManagerPlugin is not found\", que é o primeiro tropeço de todo mundo."
       );
       return js({ SessionId: id, TokenValue: "AAEAA" + hexAleatorio(40), StreamUrl: "wss://ssmmessages." + REGIAO(conta) + ".amazonaws.com/v1/data-channel/" + id });
     },
@@ -253,7 +253,7 @@
       const querAtiva = estado === "Active";
       const lista = Object.values(s.sessoes).filter((x) => (x.estado === "Connected") === querAtiva);
       if (!lista.length) {
-        avisarClimb(querAtiva ? "Nenhuma sessao aberta agora." : "Nenhuma sessao encerrada no historico ainda.");
+        avisarClimb(querAtiva ? "Nenhuma sessão aberta agora." : "Nenhuma sessão encerrada no histórico ainda.");
         return "";
       }
       return js({ Sessions: lista.map((x) => ({
@@ -269,7 +269,7 @@
       const sessao = s.sessoes[id];
       if (!sessao) throw new ErroCli("An error occurred (DoesNotExistException) when calling the TerminateSession operation: Session " + id + " does not exist.");
       sessao.estado = "Terminated";
-      avisarClimb("Sessao encerrada — e ela fica no historico. Auditoria de quem entrou em qual maquina e exatamente o motivo de a empresa fechar a porta 22 e usar isto.");
+      avisarClimb("Sessão encerrada — e ela fica no histórico. Auditoria de quem entrou em qual máquina é exatamente o motivo de a empresa fechar a porta 22 e usar isto.");
       return js({ SessionId: id });
     },
 
@@ -292,8 +292,8 @@
       const id = uuid();
       s.automacoes[id] = { id: id, documento: documento, estado: "Success", alvos: alvos, quando: Date.now() };
       avisarClimb(
-        "Runbook disparado. A diferenca pro send-command: automation e um PROCEDIMENTO com passos, condicao e rollback — " +
-        "e um alarme do CloudWatch pode disparar ele sozinho. E assim que o plantao deixa de ser acordado pro que ja se sabe consertar."
+        "Runbook disparado. A diferença pro send-command: automation é um PROCEDIMENTO com passos, condição e rollback — " +
+        "e um alarme do CloudWatch pode disparar ele sozinho. É assim que o plantão deixa de ser acordado pro que já se sabe consertar."
       );
       return js({ AutomationExecutionId: id });
     },
@@ -301,7 +301,7 @@
       const s = st(conta);
       const lista = Object.values(s.automacoes);
       if (!lista.length) {
-        avisarClimb("Nenhuma automacao executada. Dispare uma com: aws ssm start-automation-execution --document-name AWS-RestartEC2Instance --parameters InstanceId=<id>");
+        avisarClimb("Nenhuma automação executada. Dispare uma com: aws ssm start-automation-execution --document-name AWS-RestartEC2Instance --parameters InstanceId=<id>");
         return "";
       }
       return js({ AutomationExecutionMetadataList: lista.map((a) => ({
@@ -344,7 +344,7 @@
         });
       }
       if (invalidos.length) {
-        avisarClimb("Repare: nome que nao existe NAO derruba a chamada — ele volta em InvalidParameters. Isso e de proposito, pra um parametro faltando nao quebrar o boot da aplicacao inteira.");
+        avisarClimb("Repare: nome que não existe NÃO derruba a chamada — ele volta em InvalidParameters. Isso é de propósito, pra um parâmetro faltando não quebrar o boot da aplicação inteira.");
       }
       return js({ Parameters: achados, InvalidParameters: invalidos });
     },
@@ -356,7 +356,7 @@
       const decifrar = flags["with-decryption"] !== undefined;
       const hist = (p.historico && p.historico.length) ? p.historico : [{ versao: p.versao, valor: p.valor, tipo: p.tipo }];
       if (hist.length > 1) {
-        avisarClimb("Cada put-parameter --overwrite cria uma VERSAO nova, e as antigas ficam. E assim que se responde 'quem mudou a config e quebrou a producao' — e como se volta pro valor anterior.");
+        avisarClimb("Cada put-parameter --overwrite cria uma VERSÃO nova, e as antigas ficam. É assim que se responde 'quem mudou a config e quebrou a produção' — e como se volta pro valor anterior.");
       }
       return js({ Parameters: hist.map((h) => ({
         Name: nome, Type: h.tipo, Version: h.versao,
@@ -475,16 +475,16 @@
 
   // --- Parameter Store: ler vários, e o histórico ---
   at("ssm-3", [
-    d("ssmc-multi1", "ssm", 2, 80, "A aplicacao sobe e pede tres configs",
-      "No boot, a aplicacao precisa da URL da API e da senha do banco — e fazer uma chamada por config e desperdicio. Leia <b>/loja/url-api</b> e <b>/loja/inexistente</b> numa unica chamada e repare no que a AWS faz com o nome que nao existe.",
-      ["Existe a versao no plural do get-parameter, e ela recebe os nomes separados por espaco.", "Repare na resposta: a AWS separa o que achou do que nao achou, em vez de falhar tudo."],
+    d("ssmc-multi1", "ssm", 2, 80, "A aplicação sobe e pede três configs",
+      "No boot, a aplicação precisa da URL da API e da senha do banco — e fazer uma chamada por config e desperdicio. Leia <b>/loja/url-api</b> e <b>/loja/inexistente</b> numa única chamada e repare no que a AWS faz com o nome que não existe.",
+      ["Existe a versão no plural do get-parameter, e ela recebe os nomes separados por espaço.", "Repare na resposta: a AWS separa o que achou do que não achou, em vez de falhar tudo."],
       ["aws ssm get-parameters --names /loja/url-api /loja/inexistente"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "get-parameters")),
   ]);
   at("ssm-6", [
-    d("ssmc-hist1", "ssm", 3, 110, "Quem mudou a config e quebrou a producao?",
-      "A loja parou de responder depois que alguem mexeu num parametro. Reproduza: troque o <b>/loja/url-api</b> pra <b>https://api-nova.loja.com</b> (a AWS exige <b>--overwrite</b> pra sobrescrever) e depois veja <b>todas as versoes</b> do parametro pra descobrir qual era o valor antigo.",
-      ["Sem --overwrite a AWS recusa a sobrescrita, de proposito — e uma trava contra mudar config sem querer.", "Cada sobrescrita cria uma VERSAO, e existe um comando que lista o historico delas."],
+    d("ssmc-hist1", "ssm", 3, 110, "Quem mudou a config e quebrou a produção?",
+      "A loja parou de responder depois que alguém mexeu num parâmetro. Reproduza: troque o <b>/loja/url-api</b> pra <b>https://api-nova.loja.com</b> (a AWS exige <b>--overwrite</b> pra sobrescrever) e depois veja <b>todas as versões</b> do parâmetro pra descobrir qual era o valor antigo.",
+      ["Sem --overwrite a AWS recusa a sobrescrita, de propósito — é uma trava contra mudar config sem querer.", "Cada sobrescrita cria uma VERSÃO, e existe um comando que lista o histórico delas."],
       ["aws ssm put-parameter --name /loja/url-api --value https://api-nova.loja.com --type String --overwrite",
         "aws ssm get-parameter-history --name /loja/url-api"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "get-parameter-history") &&
@@ -493,54 +493,54 @@
 
   // --- operar a frota: Run Command, Session Manager e runbook ---
   at("cob-ssm-1", [
-    d("ssmc-inv1", "ssm", 2, 80, "A maquina nao aparece na lista",
-      "Chamado classico do suporte: <i>\"nao consigo abrir sessao na instancia\"</i>. Antes de qualquer coisa, veja <b>quais maquinas o SSM enxerga</b> — se ela nao estiver nessa lista, o problema nao e a sessao.",
-      ["A pergunta nao e sobre a EC2: e sobre quem esta REGISTRADO no Systems Manager.", "Repare no PingStatus da resposta: Online quer dizer que o agente esta conversando."],
+    d("ssmc-inv1", "ssm", 2, 80, "A máquina não aparece na lista",
+      "Chamado clássico do suporte: <i>\"não consigo abrir sessão na instância\"</i>. Antes de qualquer coisa, veja <b>quais máquinas o SSM enxerga</b> — se ela não estiver nessa lista, o problema não é a sessão.",
+      ["A pergunta não é sobre a EC2: é sobre quem estÃ¡ REGISTRADO no Systems Manager.", "Repare no PingStatus da resposta: Online quer dizer que o agente estÃ¡ conversando."],
       ["aws ssm describe-instance-information"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "describe-instance-information")),
-    d("ssmc-doc1", "ssm", 2, 70, "O que o SSM ja sabe fazer sozinho",
-      "Antes de escrever script, veja o que a AWS ja traz pronto. Liste os <b>documentos</b> disponiveis e repare que eles se dividem em dois tipos que nao se misturam: <b>Command</b> e <b>Automation</b>.",
-      ["Documento e o script pronto que o SSM executa.", "Um `list-…` simples resolve; da pra estreitar por tipo com --filters."],
+    d("ssmc-doc1", "ssm", 2, 70, "O que o SSM já sabe fazer sozinho",
+      "Antes de escrever script, veja o que a AWS já traz pronto. Liste os <b>documentos</b> disponíveis e repare que eles se dividem em dois tipos que não se misturam: <b>Command</b> e <b>Automation</b>.",
+      ["Documento é o script pronto que o SSM executa.", "Um `list-…` simples resolve; dá pra estreitar por tipo com --filters."],
       ["aws ssm list-documents"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "list-documents")),
     d("ssmc-run1", "ssm", 3, 130, "Rode um comando sem abrir SSH",
-      "Precisa saber ha quanto tempo o servidor esta de pe, mas a porta 22 esta fechada e voce nao tem a chave .pem. Suba uma instancia <b>t3.micro</b> e rode <b>uptime</b> nela pelo Run Command, com o documento <b>AWS-RunShellScript</b>.",
-      ["A forma de rodar script em maquina gerenciada e `send-command`, e ela pede QUAL documento usar.", "O comando em si vai dentro de `--parameters`, na forma `commands=<comando>`.", "Guarde o CommandId que volta: a saida nao vem aqui."],
+      "Precisa saber há quanto tempo o servidor está de pé, mas a porta 22 está fechada e você não tem a chave .pem. Suba uma instância <b>t3.micro</b> e rode <b>uptime</b> nela pelo Run Command, com o documento <b>AWS-RunShellScript</b>.",
+      ["A forma de rodar script em máquina gerenciada é `send-command`, e ela pede QUAL documento usar.", "O comando em si vai dentro de `--parameters`, na forma `commands=<comando>`.", "Guarde o CommandId que volta: a saída não vem aqui."],
       ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.micro",
         "aws ssm send-command --instance-ids <id-da-instância> --document-name AWS-RunShellScript --parameters commands=uptime"],
       (c) => comandos(c).some((x) => x.documento === "AWS-RunShellScript")),
-    d("ssmc-run2", "ssm", 3, 110, "E ai, deu certo?",
-      "O send-command devolveu um protocolo, nao a resposta. Busque a <b>saida</b> do comando que voce acabou de rodar naquela maquina. <small>(e por isso que operar pela CLI da certo em 300 maquinas: a saida de cada uma fica guardada)</small>",
-      ["Voce precisa de duas coisas: qual envio e qual maquina.", "Liste primeiro os envios pra achar o CommandId; a saida vem em StandardOutputContent."],
+    d("ssmc-run2", "ssm", 3, 110, "E aí, deu certo?",
+      "O send-command devolveu um protocolo, não a resposta. Busque a <b>saída</b> do comando que você acabou de rodar naquela máquina. <small>(é por isso que operar pela CLI da certo em 300 máquinas: a saída de cada uma fica guardada)</small>",
+      ["Você precisa de duas coisas: qual envio e qual máquina.", "Liste primeiro os envios pra achar o CommandId; a saída vem em StandardOutputContent."],
       ["aws ssm list-commands",
         "aws ssm get-command-invocation --command-id <comando-id> --instance-id <id-da-instância>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "get-command-invocation")),
     d("ssmc-run3", "ssm", 3, 120, "Reinicie o nginx da frota",
-      "O time relatou que o site voltou a responder depois de reiniciar o nginx na mao — e isso precisa virar rotina, nao heroismo. Rode <b>systemctl restart nginx</b> na instancia, deixando o comentario <b>reinicio nginx chamado 4412</b>.",
-      ["Mesmo send-command do exercicio anterior, outro conteudo em commands — e aqui o comando tem espacos, entao vai entre aspas.", "O `--comment` nao e enfeite: e ele que aparece no historico dizendo POR QUE aquilo foi rodado.", "No fim, veja maquina por maquina como foi: `list-command-invocations --details`."],
+      "O time relatou que o site voltou a responder depois de reiniciar o nginx na mão — e isso precisa virar rotina, não heroísmo. Rode <b>systemctl restart nginx</b> na instância, deixando o comentario <b>reinicio nginx chamado 4412</b>.",
+      ["Mesmo send-command do exercicio anterior, outro conteúdo em commands — e aqui o comando tem espaços, então vai entre aspas.", "O `--comment` não é enfeite: é ele que aparece no histórico dizendo POR QUE aquilo foi rodado.", "No fim, veja máquina por máquina como foi: `list-command-invocations --details`."],
       ["aws ssm send-command --instance-ids <id-da-instância> --document-name AWS-RunShellScript --parameters commands=\"systemctl restart nginx\" --comment \"reinicio nginx chamado 4412\"",
         "aws ssm list-command-invocations --command-id <comando-id> --details"],
       (c) => comandos(c).some((x) => String(x.comentario).indexOf("4412") >= 0)),
     d("ssmc-sess1", "ssm", 3, 130, "Terminal sem porta 22, sem chave, sem bastion",
-      "A empresa fechou a porta 22 em todas as maquinas — e fez certo. Abra uma <b>sessao</b> na instancia declarando o motivo <b>investigar-disco-cheio</b>.",
-      ["Aqui a maquina nao e --instance-ids: este comando chama de `--target`.", "O `--reason` fica registrado na auditoria; e o que transforma acesso em rastro."],
+      "A empresa fechou a porta 22 em todas as máquinas — e fez certo. Abra uma <b>sessão</b> na instância declarando o motivo <b>investigar-disco-cheio</b>.",
+      ["Aqui a máquina não é --instance-ids: este comando chama de `--target`.", "O `--reason` fica registrado na auditoria; é o que transforma acesso em rastro."],
       ["aws ssm start-session --target <id-da-instância> --reason investigar-disco-cheio"],
       (c) => sessoes(c).some((s) => String(s.motivo).indexOf("disco-cheio") >= 0)),
-    d("ssmc-sess2", "ssm", 3, 100, "Quem esta dentro das maquinas agora?",
-      "Auditoria de seguranca: liste as sessoes <b>abertas neste momento</b> e encerre a que voce deixou aberta. <small>(sessao esquecida e terminal vivo numa maquina de producao)</small>",
-      ["O `--state` e obrigatorio e so aceita dois valores: Active ou History.", "Pra encerrar, use o SessionId que apareceu na listagem."],
+    d("ssmc-sess2", "ssm", 3, 100, "Quem está dentro das máquinas agora?",
+      "Auditoria de segurança: liste as sessões <b>abertas neste momento</b> e encerre a que você deixou aberta. <small>(sessão esquecida e terminal vivo numa máquina de produção)</small>",
+      ["O `--state` é obrigatório e só aceita dois valores: Active ou History.", "Pra encerrar, use o SessionId que apareceu na listagem."],
       ["aws ssm describe-sessions --state Active",
         "aws ssm terminate-session --session-id <sessao-id>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "terminate-session") &&
         sessoes(c).some((s) => s.estado === "Terminated")),
     d("ssmc-auto1", "ssm", 3, 140, "O runbook que roda sozinho de madrugada",
-      "A instancia trava toda semana de madrugada e alguem precisa reiniciar. Isso e trabalho de <b>runbook</b>, nao de gente acordada: dispare o documento <b>AWS-RestartEC2Instance</b> na instancia. <small>(depois, um alarme do CloudWatch pode disparar isso sozinho)</small>",
-      ["Documento de Automation NAO roda com send-command — tem comando proprio, e o simulador te avisa se trocar.", "O alvo vai em `--parameters`, na forma `InstanceId=<id>`."],
+      "A instância trava toda semana de madrugada e alguém precisa reiniciar. Isso é trabalho de <b>runbook</b>, não de gente acordada: dispare o documento <b>AWS-RestartEC2Instance</b> na instância. <small>(depois, um alarme do CloudWatch pode disparar isso sozinho)</small>",
+      ["Documento de Automation NÃO roda com send-command — tem comando próprio, e o simulador te avisa se trocar.", "O alvo vai em `--parameters`, na forma `InstanceId=<id>`."],
       ["aws ssm start-automation-execution --document-name AWS-RestartEC2Instance --parameters InstanceId=<id-da-instância>"],
       (c) => automacoes(c).some((a) => a.documento === "AWS-RestartEC2Instance")),
     d("ssmc-auto2", "ssm", 3, 110, "Em que passo o runbook parou?",
-      "De manha, o relatorio: o runbook rodou mesmo? Liste as automacoes executadas e repare que cada uma tem <b>passos</b> — e no passo que falha que mora a resposta.",
-      ["Primeiro liste o que rodou; o detalhe passo a passo e outro comando, da familia `get-…`.", "O identificador aqui e o AutomationExecutionId, nao o CommandId."],
+      "De manhã, o relatório: o runbook rodou mesmo? Liste as automações executadas e repare que cada uma tem <b>passos</b> — e no passo que falha que mora a resposta.",
+      ["Primeiro liste o que rodou; o detalhe passo a passo e outro comando, da família `get-…`.", "O identificador aqui é o AutomationExecutionId, não o CommandId."],
       ["aws ssm describe-automation-executions"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ssm", "describe-automation-executions")),
   ]);

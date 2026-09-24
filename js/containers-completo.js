@@ -13,9 +13,9 @@
 //   ECS RUN-TASK — tarefa avulsa, que e como se roda migracao de banco, job
 //        noturno e script pontual. Diferente do service, que mantem N de pe.
 //   ECS EXECUTE-COMMAND — "entrar no container" sem SSH. E o Session Manager
-//        do container, e a resposta pro chamado "preciso ver o que ta la dentro".
+//        do container, e a resposta pro chamado "preciso ver o que ta lá dentro".
 //   ECS DESCRIBE-TASKS / STOP-TASK — por que a tarefa morreu. O campo
-//        stoppedReason e onde mora a resposta, e quase ninguem sabe olhar.
+//        stoppedReason é onde mora a resposta, e quase ninguem sabe olhar.
 //   ECR BATCH-DELETE-IMAGE — registro cresce pra sempre e ninguem vigia; e
 //        custo silencioso. Junto com a politica de ciclo de vida do repo.
 //   ECR SET-REPOSITORY-POLICY — soltar o repo pra outra conta, que e o caso
@@ -91,7 +91,7 @@
       const quantidade = Number(flags.count || 1);
       const tipo = flags["launch-type"] ? String(flags["launch-type"]) : "EC2";
       if (["EC2", "FARGATE", "EXTERNAL"].indexOf(tipo) < 0) {
-        throw new ErroCli("An error occurred (InvalidParameterException) when calling the RunTask operation: launch type invalido: " + tipo + ". Use EC2, FARGATE ou EXTERNAL.");
+        throw new ErroCli("An error occurred (InvalidParameterException) when calling the RunTask operation: launch type inválido: " + tipo + ". Use EC2, FARGATE ou EXTERNAL.");
       }
       const criadas = [];
       for (let i = 0; i < quantidade; i++) {
@@ -104,8 +104,8 @@
         criadas.push(conta.ecs.execucoes[id]);
       }
       avisarClimb(
-        "run-task roda a tarefa UMA VEZ e acabou — e assim que se faz migracao de banco, job noturno e script pontual. " +
-        "O create-service e o contrario: ele MANTEM N copias de pe e sobe outra se uma morrer. Confundir os dois e classico."
+        "run-task roda a tarefa UMA VEZ e acabou — é assim que se faz migração de banco, job noturno e script pontual. " +
+        "O create-service é o contrário: ele MANTÉM N cópias de pé e sobe outra se uma morrer. Confundir os dois e clássico."
       );
       return js({ tasks: criadas.map((t) => ({
         taskArn: "arn:aws:ecs:" + REGIAO(conta) + ":" + CONTA_ID(conta) + ":task/" + nomeCluster + "/" + t.id,
@@ -137,8 +137,8 @@
         throw new ErroCli("An error occurred (InvalidParameterException) when calling the DescribeTasks operation: Task not found.");
       }
       avisarClimb(
-        "Quando a tarefa morre, a resposta esta no campo **stoppedReason** — e quase ninguem sabe olhar ai. " +
-        "Os classicos sao OutOfMemoryError (o container estourou a memoria da task definition) e o exit code do processo."
+        "Quando a tarefa morre, a resposta está no campo stoppedReason — e quase ninguém sabe olhar aí. " +
+        "Os clássicos são OutOfMemoryError (o container estourou a memória da task definition) e o exit code do processo."
       );
       return js({ tasks: achadas.map((t) => ({
         taskArn: "arn:aws:ecs:" + REGIAO(conta) + ":" + CONTA_ID(conta) + ":task/" + nomeCluster + "/" + t.id,
@@ -155,7 +155,7 @@
       if (!t) throw new ErroCli("An error occurred (InvalidParameterException) when calling the StopTask operation: The referenced task was not found.");
       t.estado = "STOPPED";
       t.motivo = flags.reason ? String(flags.reason) : "Task stopped by user";
-      avisarClimb("O `--reason` nao e enfeite: ele fica gravado na tarefa e aparece pro proximo que for investigar por que aquilo parou.");
+      avisarClimb("O `--reason` não é enfeite: ele fica gravado na tarefa e aparece pro próximo que for investigar por que aquilo parou.");
       return js({ task: { taskArn: id, lastStatus: "STOPPED", stoppedReason: t.motivo } });
     },
     "execute-command": (conta, pos, flags) => {
@@ -167,13 +167,13 @@
         throw new ErroCli(
           "An error occurred (InvalidParameterException) when calling the ExecuteCommand operation: The execute command failed because execute command was not enabled when the task was run.\n" +
           "O ECS Exec precisa ser ligado NA HORA de rodar a tarefa: aws ecs run-task ... --enable-execute-command\n" +
-          "Nao da pra ligar depois: a tarefa tem que ser recriada."
+          "Não dá pra ligar depois: a tarefa tem que ser recriada."
         );
       }
       const comando = String(exigirFlag(flags, "command"));
       avisarClimb(
-        "Isto e o Session Manager do container: voce entra no que esta rodando SEM SSH, sem porta aberta e sem imagem com sshd. " +
-        "Precisa de tres coisas: exec ligado na tarefa, permissao de SSM na role da TAREFA (nao a de execucao) e o session-manager-plugin instalado."
+        "Isto é o Session Manager do container: você entra no que está rodando SEM SSH, sem porta aberta e sem imagem com sshd. " +
+        "Precisa de três coisas: exec ligado na tarefa, permissão de SSM na role da TAREFA (não a de execução) e o session-manager-plugin instalado."
       );
       return js({ clusterArn: nomeCluster, taskArn: id, interactive: flags.interactive !== undefined, session: { sessionId: "ecs-execute-command-" + hexAleatorio(16), tokenValue: hexAleatorio(40) }, __comando: comando });
     },
@@ -195,7 +195,7 @@
     },
     "describe-task-definition": (conta, pos, flags) => {
       const [familia, t] = tarefaDe(conta, exigirFlag(flags, "task-definition"), "DescribeTaskDefinition");
-      avisarClimb("Task definition e IMUTAVEL: cada registro cria uma revisao nova e as antigas ficam. E por isso que voltar atras num deploy e apontar o service pra revisao anterior — nao e recriar nada.");
+      avisarClimb("Task definition e IMUTAVEL: cada registro cria uma revisão nova e as antigas ficam. É por isso que voltar atrás num deploy e apontar o service pra revisão anterior — não é recriar nada.");
       return js({ taskDefinition: {
         taskDefinitionArn: "arn:aws:ecs:" + REGIAO(conta) + ":" + CONTA_ID(conta) + ":task-definition/" + familia + ":" + t.revisao,
         family: familia, revision: t.revisao, status: t.inativa ? "INACTIVE" : "ACTIVE",
@@ -205,7 +205,7 @@
     "deregister-task-definition": (conta, pos, flags) => {
       const [familia, t] = tarefaDe(conta, exigirFlag(flags, "task-definition"), "DeregisterTaskDefinition");
       t.inativa = true;
-      avisarClimb("INACTIVE nao e apagado: a revisao continua existindo e um service que ja aponta pra ela continua rodando. O que muda e que voce nao consegue mais criar coisa NOVA em cima dela.");
+      avisarClimb("INACTIVE não é apagado: a revisão continua existindo e um service que já aponta pra ela continua rodando. O que muda é que você não consegue mais criar coisa NOVA em cima dela.");
       return js({ taskDefinition: { family: familia, revision: t.revisao, status: "INACTIVE" } });
     },
   });
@@ -230,16 +230,16 @@
         apagadas.push({ imageTag: t });
       }
       avisarClimb(
-        "Registro de imagem cresce PRA SEMPRE e ninguem vigia: cada build deixa uma camada la, e voce paga por GB. " +
-        "Apagar na mao resolve hoje; a politica de ciclo de vida do repositorio resolve pra sempre."
+        "Registro de imagem cresce PRA SEMPRE e ninguém vigia: cada build deixa uma camada lá, e você paga por GB. " +
+        "Apagar na mão resolve hoje; a política de ciclo de vida do repositório resolve pra sempre."
       );
       return js({ imageIds: apagadas, failures: falhas });
     },
     "get-authorization-token": (conta) => {
       st(conta);
       avisarClimb(
-        "Este e o comando de BAIXO nivel: ele devolve o token em base64 no formato AWS:senha. O `get-login-password` que voce ja usou " +
-        "e o atalho que ja decodifica e entrega so a senha, pronta pro `docker login --password-stdin`. Os dois existem; o segundo e o do dia a dia."
+        "Este é o comando de BAIXO nível: ele devolve o token em base64 no formato AWS:senha. O `get-login-password` que você já usou " +
+        "e o atalho que já decodifica e entrega só a senha, pronta pro `docker login --password-stdin`. Os dois existem; o segundo é o do dia a dia."
       );
       return js({ authorizationData: [{
         authorizationToken: (typeof btoa === "function" ? btoa("AWS:" + hexAleatorio(40)) : "QVdTOg" + hexAleatorio(40)),
@@ -254,8 +254,8 @@
         ? { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { AWS: "arn:aws:iam::111122223333:root" }, Action: ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"] }] }
         : texto;
       avisarClimb(
-        "Politica de repositorio e como a conta de PRODUCAO baixa a imagem que a conta de BUILD publicou. " +
-        "Empresa seria tem conta separada por ambiente, e e assim que a imagem atravessa a fronteira sem ninguem copiar nada."
+        "Política de repositório e como a conta de PRODUÇÃO baixa a imagem que a conta de BUILD publicou. " +
+        "Empresa seria tem conta separada por ambiente, e é assim que a imagem atravessa a fronteira sem ninguém copiar nada."
       );
       return js({ repositoryName: nome, policyText: JSON.stringify(r.politica) });
     },
@@ -271,7 +271,7 @@
       if (!r.cicloVida && !r.lifecycle && !r.politicaCiclo) {
         throw new ErroCli(
           "An error occurred (LifecyclePolicyNotFoundException) when calling the GetLifecyclePolicy operation: Lifecycle policy does not exist for the repository with name '" + nome + "'\n" +
-          "Sem ela, o repositorio guarda toda imagem de todo build, pra sempre."
+          "Sem ela, o repositório guarda toda imagem de todo build, pra sempre."
         );
       }
       return js({ repositoryName: nome, lifecyclePolicyText: JSON.stringify(r.cicloVida || r.lifecycle || r.politicaCiclo) });
@@ -282,8 +282,8 @@
         throw new ErroCli("An error occurred (LifecyclePolicyNotFoundException) when calling the DeleteLifecyclePolicy operation: Lifecycle policy does not exist for the repository with name '" + nome + "'");
       }
       delete r.cicloVida; delete r.lifecycle; delete r.politicaCiclo;
-      avisarClimb("Politica removida: a partir de agora nada e apagado sozinho e o repositorio volta a crescer sem limite.");
-      return okSilencioso("Politica de ciclo de vida removida de \"" + nome + "\".");
+      avisarClimb("Política removida: a partir de agora nada é apagado sozinho e o repositório volta a crescer sem limite.");
+      return okSilencioso("Política de ciclo de vida removida de \"" + nome + "\".");
     },
   });
 
@@ -319,7 +319,7 @@
       const id = hexAleatorio(8) + "-" + hexAleatorio(4) + "-" + hexAleatorio(12);
       conta.eks.atualizacoes = conta.eks.atualizacoes || {};
       conta.eks.atualizacoes[id] = { id: id, cluster: cluster, tipo: "ConfigUpdate", estado: "Successful" };
-      avisarClimb("Escalar o nodegroup muda quantas MAQUINAS existem. Nao confunda com escalar pods (HPA), que e do Kubernetes: sem no sobrando, o pod novo fica Pending e ninguem entende por que.");
+      avisarClimb("Escalar o nodegroup muda quantas MÁQUINAS existem. Não confunda com escalar pods (HPA), que é do Kubernetes: sem nó sobrando, o pod novo fica Pending e ninguém entende por que.");
       return js({ update: { id: id, status: "InProgress", type: "ConfigUpdate" } });
     },
     "update-cluster-version": (conta, pos, flags) => {
@@ -332,7 +332,7 @@
       if (!(novo > atual)) {
         throw new ErroCli(
           "An error occurred (InvalidParameterException) when calling the UpdateClusterVersion operation: Cluster is already at version " + c.versao + ".\n" +
-          "O EKS so sobe de versao, e de UMA menor por vez — nao da pra pular da 1.28 pra 1.31 nem voltar atras."
+          "O EKS só sobe de versão, e de UMA menor por vez — não dá pra pular da 1.28 pra 1.31 nem voltar atrás."
         );
       }
       if (novo - atual > 0.011) {
@@ -346,8 +346,8 @@
       conta.eks.atualizacoes = conta.eks.atualizacoes || {};
       conta.eks.atualizacoes[id] = { id: id, cluster: nome, tipo: "VersionUpdate", estado: "Successful" };
       avisarClimb(
-        "Atualizar o cluster e so METADE: o control plane sobe aqui, mas os NOS continuam na versao antiga e o Kubernetes so aguenta " +
-        "duas menores de diferenca. Upgrade de verdade e control plane, depois nodegroup, depois os addons — nessa ordem."
+        "Atualizar o cluster e só METADE: o control plane sobe aqui, mas os NOS continuam na versão antiga e o Kubernetes só aguenta " +
+        "duas menores de diferença. Upgrade de verdade e control plane, depois nodegroup, depois os addons — nessa ordem."
       );
       return js({ update: { id: id, status: "InProgress", type: "VersionUpdate", params: [{ type: "Version", value: versao }] } });
     },
@@ -365,7 +365,7 @@
       if (!c) throw new ErroCli("An error occurred (ResourceNotFoundException) when calling the ListAddons operation: No cluster found for name: " + cluster + ".");
       c.addons = c.addons || [];
       if (!c.addons.length) {
-        avisarClimb("Nenhum addon gerenciado. Cluster novo ja vem com vpc-cni, coredns e kube-proxy rodando — mas como addon GERENCIADO pela AWS (que atualiza sozinho) so depois que voce declara.");
+        avisarClimb("Nenhum addon gerenciado. Cluster novo já vem com vpc-cni, coredns e kube-proxy rodando — mas como addon GERENCIADO pela AWS (que atualiza sozinho) só depois que você declara.");
         return "";
       }
       return js({ addons: c.addons.map((a) => a.nome) });
@@ -379,8 +379,8 @@
       const CONHECIDOS = ["vpc-cni", "coredns", "kube-proxy", "aws-ebs-csi-driver", "aws-efs-csi-driver", "amazon-cloudwatch-observability"];
       if (CONHECIDOS.indexOf(nome) < 0) {
         throw new ErroCli(
-          "An error occurred (InvalidParameterException) when calling the CreateAddon operation: Addon " + nome + " nao e um addon gerenciado.\n" +
-          "Disponiveis no simulador: " + CONHECIDOS.join(", ")
+          "An error occurred (InvalidParameterException) when calling the CreateAddon operation: Addon " + nome + " não é um addon gerenciado.\n" +
+          "Disponíveis no simulador: " + CONHECIDOS.join(", ")
         );
       }
       c.addons = c.addons || [];
@@ -390,8 +390,8 @@
       c.addons.push({ nome: nome, versao: flags["addon-version"] ? String(flags["addon-version"]) : "v1.19.0-eksbuild.1" });
       avisarClimb(
         nome === "aws-ebs-csi-driver"
-          ? "Sem o driver de EBS o pod que pede disco fica PENDING pra sempre, e o erro nao diz isso. E a pegadinha n1 de quem sobe cluster novo e tenta rodar banco nele."
-          : "Addon gerenciado e a AWS cuidando da versao e da compatibilidade daquele componente — em vez de voce aplicar YAML na mao a cada upgrade."
+          ? "Sem o driver de EBS o pod que pede disco fica PENDING pra sempre, e o erro não diz isso. É a pegadinha n1 de quem sobe cluster novo e tenta rodar banco nele."
+          : "Addon gerenciado é a AWS cuidando da versão e da compatibilidade daquele componente — em vez de você aplicar YAML na mão a cada upgrade."
       );
       return js({ addon: { addonName: nome, clusterName: cluster, status: "CREATING", addonVersion: c.addons[c.addons.length - 1].versao } });
     },
@@ -411,7 +411,7 @@
         "Lista as tarefas do cluster.\n\nO --desired-status STOPPED é o que importa quando algo quebra: é\nele que mostra as que morreram — e que somem da lista padrão."),
       "ecs.describe-tasks": M(
         "aws ecs describe-tasks --cluster meu-cluster --tasks <arn-ou-id>",
-        "O detalhe da tarefa. Quando ela morre, a resposta está no campo\n**stoppedReason** — e quase ninguém sabe olhar aí.\n\nOs clássicos: OutOfMemoryError (o contêiner estourou a memória\ndeclarada na task definition) e o exit code do processo."),
+        "O detalhe da tarefa. Quando ela morre, a resposta está no campo\nstoppedReason — e quase ninguém sabe olhar aí.\n\nOs clássicos: OutOfMemoryError (o contêiner estourou a memória\ndeclarada na task definition) e o exit code do processo."),
       "ecs.stop-task": M(
         "aws ecs stop-task --cluster meu-cluster --task <id> --reason \"deploy errado\"",
         "Para a tarefa. O --reason fica gravado e aparece pro próximo que for\ninvestigar por que aquilo parou."),
@@ -513,74 +513,74 @@
   const clusterEks = (c, n) => ((c.eks || {}).clusters || {})[n];
 
   at("cob-ecs-2", [
-    d("ctn-run1", "ecs", 3, 130, "A migracao do banco nao e um servico",
-      "Antes do deploy, alguem precisa rodar a migracao do banco — UMA vez, nao ficar de pe pra sempre. Crie o cluster <b>producao-app</b>, registre a receita <b>migracao-banco</b> e rode ela como tarefa avulsa em <b>FARGATE</b>, ja com o <b>acesso por exec ligado</b>.",
-      ["O `create-service` manteria a migracao rodando pra sempre e ela se repetiria — nao e isso que voce quer.", "O que roda uma vez e acabou e o `run-task`. A receita vem do arquivo pronto `file://tarefa-web.json` (digite `ls`).", "O `--enable-execute-command` precisa ir AGORA: nao da pra ligar depois sem recriar a tarefa."],
+    d("ctn-run1", "ecs", 3, 130, "A migração do banco não é um serviço",
+      "Antes do deploy, alguém precisa rodar a migração do banco — UMA vez, não ficar de pé pra sempre. Crie o cluster <b>producao-app</b>, registre a receita <b>migracao-banco</b> e rode ela como tarefa avulsa em <b>FARGATE</b>, já com o <b>acesso por exec ligado</b>.",
+      ["O `create-service` manteria a migração rodando pra sempre e ela se repetiria — não é isso que você quer.", "O que roda uma vez e acabou e o `run-task`. A receita vem do arquivo pronto `file://tarefa-web.json` (digite `ls`).", "O `--enable-execute-command` precisa ir AGORA: não dá pra ligar depois sem recriar a tarefa."],
       ["aws ecs create-cluster --cluster-name producao-app",
         "aws ecs register-task-definition --family migracao-banco --container-definitions file://tarefa-web.json",
         "aws ecs run-task --cluster producao-app --task-definition migracao-banco --launch-type FARGATE --enable-execute-command"],
       (c) => execs(c).some((t) => t.familia === "migracao-banco" && t.exec)),
     d("ctn-exec1", "ecs", 3, 140, "Preciso ver o que tem dentro do container",
-      "A migracao travou e voce precisa olhar de dentro. Liste as tarefas do <b>producao-app</b> e <b>entre</b> no container <b>migracao</b> rodando <b>/bin/sh</b> em modo interativo. <small>(sem SSH, sem porta aberta, sem imagem com sshd)</small>",
-      ["Primeiro liste pra pegar o id da tarefa.", "O comando que entra no container e o `execute-command` — e ele exige `--interactive`.", "Se der erro dizendo que exec nao estava ligado, e porque a tarefa nasceu sem a flag: recriar e o unico jeito."],
+      "A migração travou e você precisa olhar de dentro. Liste as tarefas do <b>producao-app</b> e <b>entre</b> no container <b>migração</b> rodando <b>/bin/sh</b> em modo interativo. <small>(sem SSH, sem porta aberta, sem imagem com sshd)</small>",
+      ["Primeiro liste pra pegar o id da tarefa.", "O comando que entra no container é o `execute-command` — e ele exige `--interactive`.", "Se der erro dizendo que exec não estava ligado, é porque a tarefa nasceu sem a flag: recriar é o único jeito."],
       ["aws ecs list-tasks --cluster producao-app",
         "aws ecs execute-command --cluster producao-app --task <tarefa-id> --container migracao --command \"/bin/sh\" --interactive"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ecs", "execute-command")),
     d("ctn-diag1", "ecs", 3, 130, "Por que a tarefa morreu?",
-      "A tarefa parou sozinha e o time quer saber por que. <b>Pare</b> a tarefa deixando o motivo <b>investigacao-de-memoria</b>, e depois <b>descreva</b> ela pra ver o campo que guarda a causa. <small>(o stoppedReason e onde mora a resposta — e quase ninguem sabe olhar ai)</small>",
-      ["Parar pede o cluster e o id da tarefa, mais o `--reason`.", "Depois, o `describe-tasks` mostra o stoppedReason e o exitCode do container.", "OutOfMemoryError quer dizer que o container estourou a memoria declarada na task definition."],
+      "A tarefa parou sozinha e o time quer saber por que. <b>Pare</b> a tarefa deixando o motivo <b>investigacao-de-memoria</b>, e depois <b>descreva</b> ela pra ver o campo que guarda a causa. <small>(o stoppedReason é onde mora a resposta — e quase ninguém sabe olhar aí)</small>",
+      ["Parar pede o cluster e o id da tarefa, mais o `--reason`.", "Depois, o `describe-tasks` mostra o stoppedReason e o exitCode do container.", "OutOfMemoryError quer dizer que o container estourou a memória declarada na task definition."],
       ["aws ecs stop-task --cluster producao-app --task <tarefa-id> --reason investigacao-de-memoria",
         "aws ecs describe-tasks --cluster producao-app --tasks <tarefa-id>"],
       (c) => execs(c).some((t) => t.estado === "STOPPED" && String(t.motivo).indexOf("investigacao") >= 0)),
-    d("ctn-td1", "ecs", 3, 110, "Volte pra revisao anterior",
-      "Deploy ruim no ar. Voce nao precisa recriar nada: task definition e <b>imutavel</b> e as revisoes antigas continuam la. Veja a receita <b>migracao-banco</b> e depois marque ela como inativa, pra ninguem criar coisa nova em cima dela.",
-      ["Primeiro olhe o que tem dentro com o `describe-task-definition`.", "Marcar como inativa e `deregister-task-definition` — que NAO apaga: quem ja usa continua rodando."],
+    d("ctn-td1", "ecs", 3, 110, "Volte pra revisão anterior",
+      "Deploy ruim no ar. Você não precisa recriar nada: task definition e <b>imutavel</b> e as revisões antigas continuam lá. Veja a receita <b>migracao-banco</b> e depois marque ela como inativa, pra ninguém criar coisa nova em cima dela.",
+      ["Primeiro olhe o que tem dentro com o `describe-task-definition`.", "Marcar como inativa e `deregister-task-definition` — que NÃO apaga: quem já usa continua rodando."],
       ["aws ecs describe-task-definition --task-definition migracao-banco",
         "aws ecs deregister-task-definition --task-definition migracao-banco"],
       (c) => !!(((c.ecs || {}).tarefas || {})["migracao-banco"] || {}).inativa),
     d("ctn-cl1", "ecs", 3, 90, "O retrato do cluster",
-      "Reuniao daqui a cinco minutos e perguntaram quantas coisas estao rodando. Descreva o cluster <b>producao-app</b>: tarefas rodando, pendentes e servicos ativos numa linha so.",
-      ["A flag aqui e `--clusters`, no plural — da pra perguntar por varios de uma vez.", "Repare nos contadores: runningTasksCount, pendingTasksCount e activeServicesCount."],
+      "Reuniao daqui a cinco minutos e perguntaram quantas coisas estão rodando. Descreva o cluster <b>producao-app</b>: tarefas rodando, pendentes e serviços ativos numa linha só.",
+      ["A flag aqui é `--clusters`, no plural — dá pra perguntar por vários de uma vez.", "Repare nos contadores: runningTasksCount, pendingTasksCount e activeServicesCount."],
       ["aws ecs describe-clusters --clusters producao-app"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ecs", "describe-clusters")),
   ]);
 
   at("ecr-5", [
-    d("ctn-ecr1", "ecr", 3, 120, "O registro cresceu 400 GB sem ninguem ver",
-      "Cada build deixa uma imagem no repositorio, e voce paga por GB. Crie o repositorio <b>api-antiga</b> e apague as imagens <b>v1</b> e <b>v2</b> de uma vez. <small>(isso resolve hoje; a politica de ciclo de vida resolve pra sempre)</small>",
-      ["Apagar imagem e em LOTE: `batch-delete-image`.", "Cada imagem vai na forma `imageTag=<tag>`, separadas por espaco.", "A resposta separa o que foi apagado do que nao existia."],
+    d("ctn-ecr1", "ecr", 3, 120, "O registro cresceu 400 GB sem ninguém ver",
+      "Cada build deixa uma imagem no repositório, e você paga por GB. Crie o repositório <b>api-antiga</b> e apague as imagens <b>v1</b> e <b>v2</b> de uma vez. <small>(isso resolve hoje; a política de ciclo de vida resolve pra sempre)</small>",
+      ["Apagar imagem é em LOTE: `batch-delete-image`.", "Cada imagem vai na forma `imageTag=<tag>`, separadas por espaço.", "A resposta separa o que foi apagado do que não existia."],
       ["aws ecr create-repository --repository-name api-antiga",
         "aws ecr batch-delete-image --repository-name api-antiga --image-ids imageTag=v1 imageTag=v2"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ecr", "batch-delete-image") && !!repo(c, "api-antiga")),
-    d("ctn-ecr2", "ecr", 3, 130, "Producao precisa puxar a imagem que o build publicou",
-      "A empresa tem conta separada por ambiente: o build publica numa conta, producao roda noutra. Libere o repositorio <b>api-antiga</b> pra outra conta com uma politica de repositorio, e confira o que ficou valendo.",
-      ["Politica de repositorio se grava com `set-repository-policy`, e o documento vai em `--policy-text`.", "Use o arquivo pronto: `file://politica-publica.json` (digite `ls` pra ver).", "Depois existe o `get-…` do mesmo par."],
+    d("ctn-ecr2", "ecr", 3, 130, "Produção precisa puxar a imagem que o build publicou",
+      "A empresa tem conta separada por ambiente: o build publica numa conta, produção roda noutra. Libere o repositório <b>api-antiga</b> pra outra conta com uma política de repositório, e confira o que ficou valendo.",
+      ["Política de repositório se grava com `set-repository-policy`, e o documento vai em `--policy-text`.", "Use o arquivo pronto: `file://politica-publica.json` (digite `ls` pra ver).", "Depois existe o `get-…` do mesmo par."],
       ["aws ecr set-repository-policy --repository-name api-antiga --policy-text file://politica-publica.json",
         "aws ecr get-repository-policy --repository-name api-antiga"],
       (c) => !!((repo(c, "api-antiga") || {}).politica)),
     d("ctn-ecr3", "ecr", 3, 100, "O login por baixo do atalho",
-      "Voce ja usou o <b>get-login-password</b>. Agora veja o que ele faz por baixo: peca o <b>token de autorizacao</b> cru e repare que ele vem em base64, no formato <code>AWS:senha</code>.",
-      ["E o `get-authorization-token`, sem argumento nenhum.", "O token vale 12 horas — e por isso que pipeline de CI faz login a cada execucao."],
+      "Você já usou o <b>get-login-password</b>. Agora veja o que ele faz por baixo: peça o <b>token de autorizacao</b> cru e repare que ele vem em base64, no formato <code>AWS:senha</code>.",
+      ["É o `get-authorization-token`, sem argumento nenhum.", "O token vale 12 horas — é por isso que pipeline de CI faz login a cada execução."],
       ["aws ecr get-authorization-token"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ecr", "get-authorization-token")),
   ]);
 
   at("eks-6", [
-    d("ctn-eks1", "eks", 3, 120, "Os pods estao Pending: faltou maquina",
-      "O time subiu mais replicas e metade dos pods ficou <b>Pending</b> — nao e problema do Kubernetes, e falta de no. Veja o grupo de nos <b>nos-app</b> do cluster <b>cluster-k8s</b> e aumente a escala pra <b>minSize=2, maxSize=6, desiredSize=4</b>.",
-      ["Primeiro olhe como esta, com o `describe-nodegroup`.", "Mudar a escala e `update-nodegroup-config`, e a configuracao vai em `--scaling-config`.", "A forma e `minSize=<n>,maxSize=<n>,desiredSize=<n>` — e o desejado precisa caber entre os dois."],
+    d("ctn-eks1", "eks", 3, 120, "Os pods estão Pending: faltou máquina",
+      "O time subiu mais replicas e metade dos pods ficou <b>Pending</b> — não é problema do Kubernetes, e falta de no. Veja o grupo de nos <b>nos-app</b> do cluster <b>cluster-k8s</b> e aumente a escala pra <b>minSize=2, maxSize=6, desiredSize=4</b>.",
+      ["Primeiro olhe como estÃ¡, com o `describe-nodegroup`.", "Mudar a escala e `update-nodegroup-config`, e a configuração vai em `--scaling-config`.", "A forma e `minSize=<n>,maxSize=<n>,desiredSize=<n>` — e o desejado precisa caber entre os dois."],
       ["aws eks describe-nodegroup --cluster-name cluster-k8s --nodegroup-name nos-app",
         "aws eks update-nodegroup-config --cluster-name cluster-k8s --nodegroup-name nos-app --scaling-config minSize=2,maxSize=6,desiredSize=4"],
       (c) => (((ngDe(c, "cluster-k8s", "nos-app") || {}).escala) || {}).desiredSize === 4),
     d("ctn-eks2", "eks", 3, 140, "Upgrade do cluster, na ordem certa",
-      "A versao do cluster vai sair de suporte. Suba o <b>cluster-k8s</b> da <b>1.31</b> pra <b>1.32</b> e acompanhe a atualizacao. <small>(e so metade do trabalho: os nos continuam na versao antiga — a ordem e control plane ➜ nodegroup ➜ addons)</small>",
-      ["O EKS so SOBE, e de uma versao menor por vez: nao da pra pular da 1.31 pra 1.33 nem voltar atras.", "O comando devolve um id de atualizacao; existe um `describe-…` pra acompanhar."],
+      "A versão do cluster vai sair de suporte. Suba o <b>cluster-k8s</b> da <b>1.31</b> pra <b>1.32</b> e acompanhe a atualização. <small>(e só metade do trabalho: os nos continuam na versão antiga — a ordem e control plane ➜ nodegroup ➜ addons)</small>",
+      ["O EKS só SOBE, e de uma versão menor por vez: não dá pra pular da 1.31 pra 1.33 nem voltar atrás.", "O comando devolve um id de atualização; existe um `describe-…` pra acompanhar."],
       ["aws eks update-cluster-version --name cluster-k8s --kubernetes-version 1.32",
         "aws eks describe-update --name cluster-k8s --update-id <update-id>"],
       (c) => (clusterEks(c, "cluster-k8s") || {}).versao === "1.32"),
     d("ctn-eks3", "eks", 3, 130, "O pod que pede disco fica Pending pra sempre",
-      "Cluster novo nao sabe criar volume sozinho: sem o driver de EBS, todo pod que pede disco fica <b>Pending</b> e o erro nao explica por que. Liste os addons do <b>cluster-k8s</b> e instale o <b>aws-ebs-csi-driver</b>.",
-      ["Addon gerenciado e a AWS cuidando da versao e da compatibilidade daquele componente.", "Primeiro liste o que ja existe, depois crie o que falta.", "O nome do addon e exatamente `aws-ebs-csi-driver`."],
+      "Cluster novo não sabe criar volume sozinho: sem o driver de EBS, todo pod que pede disco fica <b>Pending</b> e o erro não explica por que. Liste os addons do <b>cluster-k8s</b> e instale o <b>aws-ebs-csi-driver</b>.",
+      ["Addon gerenciado é a AWS cuidando da versão e da compatibilidade daquele componente.", "Primeiro liste o que já existe, depois crie o que falta.", "O nome do addon é exatamente `aws-ebs-csi-driver`."],
       ["aws eks list-addons --cluster-name cluster-k8s",
         "aws eks create-addon --cluster-name cluster-k8s --addon-name aws-ebs-csi-driver"],
       (c) => (((clusterEks(c, "cluster-k8s") || {}).addons) || []).some((a) => a.nome === "aws-ebs-csi-driver")),

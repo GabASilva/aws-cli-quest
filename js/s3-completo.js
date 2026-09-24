@@ -74,10 +74,10 @@
       const todos = Object.values(b.bloqueio).every(Boolean);
       avisarClimb(
         todos
-          ? "As quatro travas ligadas: nem ACL nem politica conseguem tornar \"" + nome + "\" publico, mesmo que alguem tente. E o item numero um de todo vazamento de S3 que virou noticia."
-          : "ATENCAO: alguma trava ficou DESLIGADA. Isso e escolha valida (site estatico precisa disso), mas so vale se for consciente — o padrao da AWS hoje e ligar as quatro."
+          ? "As quatro travas ligadas: nem ACL nem política conseguem tornar \"" + nome + "\" público, mesmo que alguém tente. É o item número um de todo vazamento de S3 que virou noticia."
+          : "ATENÇÃO: alguma trava ficou DESLIGADA. Isso é escolha válida (site estático precisa disso), mas só vale se for consciente — o padrão da AWS hoje e ligar as quatro."
       );
-      return okSilencioso("Bloqueio de acesso publico ajustado em \"" + nome + "\".");
+      return okSilencioso("Bloqueio de acesso público ajustado em \"" + nome + "\".");
     },
     "get-public-access-block": (conta, pos, flags) => {
       const [nome, b] = bucketDe(conta, flags, "GetPublicAccessBlock");
@@ -100,7 +100,7 @@
       const prefixo = campo(doc, "Prefix");
       if (classe && CLASSES.indexOf(classe) < 0) {
         throw new ErroCli(
-          "An error occurred (MalformedXML) when calling the PutBucketLifecycleConfiguration operation: classe de armazenamento invalida: " + classe + ".\n" +
+          "An error occurred (MalformedXML) when calling the PutBucketLifecycleConfiguration operation: classe de armazenamento inválida: " + classe + ".\n" +
           "Validas: " + CLASSES.join(", ")
         );
       }
@@ -112,8 +112,8 @@
       }
       b.cicloVida = { id: campo(doc, "ID") || "regra-1", dias: Number(dias), classe: classe || "GLACIER", prefixo: prefixo, expira: /Expiration/i.test(doc) };
       avisarClimb(
-        "Agora o que esta em \"" + (prefixo || "todo o bucket") + "\" desce sozinho pra " + (classe || "GLACIER") + " depois de " + dias + " dias. " +
-        "E a maior economia de S3 que existe e quase ninguem configura: o arquivo continua la, so custa uma fracao — em troca de demorar mais pra ler."
+        "Agora o que está em \"" + (prefixo || "todo o bucket") + "\" desce sozinho pra " + (classe || "GLACIER") + " depois de " + dias + " dias. " +
+        "É a maior economia de S3 que existe e quase ninguém configura: o arquivo continua lá, só custa uma fração — em troca de demorar mais pra ler."
       );
       return okSilencioso("Regra de ciclo de vida gravada em \"" + nome + "\".");
     },
@@ -140,15 +140,15 @@
         .concat((pos || []).map(String)).join(" ");
       const alg = campo(doc, "SSEAlgorithm") || "AES256";
       if (["AES256", "aws:kms"].indexOf(alg) < 0 && alg !== "aws") {
-        throw new ErroCli("An error occurred (InvalidArgument) when calling the PutBucketEncryption operation: algoritmo invalido: " + alg + ". Use AES256 ou aws:kms.");
+        throw new ErroCli("An error occurred (InvalidArgument) when calling the PutBucketEncryption operation: algoritmo inválido: " + alg + ". Use AES256 ou aws:kms.");
       }
       b.criptografia = { algoritmo: alg === "aws" ? "aws:kms" : alg };
       avisarClimb(
         b.criptografia.algoritmo === "AES256"
-          ? "AES256 e a chave gerenciada pela propria AWS (SSE-S3): liga e esquece, sem custo. Serve pra quase tudo."
-          : "aws:kms usa uma chave SUA do KMS: da pra auditar quem decifrou o que e revogar acesso ao conteudo sem mexer no bucket. Custa por chamada."
+          ? "AES256 e a chave gerenciada pela própria AWS (SSE-S3): liga e esquece, sem custo. Serve pra quase tudo."
+          : "aws:kms usa uma chave SUA do KMS: dá pra auditar quem decifrou o que e revogar acesso ao conteúdo sem mexer no bucket. Custa por chamada."
       );
-      return okSilencioso("Criptografia padrao ligada em \"" + nome + "\" (" + b.criptografia.algoritmo + ").");
+      return okSilencioso("Criptografia padrão ligada em \"" + nome + "\" (" + b.criptografia.algoritmo + ").");
     },
     "get-bucket-encryption": (conta, pos, flags) => {
       const [, b] = bucketDe(conta, flags, "GetBucketEncryption");
@@ -162,7 +162,7 @@
     "list-object-versions": (conta, pos, flags) => {
       const [nome, b] = bucketDe(conta, flags, "ListObjectVersions");
       if (b.versionamento !== "Enabled") {
-        avisarClimb("O versionamento deste bucket nao esta ligado, entao so existe uma versao de cada objeto. Ligue com: aws s3api put-bucket-versioning --bucket " + nome + " --versioning-configuration Status=Enabled");
+        avisarClimb("O versionamento deste bucket não está ligado, então só existe uma versão de cada objeto. Ligue com: aws s3api put-bucket-versioning --bucket " + nome + " --versioning-configuration Status=Enabled");
       }
       const versoes = [], marcadores = [];
       for (const [chave, obj] of Object.entries(b.objetos)) {
@@ -174,8 +174,8 @@
       if (!versoes.length && !marcadores.length) { avisarClimb("Bucket vazio."); return ""; }
       if (marcadores.length) {
         avisarClimb(
-          "Repare nos DeleteMarkers: com versionamento ligado, apagar NAO apaga. A AWS poe uma lapide por cima e o conteudo continua la — " +
-          "e continua na fatura. E tambem por isso que da pra desfazer: some a lapide e o arquivo volta."
+          "Repare nos DeleteMarkers: com versionamento ligado, apagar NÃO apaga. A AWS poe uma lápide por cima e o conteúdo continua lá — " +
+          "e continua na fatura. É também por isso que dá pra desfazer: some a lápide e o arquivo volta."
         );
       }
       return js({ Versions: versoes, DeleteMarkers: marcadores });
@@ -189,10 +189,10 @@
       if (!obj) {
         throw new ErroCli(
           "An error occurred (404) when calling the HeadObject operation: Not Found\n" +
-          "Repare: o head devolve so o CODIGO, sem mensagem — e assim mesmo na AWS. 404 e nao existe, 403 e existe mas voce nao pode ver."
+          "Repare: o head devolve só o CÓDIGO, sem mensagem — é assim mesmo na AWS. 404 é não existe, 403 é existe mas você não pode ver."
         );
       }
-      avisarClimb("O head pergunta SEM baixar: tamanho, tipo e data. Num arquivo de 4 GB a diferenca e entre um instante e a transferencia inteira (que voce paga).");
+      avisarClimb("O head pergunta SEM baixar: tamanho, tipo e data. Num arquivo de 4 GB a diferença é entre um instante e a transferência inteira (que você paga).");
       return js({
         ContentLength: obj.tamanho, LastModified: obj.enviadoEm,
         ContentType: /\.(html|htm)$/.test(chave) ? "text/html" : (/\.json$/.test(chave) ? "application/json" : "binary/octet-stream"),
@@ -202,13 +202,13 @@
     },
     "head-bucket": (conta, pos, flags) => {
       const [nome] = bucketDe(conta, flags, "HeadBucket");
-      avisarClimb("Resposta vazia e SUCESSO aqui: o bucket existe e voce tem acesso. E o teste de permissao mais barato que existe — em script, vale mais que qualquer list.");
-      return okSilencioso("Bucket \"" + nome + "\" existe e esta acessivel.");
+      avisarClimb("Resposta vazia é SUCESSO aqui: o bucket existe e você tem acesso. É o teste de permissão mais barato que existe — em script, vale mais que qualquer list.");
+      return okSilencioso("Bucket \"" + nome + "\" existe e esta acessível.");
     },
     "get-bucket-location": (conta, pos, flags) => {
       bucketDe(conta, flags, "GetBucketLocation");
       const r = REGIAO(conta);
-      avisarClimb("Regiao importa: transferencia entre regioes CUSTA, e latencia de bucket do outro lado do mundo aparece no tempo de resposta da sua aplicacao.");
+      avisarClimb("Região importa: transferência entre regiões CUSTA, e latência de bucket do outro lado do mundo aparece no tempo de resposta da sua aplicação.");
       return js({ LocationConstraint: r === "us-east-1" ? null : r });
     },
 
@@ -254,10 +254,10 @@
       }
       const classe = flags["storage-class"] ? String(flags["storage-class"]) : undefined;
       if (classe && CLASSES.indexOf(classe) < 0) {
-        throw new ErroCli("An error occurred (InvalidStorageClass) when calling the CopyObject operation: classe invalida: " + classe + ".");
+        throw new ErroCli("An error occurred (InvalidStorageClass) when calling the CopyObject operation: classe inválida: " + classe + ".");
       }
       bd.objetos[chave] = { tamanho: bo.objetos[chaveOrigem].tamanho, enviadoEm: typeof dataFormatada === "function" ? dataFormatada() : new Date().toISOString(), classe: classe };
-      avisarClimb("A copia acontece DENTRO da AWS: o arquivo nao desce pra sua maquina e nao sobe de novo. Em arquivo grande isso e a diferenca entre segundos e horas — e entre pagar transferencia ou nao.");
+      avisarClimb("A copia acontece DENTRO da AWS: o arquivo não desce pra sua máquina e não sobe de novo. Em arquivo grande isso é a diferença entre segundos e horas — e entre pagar transferência ou não.");
       return js({ CopyObjectResult: { ETag: "\"" + hexAleatorio(32) + "\"", LastModified: new Date().toISOString() } });
     },
     "delete-objects": (conta, pos, flags) => {
@@ -278,7 +278,7 @@
         if (b.versionamento === "Enabled") b.versoes[k] = { versao: hexAleatorio(16), apagado: true };
         apagadas.push({ Key: k, DeleteMarker: b.versionamento === "Enabled" });
       }
-      avisarClimb("Ate 1.000 chaves por chamada. Apagar uma a uma um bucket com milhoes de objetos levaria dias — e cada chamada e cobrada.");
+      avisarClimb("Até 1.000 chaves por chamada. Apagar uma a uma um bucket com milhoes de objetos levaria dias — e cada chamada é cobrada.");
       return js({ Deleted: apagadas, Errors: erros });
     },
     "restore-object": (conta, pos, flags) => {
@@ -289,14 +289,14 @@
       if (String(obj.classe || "STANDARD").indexOf("GLACIER") < 0 && obj.classe !== "DEEP_ARCHIVE") {
         throw new ErroCli(
           "An error occurred (InvalidObjectState) when calling the RestoreObject operation: Restore is not allowed for the object's current storage class.\n" +
-          "So faz sentido restaurar o que esta em GLACIER ou DEEP_ARCHIVE — o resto ja esta disponivel."
+          "Só faz sentido restaurar o que está em GLACIER ou DEEP_ARCHIVE — o resto já esta disponível."
         );
       }
       const dias = campo([String(exigirFlag(flags, "restore-request"))].concat((pos || []).map(String)).join(" "), "Days") || "1";
       obj.restaurando = Number(dias);
       avisarClimb(
-        "Restaurar do Glacier NAO e instantaneo: leva de minutos a horas, dependendo do modo. E a copia fica disponivel so por " + dias +
-        (Number(dias) === 1 ? " dia" : " dias") + " — depois some de novo, e restaurar outra vez custa outra vez. Arquivo frio e barato pra guardar e caro pra ter pressa."
+        "Restaurar do Glacier NÃO e instantâneo: leva de minutos a horas, dependendo do modo. E a cópia fica disponível só por " + dias +
+        (Number(dias) === 1 ? " dia" : " dias") + " — depois some de novo, e restaurar outra vez custa outra vez. Arquivo frio é barato pra guardar e caro pra ter pressa."
       );
       return okSilencioso("Restauracao de \"" + chave + "\" iniciada (" + dias + " dia(s) disponivel).");
     },
@@ -304,8 +304,8 @@
       const [nome, b] = bucketDe(conta, flags, "DeleteBucketPolicy");
       if (!b.politica) throw new ErroCli("An error occurred (NoSuchBucketPolicy) when calling the DeleteBucketPolicy operation: The bucket policy does not exist");
       b.politica = null;
-      avisarClimb("Politica removida. Se ela era o que liberava o acesso publico do site, o site caiu agora — confira antes de apagar politica de bucket em producao.");
-      return okSilencioso("Politica do bucket \"" + nome + "\" removida.");
+      avisarClimb("Política removida. Se ela era o que liberava o acesso público do site, o site caiu agora — confira antes de apagar política de bucket em produção.");
+      return okSilencioso("Política do bucket \"" + nome + "\" removida.");
     },
   });
 
@@ -323,7 +323,7 @@
         return m ? { bucket: m[1], chave: m[2] } : null;
       };
       const o = parse(origem), dst = parse(destino);
-      if (!o) throw new ErroCli("O `mv` do simulador move entre caminhos s3://. Origem invalida: " + origem);
+      if (!o) throw new ErroCli("O `mv` do simulador move entre caminhos s3://. Origem inválida: " + origem);
       const bo = conta.s3.buckets[o.bucket];
       if (!bo || !(bo.objetos || {})[o.chave]) {
         throw new ErroCli("fatal error: An error occurred (404) when calling the HeadObject operation: Key \"" + o.chave + "\" does not exist");
@@ -335,7 +335,7 @@
       bd.objetos = bd.objetos || {};
       bd.objetos[chaveFinal] = bo.objetos[o.chave];
       delete bo.objetos[o.chave];
-      avisarClimb("Nao existe \"renomear\" no S3: o mv e uma copia seguida de um apagar. Por isso renomear um arquivo de 5 GB nao e instantaneo — e por isso o nome da chave importa desde o comeco.");
+      avisarClimb("Não existe \"renomear\" no S3: o mv é uma copia seguida de um apagar. Por isso renomear um arquivo de 5 GB não é instantâneo — e por isso o nome da chave importa desde o começo.");
       return "move: " + origem + " to " + destino;
     },
     presign: (conta, pos, flags) => {
@@ -349,11 +349,11 @@
       }
       const segundos = flags["expires-in"] !== undefined ? Number(flags["expires-in"]) : 3600;
       if (!(segundos > 0 && segundos <= 604800)) {
-        throw new ErroCli("An error occurred: --expires-in precisa estar entre 1 e 604800 segundos (7 dias, o maximo da AWS).");
+        throw new ErroCli("An error occurred: --expires-in precisa estar entre 1 e 604800 segundos (7 dias, o máximo da AWS).");
       }
       avisarClimb(
-        "Isto resolve o problema mais comum do S3: dar um arquivo privado pra alguem SEM tornar o bucket publico. " +
-        "O link carrega a assinatura e morre em " + segundos + " segundos. Cuidado: quem tiver o link acessa — ele e o segredo."
+        "Isto resolve o problema mais comum do S3: dar um arquivo privado pra alguém SEM tornar o bucket público. " +
+        "O link carrega a assinatura e morre em " + segundos + " segundos. Cuidado: quem tiver o link acessa — ele é o segredo."
       );
       return "https://" + m[1] + ".s3." + REGIAO(conta) + ".amazonaws.com/" + m[2] +
         "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=" + segundos +
@@ -417,7 +417,7 @@
         "Apaga até 1.000 chaves numa chamada.\n\nApagar uma a uma num bucket com milhões de objetos levaria dias — e\ncada chamada é cobrada. A resposta separa Deleted de Errors."),
       "s3api.restore-object": M(
         "aws s3api restore-object --bucket meu-bucket --key antigo.zip --restore-request Days=7",
-        "Tira do Glacier/Deep Archive uma cópia temporária.\n\nNÃO é instantâneo: leva de minutos a horas conforme o modo. E a\ncópia fica disponível só pelos dias pedidos — depois some, e\nrestaurar de novo custa de novo.\n\nArquivo frio é barato pra guardar e caro pra ter pressa."),
+        "Tira do Glacier/Deep Archive uma cópia temporária.\n\nNÃO é instantâneo: leva de minutos a horas conforme o modo. É a\ncópia fica disponível só pelos dias pedidos — depois some, e\nrestaurar de novo custa de novo.\n\nArquivo frio é barato pra guardar e caro pra ter pressa."),
       "s3api.delete-bucket-policy": M(
         "aws s3api delete-bucket-policy --bucket meu-bucket",
         "Remove a política do bucket.\n\nSe era ela que liberava o acesso público do site, o site cai agora.\nConfira com get-bucket-policy antes de apagar em produção."),
@@ -468,13 +468,13 @@
 
   at("s3-13", [
     d("s3c-mv1", "s3", 2, 80, "O arquivo subiu com o nome errado",
-      "O deploy mandou <b>relatorio.csv</b> pro bucket <b>docs-fiscais</b> com nome provisorio e agora precisa virar <b>fechamento-2026.csv</b>. Mova ele. <small>(spoiler: nao existe 'renomear' no S3 — o mv copia e apaga)</small>",
-      ["O comando tem duas letras e e o mesmo do Linux.", "Origem e destino sao os dois caminhos `s3://`, completos."],
+      "O deploy mandou <b>relatorio.csv</b> pro bucket <b>docs-fiscais</b> com nome provisório e agora precisa virar <b>fechamento-2026.csv</b>. Mova ele. <small>(spoiler: não existe 'renomear' no S3 — o mv copia e apaga)</small>",
+      ["O comando tem duas letras e e o mesmo do Linux.", "Origem e destino são os dois caminhos `s3://`, completos."],
       ["aws s3 mv s3://docs-fiscais/relatorio.csv s3://docs-fiscais/fechamento-2026.csv"],
       (c) => !!obj(c, "docs-fiscais", "fechamento-2026.csv") && !obj(c, "docs-fiscais", "relatorio.csv")),
     d("s3c-presign1", "s3", 2, 90, "O cliente quer o PDF, mas o bucket e privado",
-      "O contrato esta num bucket privado e o cliente precisa baixar — e tornar o bucket publico so por causa disso seria um erro grave. Crie <b>contratos-2026</b>, suba o <b>relatorio.csv</b> e gere um <b>link temporario</b> que expira em <b>900</b> segundos.",
-      ["Existe um comando do `aws s3` que assina uma URL temporaria pro objeto.", "O prazo vai em `--expires-in`, em segundos (o maximo da AWS sao 7 dias).", "Repare: quem tiver o link acessa — o link E o segredo."],
+      "O contrato estÃ¡ num bucket privado e o cliente precisa baixar — e tornar o bucket público só por causa disso seria um erro grave. Crie <b>contratos-2026</b>, suba o <b>relatorio.csv</b> e gere um <b>link temporário</b> que expira em <b>900</b> segundos.",
+      ["Existe um comando do `aws s3` que assina uma URL temporária pro objeto.", "O prazo vai em `--expires-in`, em segundos (o máximo da AWS são 7 dias).", "Repare: quem tiver o link acessa — o link E o segredo."],
       ["aws s3 mb s3://contratos-2026",
         "aws s3 cp relatorio.csv s3://contratos-2026/",
         "aws s3 presign s3://contratos-2026/relatorio.csv --expires-in 900"],
@@ -483,8 +483,8 @@
 
   at("cob-s3-3", [
     d("s3c-block1", "s3", 3, 140, "As quatro travas que evitam a manchete",
-      "Todo vazamento de S3 que virou noticia tem a mesma origem: bucket que ficou publico sem ninguem perceber. Ligue as <b>quatro travas</b> no <b>contratos-2026</b> e confira que ficaram valendo.",
-      ["Sao quatro chaves numa flag so, separadas por virgula — e as quatro comecam com Block, Ignore ou Restrict.", "Com as quatro ligadas, nem ACL nem politica conseguem expor o bucket, mesmo que alguem tente.", "Depois de gravar, existe o `get-…` correspondente."],
+      "Todo vazamento de S3 que virou noticia tem a mesma origem: bucket que ficou público sem ninguém perceber. Ligue as <b>quatro travas</b> no <b>contratos-2026</b> e confira que ficaram valendo.",
+      ["São quatro chaves numa flag só, separadas por virgula — e as quatro começam com Block, Ignore ou Restrict.", "Com as quatro ligadas, nem ACL nem política conseguem expor o bucket, mesmo que alguém tente.", "Depois de gravar, existe o `get-…` correspondente."],
       ["aws s3api put-public-access-block --bucket contratos-2026 --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true",
         "aws s3api get-public-access-block --bucket contratos-2026"],
       (c) => {
@@ -492,20 +492,20 @@
         return !!b.bloqueio && b.bloqueio.BlockPublicAcls === true && b.bloqueio.RestrictPublicBuckets === true;
       }),
     d("s3c-enc1", "s3", 3, 120, "A auditoria exige tudo cifrado",
-      "O contrato com o cliente exige criptografia em repouso. Ligue a <b>criptografia padrao</b> do <b>contratos-2026</b> com <b>AES256</b> — a chave gerenciada pela propria AWS, que nao custa nada.",
-      ["A configuracao vai em JSON na flag `--server-side-encryption-configuration`.", "A estrutura tem Rules ➜ ApplyServerSideEncryptionByDefault ➜ SSEAlgorithm.", "AES256 e a chave da AWS; `aws:kms` seria uma chave sua, auditavel e cobrada por chamada."],
+      "O contrato com o cliente exige criptografia em repouso. Ligue a <b>criptografia padrão</b> do <b>contratos-2026</b> com <b>AES256</b> — a chave gerenciada pela própria AWS, que não custa nada.",
+      ["A configuração vai em JSON na flag `--server-side-encryption-configuration`.", "A estrutura tem Rules ➜ ApplyServerSideEncryptionByDefault ➜ SSEAlgorithm.", "AES256 e a chave da AWS; `aws:kms` seria uma chave sua, auditável e cobrada por chamada."],
       ["aws s3api put-bucket-encryption --bucket contratos-2026 --server-side-encryption-configuration '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'",
         "aws s3api get-bucket-encryption --bucket contratos-2026"],
       (c) => (((bkt(c, "contratos-2026") || {}).criptografia) || {}).algoritmo === "AES256"),
     d("s3c-life1", "s3", 3, 150, "Log de 2019 na classe mais cara",
-      "O bucket de logs cresce sem parar e tudo esta na classe padrao — inclusive log que ninguem abre ha anos. Crie <b>logs-aplicacao</b> e configure o <b>ciclo de vida</b>: o que esta em <b>logs/</b> desce pro <b>GLACIER</b> depois de <b>30</b> dias.",
-      ["Ciclo de vida e uma REGRA que a AWS aplica sozinha todo dia — voce nao roda nada depois.", "O documento vai em JSON, com Rules ➜ Transitions ➜ Days e StorageClass.", "O Filter ➜ Prefix e o que limita a regra a uma pasta em vez do bucket inteiro."],
+      "O bucket de logs cresce sem parar e tudo está na classe padrão — inclusive log que ninguém abre há anos. Crie <b>logs-aplicacao</b> e configure o <b>ciclo de vida</b>: o que está em <b>logs/</b> desce pro <b>GLACIER</b> depois de <b>30</b> dias.",
+      ["Ciclo de vida é uma REGRA que a AWS aplica sozinha todo dia — você não roda nada depois.", "O documento vai em JSON, com Rules ➜ Transitions ➜ Days e StorageClass.", "O Filter ➜ Prefix e o que limita a regra a uma pasta em vez do bucket inteiro."],
       ["aws s3 mb s3://logs-aplicacao",
         "aws s3api put-bucket-lifecycle-configuration --bucket logs-aplicacao --lifecycle-configuration '{\"Rules\":[{\"ID\":\"arquivar\",\"Status\":\"Enabled\",\"Filter\":{\"Prefix\":\"logs/\"},\"Transitions\":[{\"Days\":30,\"StorageClass\":\"GLACIER\"}]}]}'"],
       (c) => (((bkt(c, "logs-aplicacao") || {}).cicloVida) || {}).classe === "GLACIER"),
-    d("s3c-ver1", "s3", 3, 130, "Apagar com versionamento nao apaga",
-      "Prove pra si mesmo: no bucket versionado, suba o <b>relatorio.csv</b>, apague ele e depois <b>liste as versoes</b>. Voce vai ver o arquivo continuar la, com uma lapide (DeleteMarker) por cima — e continuar na fatura.",
-      ["Primeiro ligue o versionamento com o put-bucket-versioning (Status=Enabled).", "Apagar em lote e `delete-objects`, com a lista em `Objects=[{Key=...}]`.", "O `list-object-versions` e o unico comando que mostra as lapides."],
+    d("s3c-ver1", "s3", 3, 130, "Apagar com versionamento não apaga",
+      "Prove pra si mesmo: no bucket versionado, suba o <b>relatorio.csv</b>, apague ele e depois <b>liste as versões</b>. Você vai ver o arquivo continuar lá, com uma lápide (DeleteMarker) por cima — e continuar na fatura.",
+      ["Primeiro ligue o versionamento com o put-bucket-versioning (Status=Enabled).", "Apagar em lote e `delete-objects`, com a lista em `Objects=[{Key=...}]`.", "O `list-object-versions` é o único comando que mostra as lápides."],
       ["aws s3 mb s3://arquivos-versionados",
         "aws s3api put-bucket-versioning --bucket arquivos-versionados --versioning-configuration Status=Enabled",
         "aws s3 cp relatorio.csv s3://arquivos-versionados/",
@@ -514,36 +514,36 @@
       (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "list-object-versions") &&
         !!(((bkt(c, "arquivos-versionados") || {}).versoes || {})["relatorio.csv"])),
     d("s3c-head1", "s3", 3, 100, "Qual o tamanho daquele arquivo de 4 GB?",
-      "Voce so precisa saber o tamanho e a data — baixar o arquivo inteiro pra descobrir seria absurdo (e voce paga a transferencia). Confira o <b>relatorio.csv</b> do <b>contratos-2026</b> sem baixar, e de passagem teste se o bucket existe e voce tem acesso.",
-      ["Existe uma familia de comandos que pergunta o cabecalho sem trazer o corpo.", "Sao dois: um pro objeto e outro pro bucket.", "No do bucket, resposta VAZIA e sucesso — e o teste de permissao mais barato que existe."],
+      "Você só precisa saber o tamanho e a data — baixar o arquivo inteiro pra descobrir seria absurdo (e você paga a transferência). Confira o <b>relatorio.csv</b> do <b>contratos-2026</b> sem baixar, e de passagem teste se o bucket existe e você tem acesso.",
+      ["Existe uma família de comandos que pergunta o cabeçalho sem trazer o corpo.", "São dois: um pro objeto e outro pro bucket.", "No do bucket, resposta VAZIA é sucesso — é o teste de permissão mais barato que existe."],
       ["aws s3api head-object --bucket contratos-2026 --key relatorio.csv",
         "aws s3api head-bucket --bucket contratos-2026"],
       (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "head-bucket")),
     d("s3c-copy1", "s3", 3, 120, "Copie 4 GB sem baixar 4 GB",
-      "Voce precisa de uma copia do <b>relatorio.csv</b> do <b>contratos-2026</b> dentro do <b>logs-aplicacao</b>, como <b>backup-contrato.csv</b>. Faca a copia acontecer <b>dentro da AWS</b> — sem o arquivo passar pela sua maquina.",
-      ["O `s3api copy-object` manda a AWS copiar internamente: nada desce e nada sobe.", "Repare no formato do `--copy-source`: e `<bucket>/<chave>`, SEM o s3:// na frente.", "O `--bucket` e o `--key` aqui sao o DESTINO."],
+      "Você precisa de uma copia do <b>relatorio.csv</b> do <b>contratos-2026</b> dentro do <b>logs-aplicacao</b>, como <b>backup-contrato.csv</b>. Faça a copia acontecer <b>dentro da AWS</b> — sem o arquivo passar pela sua máquina.",
+      ["O `s3api copy-object` manda a AWS copiar internamente: nada desce e nada sobe.", "Repare no formato do `--copy-source`: e `<bucket>/<chave>`, SEM o s3:// na frente.", "O `--bucket` e o `--key` aqui são o DESTINO."],
       ["aws s3api copy-object --bucket logs-aplicacao --key backup-contrato.csv --copy-source contratos-2026/relatorio.csv"],
       (c) => !!obj(c, "logs-aplicacao", "backup-contrato.csv")),
     d("s3c-tag1", "s3", 3, 100, "Quanto esse bucket custa pro time?",
-      "O relatorio de custo mostra o S3 num bolo so. Etiquete o <b>logs-aplicacao</b> com <b>Time=plataforma</b> e leia de volta. <small>(cuidado: este comando SUBSTITUI o conjunto inteiro de tags — nao existe 'adicionar uma')</small>",
+      "O relatório de custo mostra o S3 num bolo só. Etiquete o <b>logs-aplicacao</b> com <b>Time=plataforma</b> e leia de volta. <small>(cuidado: este comando SUBSTITUI o conjunto inteiro de tags — não existe 'adicionar uma')</small>",
       ["A tag vai numa estrutura chamada TagSet, em forma de lista.", "A forma e `--tagging 'TagSet=[{Key=<chave>,Value=<valor>}]'`."],
       ["aws s3api put-bucket-tagging --bucket logs-aplicacao --tagging 'TagSet=[{Key=Time,Value=plataforma}]'",
         "aws s3api get-bucket-tagging --bucket logs-aplicacao"],
       (c) => (((bkt(c, "logs-aplicacao") || {}).tags) || {}).Time === "plataforma"),
-    d("s3c-loc1", "s3", 3, 90, "Em que regiao esse bucket esta?",
-      "Antes de ligar uma aplicacao nova nele, descubra <b>onde</b> o <b>logs-aplicacao</b> fica. <small>(transferencia entre regioes custa, e latencia do outro lado do mundo aparece no tempo de resposta)</small>",
-      ["Existe um `get-…` so pra isso no s3api.", "Curiosidade real: se a resposta vier `null`, o bucket esta em us-east-1 — e assim mesmo na AWS."],
+    d("s3c-loc1", "s3", 3, 90, "Em que região esse bucket estÃ¡?",
+      "Antes de ligar uma aplicação nova nele, descubra <b>onde</b> o <b>logs-aplicacao</b> fica. <small>(transferência entre regiões custa, e latência do outro lado do mundo aparece no tempo de resposta)</small>",
+      ["Existe um `get-…` só pra isso no s3api.", "Curiosidade real: se a resposta vier `null`, o bucket está em us-east-1 — é assim mesmo na AWS."],
       ["aws s3api get-bucket-location --bucket logs-aplicacao"],
       (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "get-bucket-location")),
-    d("s3c-rest1", "s3", 3, 130, "Precisamos daquele arquivo de tres anos atras",
-      "O juridico pediu um arquivo que ja desceu pro Glacier. Copie o <b>relatorio.csv</b> pro <b>logs-aplicacao</b> como <b>antigo.csv</b> ja na classe <b>GLACIER</b> e peca a <b>restauracao</b> por <b>7</b> dias. <small>(nao e instantaneo — leva horas, e depois do prazo some de novo)</small>",
-      ["Da pra nascer direto na classe fria usando `--storage-class` no copy-object.", "Restaurar pede quantos dias a copia fica disponivel: `--restore-request Days=<n>`.", "Tentar restaurar algo que nao esta em Glacier devolve InvalidObjectState — o arquivo ja esta disponivel."],
+    d("s3c-rest1", "s3", 3, 130, "Precisamos daquele arquivo de três anos atrás",
+      "O jurídico pediu um arquivo que já desceu pro Glacier. Copie o <b>relatorio.csv</b> pro <b>logs-aplicacao</b> como <b>antigo.csv</b> já na classe <b>GLACIER</b> e peça a <b>restauração</b> por <b>7</b> dias. <small>(não é instantâneo — leva horas, e depois do prazo some de novo)</small>",
+      ["Dá pra nascer direto na classe fria usando `--storage-class` no copy-object.", "Restaurar pede quantos dias a copia fica disponível: `--restore-request Days=<n>`.", "Tentar restaurar algo que não está em Glacier devolve InvalidObjectState — o arquivo já esta disponível."],
       ["aws s3api copy-object --bucket logs-aplicacao --key antigo.csv --copy-source contratos-2026/relatorio.csv --storage-class GLACIER",
         "aws s3api restore-object --bucket logs-aplicacao --key antigo.csv --restore-request Days=7"],
       (c) => ((obj(c, "logs-aplicacao", "antigo.csv") || {}).restaurando) === 7),
-    d("s3c-pol1", "s3", 3, 110, "Revogue a politica que abria o bucket",
-      "O site antigo saiu do ar e a politica que liberava leitura publica continua valendo — permissao que sobra e incidente esperando. Recrie o cenario no bucket <b>site-aposentado</b>: ponha a politica publica nele, <b>leia</b> o que esta valendo e so entao <b>remova</b>.",
-      ["Primeiro olhe o que esta valendo com o `get-bucket-policy`: apagar politica sem ler e como apagar regra de firewall no escuro.", "O comando de remover e o `delete-…` do mesmo par.", "A politica vem do arquivo pronto: `file://politica-publica.json` (digite `ls` pra ver)."],
+    d("s3c-pol1", "s3", 3, 110, "Revogue a política que abria o bucket",
+      "O site antigo saiu do ar e a política que liberava leitura publica continua valendo — permissão que sobra e incidente esperando. Recrie o cenario no bucket <b>site-aposentado</b>: ponha a política publica nele, <b>leia</b> o que está valendo e só então <b>remova</b>.",
+      ["Primeiro olhe o que está valendo com o `get-bucket-policy`: apagar política sem ler e como apagar regra de firewall no escuro.", "O comando de remover é o `delete-…` do mesmo par.", "A política vem do arquivo pronto: `file://politica-publica.json` (digite `ls` pra ver)."],
       ["aws s3 mb s3://site-aposentado",
         "aws s3api put-bucket-policy --bucket site-aposentado --policy file://politica-publica.json",
         "aws s3api get-bucket-policy --bucket site-aposentado",

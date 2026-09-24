@@ -42,20 +42,22 @@
 
   // ===================== SQS =====================
   // create-queue — onde a fila entra no dia a dia, e dois cenários de fixação
-  at("sqs-2", [
-    d("psqs-cq1", "sqs", 1, 50, "O app de entrega não pode travar",
+  // Fixacao de create-queue DEPOIS do send-message, e nao logo apos o sqs-2:
+  // a trilha e paga e as 3 primeiras sao a amostra gratis. Com a fixacao na
+  // posicao 3 a amostra virava list + create + create de novo, e o aluno nao
+  // chegava ao send-message, que e a parte que mostra pra que fila serve.
+  at("sqs-3", [
+    d("psqs-cq1", "sqs", 2, 50, "O app de entrega não pode travar",
       "No seu app de delivery, confirmar o pedido e chamar o entregador são duas coisas: se a segunda demora, o cliente fica olhando a telinha girar. A fila resolve — o pedido é aceito na hora e o despacho acontece atrás. Crie a fila <b>entregas-app</b>.",
       ["Fila serve pra desacoplar: quem produz não espera quem consome.", "Criar é `create-queue`, e o nome vai em `--queue-name`."],
       ["aws sqs create-queue --queue-name entregas-app"],
       (c) => !!fila(c, "entregas-app")),
-    d("psqs-cq2", "sqs", 1, 50, "E-mail de boas-vindas não pode se perder",
+    d("psqs-cq2", "sqs", 2, 50, "E-mail de boas-vindas não pode se perder",
       "Todo cadastro novo dispara um e-mail de boas-vindas. Se o servidor de e-mail estiver fora do ar, o cadastro não pode falhar junto. Crie a fila <b>emails-boas-vindas</b> pra segurar esses envios.",
       ["A fila guarda a tarefa até alguém conseguir executá-la — é isso que evita perder o e-mail.", "Mesma forma da anterior, trocando o nome da fila."],
       ["aws sqs create-queue --queue-name emails-boas-vindas"],
       (c) => !!fila(c, "emails-boas-vindas")),
-  ]);
-  // send-message — a mensagem é o pedido de trabalho
-  at("sqs-3", [
+    // send-message — a mensagem é o pedido de trabalho
     d("psqs-sm1", "sqs", 2, 60, "O pedido da marmita entra na fila",
       "A cozinha do restaurante lê a fila pra saber o que preparar. Crie a fila <b>pedidos-marmita</b> e mande o primeiro pedido: <b>marmita 42</b>.",
       ["São dois comandos: primeiro a fila existe, depois a mensagem entra.", "O texto da mensagem vai em `--message-body`, entre aspas.", "A URL da fila é a que o create-queue devolveu."],
@@ -143,20 +145,19 @@
 
   // ===================== SNS =====================
   // create-topic — o tópico é o megafone, não o destinatário
-  at("sns-2", [
-    d("psns-ct1", "sns", 1, 50, "Um aviso, muitos interessados",
+  // Mesmo motivo do SQS: fixacao fora das 3 primeiras (amostra gratis).
+  at("sns-3", [
+    d("psns-ct1", "sns", 2, 50, "Um aviso, muitos interessados",
       "Quando um pedido sai pra entrega, o cliente quer saber, o suporte quer saber e o painel quer atualizar. Em vez de avisar um por um, você publica uma vez num tópico e cada interessado se inscreve. Crie o tópico <b>avisos-entrega</b>.",
       ["Tópico não guarda mensagem: ele repassa na hora pra quem estiver inscrito.", "O nome do tópico vai em `--name` (e não em `--topic-name`)."],
       ["aws sns create-topic --name avisos-entrega"],
       (c) => !!topico(c, "avisos-entrega")),
-    d("psns-ct2", "sns", 1, 50, "O plantão precisa acordar",
+    d("psns-ct2", "sns", 2, 50, "O plantão precisa acordar",
       "Se o servidor cair às 3 da manhã, alguém tem que ser acordado. Crie o tópico <b>alertas-servidor</b>, que é pra onde os alarmes vão gritar.",
       ["É o mesmo comando de criar tópico — muda o propósito, não a forma.", "Guarde o ARN que volta: é ele que identifica o tópico nos próximos comandos."],
       ["aws sns create-topic --name alertas-servidor"],
       (c) => !!topico(c, "alertas-servidor")),
-  ]);
-  // subscribe — cada protocolo tem seu uso
-  at("sns-3", [
+    // subscribe — cada protocolo tem seu uso
     d("psns-sub1", "sns", 2, 70, "Inscreva o plantonista",
       "O plantonista desta semana é a <b>plantao@climb-labs.com</b>. Inscreva esse e-mail no tópico <b>alertas-servidor</b>. <small>(na AWS de verdade ele ainda precisa clicar no link de confirmação — por isso a resposta vem como pending confirmation)</small>",
       ["Inscrição tem três partes: em qual tópico, por qual meio, e pra qual endereço.", "O meio é `--protocol email` e o endereço vai em `--notification-endpoint`."],

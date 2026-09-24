@@ -103,8 +103,8 @@
         for (const t of tags) s.tags[r][t.Key] = t.Value === undefined ? "" : String(t.Value);
       }
       avisarClimb(
-        "Etiqueta nao muda nada no funcionamento — e por isso que ela e o comando mais subestimado da AWS. Sem ela nao existe " +
-        "relatorio de custo por time, nem inventario, nem faxina: voce fica com 40 maquinas e ninguem sabe de quem e nenhuma."
+        "Etiqueta não muda nada no funcionamento — é por isso que ela é o comando mais subestimado da AWS. Sem ela não existe " +
+        "relatório de custo por time, nem inventario, nem faxina: você fica com 40 máquinas e ninguém sabe de quem e nenhuma."
       );
       return okSilencioso("Etiquetas aplicadas em " + recursos.length + (recursos.length === 1 ? " recurso." : " recursos."));
     },
@@ -120,7 +120,7 @@
         }
       }
       if (!fora.length) {
-        avisarClimb("Nenhum recurso etiquetado. No relatorio de custo isso aparece como 'sem tag' — o balde onde ninguem consegue achar responsavel.");
+        avisarClimb("Nenhum recurso etiquetado. No relatório de custo isso aparece como 'sem tag' — o balde onde ninguém consegue achar responsável.");
         return "";
       }
       return js({ Tags: fora });
@@ -148,8 +148,8 @@
       const ip = "54." + (100 + Math.floor(Math.random() * 100)) + "." + Math.floor(Math.random() * 250) + "." + Math.floor(Math.random() * 250);
       s.enderecos[id] = { id: id, ip: ip, instancia: null, associacao: null };
       avisarClimb(
-        "Atencao ao contrario do que parece: IP elastico ASSOCIADO a uma maquina ligada e de graca — o que a AWS cobra e o IP " +
-        "PARADO, sem uso. E um dos achados mais comuns de FinOps: dezenas de IPs alocados de migracoes antigas, cobrando por hora."
+        "Atenção ao contrário do que parece: IP elástico ASSOCIADO a uma máquina ligada é de graça — o que a AWS cobra é o IP " +
+        "PARADO, sem uso. É um dos achados mais comuns de FinOps: dezenas de IPs alocados de migrações antigas, cobrando por hora."
       );
       return js({ PublicIp: ip, AllocationId: id, Domain: "vpc" });
     },
@@ -171,7 +171,7 @@
       if (!e) throw new ErroCli("An error occurred (InvalidAssociationID.NotFound) when calling the DisassociateAddress operation: Association ID not found.");
       e.instancia = null;
       e.associacao = null;
-      avisarClimb("Soltou da maquina — mas o IP continua SEU e agora esta parado, que e justamente o estado que a AWS cobra. Se nao vai usar, libere com release-address.");
+      avisarClimb("Soltou da máquina — mas o IP continua SEU e agora está parado, que é justamente o estado que a AWS cobra. Se não vai usar, libere com release-address.");
       return okSilencioso("Endereco desassociado.");
     },
     "release-address": (conta, pos, flags) => {
@@ -182,23 +182,23 @@
       if (e.instancia) {
         throw new ErroCli(
           "An error occurred (InvalidIPAddress.InUse) when calling the ReleaseAddress operation: Address is in use.\n" +
-          "Solte da maquina antes: aws ec2 disassociate-address --association-id " + e.associacao
+          "Solte da máquina antes: aws ec2 disassociate-address --association-id " + e.associacao
         );
       }
       delete s.enderecos[alloc];
-      avisarClimb("Liberado: para de cobrar. Mas o IP volta pro bolo da AWS e voce NAO consegue ele de volta — se algum DNS ou allowlist apontava pra ele, quebrou.");
+      avisarClimb("Liberado: para de cobrar. Mas o IP volta pro bolo da AWS e você NÃO consegue ele de volta — se algum DNS ou allowlist apontava pra ele, quebrou.");
       return okSilencioso("Endereco " + e.ip + " liberado.");
     },
     "describe-addresses": (conta) => {
       const s = st(conta);
       const lista2 = Object.values(s.enderecos);
       if (!lista2.length) {
-        avisarClimb("Nenhum IP elastico alocado.");
+        avisarClimb("Nenhum IP elástico alocado.");
         return "";
       }
       const parados = lista2.filter((e) => !e.instancia).length;
       if (parados) {
-        avisarClimb(parados + (parados === 1 ? " IP esta PARADO" : " IPs estao PARADOS") + " (sem maquina associada) — e e exatamente isso que aparece na fatura. Procure por 'Association' vazio na saida.");
+        avisarClimb(parados + (parados === 1 ? " IP está PARADO" : " IPs estão PARADOS") + " (sem máquina associada) — e é exatamente isso que aparece na fatura. Procure por 'Association' vazio na saída.");
       }
       return js({ Addresses: lista2.map((e) => ({
         PublicIp: e.ip, AllocationId: e.id, Domain: "vpc",
@@ -223,8 +223,8 @@
       };
       avisarClimb(
         flags["no-reboot"] !== undefined
-          ? "Com --no-reboot a maquina nao reinicia, mas a AWS nao garante que o disco esteja consistente: se o banco estava escrevendo, a imagem pode sair no meio de uma transacao."
-          : "Por padrao a AWS REINICIA a maquina pra garantir que o disco esteja consistente. Em producao isso e uma queda — por isso existe o --no-reboot, com a ressalva de consistencia."
+          ? "Com --no-reboot a máquina não reinicia, mas a AWS não garante que o disco esteja consistente: se o banco estava escrevendo, a imagem pode sair no meio de uma transação."
+          : "Por padrão a AWS REINICIA a máquina pra garantir que o disco esteja consistente. Em produção isso é uma queda — por isso existe o --no-reboot, com a ressalva de consistência."
       );
       return js({ ImageId: ami });
     },
@@ -232,11 +232,11 @@
       const s = st(conta);
       const minhas = Object.values(s.imagens);
       if (flags.owners !== undefined && !minhas.length) {
-        avisarClimb("Nenhuma imagem sua. Sem --owners self a AWS devolveria dezenas de milhares de AMIs publicas — por isso o filtro e quase obrigatorio.");
+        avisarClimb("Nenhuma imagem sua. Sem --owners self a AWS devolveria dezenas de milhares de AMIs públicas — por isso o filtro é quase obrigatório.");
         return "";
       }
       if (!minhas.length) {
-        avisarClimb("Nenhuma imagem propria ainda. Crie uma com: aws ec2 create-image --instance-id <id> --name <nome>");
+        avisarClimb("Nenhuma imagem própria ainda. Crie uma com: aws ec2 create-image --instance-id <id> --name <nome>");
         return "";
       }
       return js({ Images: minhas.map((im) => ({
@@ -250,7 +250,7 @@
       const ami = String(exigirFlag(flags, "image-id"));
       if (!s.imagens[ami]) throw new ErroCli("An error occurred (InvalidAMIID.NotFound) when calling the DeregisterImage operation: The image id '" + ami + "' does not exist");
       delete s.imagens[ami];
-      avisarClimb("Cuidado: dar baixa na AMI NAO apaga os snapshots que ela criou — eles continuam na fatura. Por isso existe o --delete-associated-snapshots.");
+      avisarClimb("Cuidado: dar baixa na AMI NÃO apaga os snapshots que ela criou — eles continuam na fatura. Por isso existe o --delete-associated-snapshots.");
       return okSilencioso("Imagem " + ami + " deu baixa.");
     },
 
@@ -262,7 +262,7 @@
       const incluirTodas = flags["include-all-instances"] !== undefined;
       const visiveis = incluirTodas ? todas : todas.filter((i) => i.estado === "running");
       if (!visiveis.length) {
-        avisarClimb("Nada aqui — e a pegadinha do comando: por padrao ele so mostra maquina LIGADA. A que esta parada some da lista, e parece que nem existe. Use --include-all-instances.");
+        avisarClimb("Nada aqui — é a pegadinha do comando: por padrão ele só mostra máquina LIGADA. A que está parada some da lista, e parece que nem existe. Use --include-all-instances.");
         return "";
       }
       return js({ InstanceStatuses: visiveis.map((i) => ({
@@ -293,21 +293,21 @@
       const valor = flags.value !== undefined ? String(flags.value) : (flags["instance-type"] !== undefined ? String(flags["instance-type"]) : "");
       if (atributo !== "instanceType") {
         throw new ErroCli(
-          "An error occurred (InvalidParameterValue) when calling the ModifyInstanceAttribute operation: atributo nao suportado no simulador: " + (atributo || "(vazio)") + ".\n" +
-          "Aqui da pra trocar o tipo: --attribute instanceType --value t3.small"
+          "An error occurred (InvalidParameterValue) when calling the ModifyInstanceAttribute operation: atributo não suportado no simulador: " + (atributo || "(vazio)") + ".\n" +
+          "Aqui dá pra trocar o tipo: --attribute instanceType --value t3.small"
         );
       }
       if (inst.estado !== "stopped") {
         throw new ErroCli(
           "An error occurred (IncorrectInstanceState) when calling the ModifyInstanceAttribute operation: The instance '" + id + "' is not in the 'stopped' state.\n" +
-          "Trocar o tipo exige a maquina PARADA: aws ec2 stop-instances --instance-ids " + id
+          "Trocar o tipo exige a máquina PARADA: aws ec2 stop-instances --instance-ids " + id
         );
       }
       if (!TIPOS.some((t) => t.nome === valor)) {
         throw new ErroCli("An error occurred (InvalidParameterValue) when calling the ModifyInstanceAttribute operation: Invalid value '" + valor + "' for InstanceType.");
       }
       inst.tipo = valor;
-      avisarClimb("Isto e rightsizing: a maquina volta a ligar com outro tamanho, sem recriar nada e sem perder o disco. E o conserto mais barato de uma instancia superdimensionada.");
+      avisarClimb("Isto é rightsizing: a máquina volta a ligar com outro tamanho, sem recriar nada e sem perder o disco. É o conserto mais barato de uma instância superdimensionada.");
       return okSilencioso("Instancia " + id + " agora e " + valor + ".");
     },
     "reboot-instances": (conta, pos, flags) => {
@@ -318,7 +318,7 @@
           throw new ErroCli("An error occurred (IncorrectInstanceState) when calling the RebootInstances operation: The instance '" + id + "' is not in the 'running' state.");
         }
       }
-      avisarClimb("Reboot NAO e stop + start: a maquina continua no mesmo hardware e mantem o IP publico. O stop/start pode mudar de host — e, sem IP elastico, muda o IP tambem.");
+      avisarClimb("Reboot NÃO e stop + start: a máquina continua no mesmo hardware e mantém o IP público. O stop/start pode mudar de host — e, sem IP elástico, muda o IP também.");
       return okSilencioso("Reiniciando " + ids.length + (ids.length === 1 ? " instancia." : " instancias."));
     },
 
@@ -352,9 +352,9 @@
         return !(mesmaPorta && mesmoCidr);
       });
       if (antes === g.regras.length) {
-        avisarClimb("Nenhuma regra batia com o que voce pediu — e a AWS nao reclama disso. Confira as regras com: aws ec2 describe-security-groups");
+        avisarClimb("Nenhuma regra batia com o que você pediu — e a AWS não reclama disso. Confira as regras com: aws ec2 describe-security-groups");
       } else {
-        avisarClimb("Porta fechada. A trilha te ensinou a ABRIR a 22 e a 80; fechar o que nao e mais usado e o que a auditoria cobra — e ninguem ensina.");
+        avisarClimb("Porta fechada. A trilha te ensinou a ABRIR a 22 e a 80; fechar o que não é mais usado é o que a auditoria cobra — e ninguém ensina.");
       }
       return okSilencioso("Regra de entrada revogada do grupo \"" + g.nome + "\".");
     },
@@ -366,8 +366,8 @@
         porta: flags.port !== undefined ? String(flags.port) : "all",
         cidr: flags.cidr ? String(flags.cidr) : "0.0.0.0/0",
       });
-      avisarClimb("Regra de SAIDA. Quase ninguem mexe nisso porque o padrao ja libera tudo pra fora — e e justamente por isso que restringir a saida e um controle forte contra exfiltracao de dado.");
-      return okSilencioso("Regra de saida adicionada ao grupo \"" + g.nome + "\".");
+      avisarClimb("Regra de SAÍDA. Quase ninguém mexe nisso porque o padrão já libera tudo pra fora — e é justamente por isso que restringir a saída é um controle forte contra exfiltração de dado.");
+      return okSilencioso("Regra de saída adicionada ao grupo \"" + g.nome + "\".");
     },
     "delete-security-group": (conta, pos, flags) => {
       const s = st(conta);
@@ -376,7 +376,7 @@
       if (emUso) {
         throw new ErroCli(
           "An error occurred (DependencyViolation) when calling the DeleteSecurityGroup operation: resource " + (g.id || g.nome) + " has a dependent object.\n" +
-          "Alguma instancia ainda usa esse grupo. A AWS nao deixa apagar grupo em uso — de proposito."
+          "Alguma instância ainda usa esse grupo. A AWS não deixa apagar grupo em uso — de propósito."
         );
       }
       const chave = Object.keys(s.securityGroups).find((k) => s.securityGroups[k] === g);
@@ -388,7 +388,7 @@
       const nome = String(exigirFlag(flags, "key-name"));
       if (!s.keyPairs[nome]) throw new ErroCli("An error occurred (InvalidKeyPair.NotFound) when calling the DeleteKeyPair operation: The key pair '" + nome + "' does not exist");
       delete s.keyPairs[nome];
-      avisarClimb("Apagar o par no console NAO tira a chave publica de dentro das maquinas que ja subiram com ela: quem tem o .pem continua entrando. Apagar aqui so impede novos usos.");
+      avisarClimb("Apagar o par no console NÃO tira a chave publica de dentro das máquinas que já subiram com ela: quem tem o .pem continua entrando. Apagar aqui só impede novos usos.");
       return okSilencioso("Par de chaves \"" + nome + "\" apagado.");
     },
 
@@ -403,15 +403,15 @@
       if (!s.enderecos[alloc]) {
         throw new ErroCli(
           "An error occurred (InvalidAllocationID.NotFound) when calling the CreateNatGateway operation: Allocation ID " + alloc + " not found.\n" +
-          "NAT gateway precisa de um IP elastico proprio: aws ec2 allocate-address --domain vpc"
+          "NAT gateway precisa de um IP elástico próprio: aws ec2 allocate-address --domain vpc"
         );
       }
       s.enderecos[alloc].instancia = "nat";
       const id = "nat-0" + hexAleatorio(16);
       s.nats[id] = { id: id, subnet: subnet, alocacao: alloc, estado: "available", criadoEm: new Date().toISOString() };
       avisarClimb(
-        "O NAT deixa a sub-rede PRIVADA sair pra internet (baixar pacote, chamar API) sem ficar alcancavel de fora. " +
-        "E tambem uma das linhas mais caras da fatura: cobra por hora E por GB que passa. Ambiente de teste com NAT esquecido ligado e classico."
+        "O NAT deixa a sub-rede PRIVADA sair pra internet (baixar pacote, chamar API) sem ficar alcançável de fora. " +
+        "É também uma das linhas mais caras da fatura: cobra por hora E por GB que passa. Ambiente de teste com NAT esquecido ligado e clássico."
       );
       return js({ NatGateway: { NatGatewayId: id, SubnetId: subnet, State: "pending", NatGatewayAddresses: [{ AllocationId: alloc, PublicIp: s.enderecos[alloc].ip }] } });
     },
@@ -434,7 +434,7 @@
       if (!n) throw new ErroCli("An error occurred (NatGatewayNotFound) when calling the DeleteNatGateway operation: NAT gateway " + id + " was not found.");
       n.estado = "deleted";
       if (s.enderecos[n.alocacao]) s.enderecos[n.alocacao].instancia = null;
-      avisarClimb("Apagou o NAT, mas o IP elastico dele continua SEU e agora esta parado — cobrando. Libere tambem, senao voce trocou uma conta grande por uma pequena eterna.");
+      avisarClimb("Apagou o NAT, mas o IP elástico dele continua SEU e agora está parado — cobrando. Libere também, senao você trocou uma conta grande por uma pequena eterna.");
       return okSilencioso("NAT gateway " + id + " apagado.");
     },
   });
@@ -456,7 +456,7 @@
         "Remove etiquetas. Sem --tags remove TODAS as do recurso."),
       "ec2.allocate-address": M(
         "aws ec2 allocate-address --domain vpc",
-        "Reserva um IP público fixo na sua conta.\n\nAO CONTRÁRIO DO QUE PARECE: IP elástico ASSOCIADO a uma máquina\nligada é de graça. O que a AWS cobra é o IP PARADO.\n\nÉ um dos achados mais comuns de FinOps: dezenas de IPs sobrando de\nmigrações antigas, cobrando por hora."),
+        "Reserva um IP público fixo na sua conta.\n\não CONTRÁRIO DO QUE PARECE: IP elástico ASSOCIADO a uma máquina\nligada é de graça. O que a AWS cobra é o IP PARADO.\n\nÉ um dos achados mais comuns de FinOps: dezenas de IPs sobrando de\nmigrações antigas, cobrando por hora."),
       "ec2.associate-address": M(
         "aws ec2 associate-address --allocation-id eipalloc-0abc --instance-id i-0abc",
         "Gruda o IP fixo na máquina. Sem isso, cada stop/start troca o IP\npúblico — e o DNS que apontava pra ela quebra."),
@@ -577,75 +577,75 @@
 
   at("ec2-12", [
     d("ec2c-reg1", "ec2", 1, 50, "Onde eu posso rodar isso?",
-      "Antes de subir qualquer coisa, duas perguntas de base: em quais <b>regioes</b> a conta pode operar, e quais <b>zonas</b> existem na regiao atual. <small>(alta disponibilidade comeca aqui: maquina em zona diferente sobrevive a queda de um data center)</small>",
-      ["Sao dois `describe-…` irmaos: um de regiao, outro de zona.", "A zona e sempre a regiao mais uma letra: us-east-1a, us-east-1b…"],
+      "Antes de subir qualquer coisa, duas perguntas de base: em quais <b>regiões</b> a conta pode operar, e quais <b>zonas</b> existem na região atual. <small>(alta disponibilidade começa aqui: máquina em zona diferente sobrevive a queda de um data center)</small>",
+      ["São dois `describe-…` irmãos: um de região, outro de zona.", "A zona é sempre a região mais uma letra: us-east-1a, us-east-1b…"],
       ["aws ec2 describe-regions",
         "aws ec2 describe-availability-zones"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-availability-zones")),
-    d("ec2c-status1", "ec2", 2, 80, "A maquina esta de pe mesmo?",
-      "Chamado aberto: <i>\"o site caiu\"</i>. Antes de entrar na maquina, olhe as <b>duas checagens de saude</b> que a AWS faz — a do hardware e a do sistema. <small>(a pegadinha: por padrao esse comando so mostra maquina LIGADA; a parada some da lista)</small>",
-      ["Nao e o describe-instances: existe um comando so de STATUS.", "Se a maquina estiver parada e voce quiser ve-la assim mesmo, use --include-all-instances."],
+    d("ec2c-status1", "ec2", 2, 80, "A máquina está de pé mesmo?",
+      "Chamado aberto: <i>\"o site caiu\"</i>. Antes de entrar na máquina, olhe as <b>duas checagens de saúde</b> que a AWS faz — a do hardware e a do sistema. <small>(a pegadinha: por padrão esse comando só mostra máquina LIGADA; a parada some da lista)</small>",
+      ["Não é o describe-instances: existe um comando só de STATUS.", "Se a máquina estiver parada e você quiser vÃª-la assim mesmo, use --include-all-instances."],
       ["aws ec2 describe-instance-status --include-all-instances"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-instance-status")),
   ]);
 
   at("cob-ec2-1", [
-    d("ec2c-tag1", "ec2", 2, 90, "Quarenta maquinas e nenhum dono",
-      "O relatorio de custo chegou com tudo num bolo so: ninguem sabe qual time paga o que. Comece pela sua maquina — suba uma <b>t3.micro</b> e etiquete ela com <b>Time=plataforma</b> e <b>Ambiente=producao</b> de uma vez.",
-      ["Etiqueta nao muda nada no funcionamento; muda o relatorio — e e por isso que ela e o comando mais esquecido da AWS.", "Cada etiqueta vai na forma `Key=<chave>,Value=<valor>`, e da pra mandar varias separadas por espaco."],
+    d("ec2c-tag1", "ec2", 2, 90, "Quarenta máquinas e nenhum dono",
+      "O relatório de custo chegou com tudo num bolo só: ninguém sabe qual time paga o que. Comece pela sua máquina — suba uma <b>t3.micro</b> e etiquete ela com <b>Time=plataforma</b> e <b>Ambiente=producao</b> de uma vez.",
+      ["Etiqueta não muda nada no funcionamento; muda o relatório — e é por isso que ela é o comando mais esquecido da AWS.", "Cada etiqueta vai na forma `Key=<chave>,Value=<valor>`, e dá pra mandar várias separadas por espaço."],
       ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t3.micro",
         "aws ec2 create-tags --resources <id-da-instância> --tags Key=Time,Value=plataforma Key=Ambiente,Value=producao"],
       (c) => Object.values(((c.ec2 || {}).tags) || {}).some((t) => t.Time === "plataforma" && t.Ambiente === "producao")),
-    d("ec2c-tag2", "ec2", 2, 70, "O que ainda esta sem dono?",
-      "Com a primeira etiquetada, levante o inventario: liste <b>todas as etiquetas</b> da conta pra ver o que ja tem dono e o que ficou de fora.",
-      ["E o `describe-…` das etiquetas, sem alvo: ele varre a conta.", "Da pra estreitar com --filters, mas aqui queremos o retrato inteiro."],
+    d("ec2c-tag2", "ec2", 2, 70, "O que ainda está sem dono?",
+      "Com a primeira etiquetada, levante o inventario: liste <b>todas as etiquetas</b> da conta pra ver o que já tem dono e o que ficou de fora.",
+      ["É o `describe-…` das etiquetas, sem alvo: ele varre a conta.", "Dá pra estreitar com --filters, mas aqui queremos o retrato inteiro."],
       ["aws ec2 describe-tags"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-tags")),
     d("ec2c-ip1", "ec2", 2, 90, "O IP muda toda vez que reinicia",
-      "O DNS aponta pra maquina, mas todo stop/start ela ganha um IP novo e o site cai. A solucao e um <b>IP elastico</b>: reserve um e <b>grude</b> na instancia.",
-      ["Sao dois passos: reservar o IP na conta e associar ele a uma maquina.", "Na reserva, o dominio e `vpc` (o EC2-Classic foi aposentado).", "Guarde o AllocationId: e por ele que a associacao acontece."],
+      "O DNS aponta pra máquina, mas todo stop/start ela ganha um IP novo e o site cai. A solução é um <b>IP elástico</b>: reserve um e <b>grude</b> na instância.",
+      ["São dois passos: reservar o IP na conta e associar ele a uma máquina.", "Na reserva, o dominio e `vpc` (o EC2-Classic foi aposentado).", "Guarde o AllocationId: e por ele que a associação acontece."],
       ["aws ec2 allocate-address --domain vpc",
         "aws ec2 associate-address --allocation-id <eip-id> --instance-id <id-da-instância>"],
       (c) => enderecos(c).some((e) => !!e.instancia)),
-    d("ec2c-ip2", "ec2", 3, 110, "O IP parado que ninguem viu na fatura",
-      "Faxina de custo: reserve um segundo IP elastico simulando uma migracao antiga, liste os enderecos pra <b>achar o que esta sem maquina</b> e <b>libere</b> ele. <small>(ao contrario do que parece, IP associado e de graca — o que a AWS cobra e o parado)</small>",
-      ["Na listagem, o que esta parado e o que aparece SEM InstanceId.", "Liberar e `release-address`, e ele exige o AllocationId.", "A AWS recusa liberar um IP que ainda esta associado — solte antes se for o caso."],
+    d("ec2c-ip2", "ec2", 3, 110, "O IP parado que ninguém viu na fatura",
+      "Faxina de custo: reserve um segundo IP elástico simulando uma migração antiga, liste os enderecos pra <b>achar o que está sem máquina</b> e <b>libere</b> ele. <small>(ao contrário do que parece, IP associado é de graça — o que a AWS cobra é o parado)</small>",
+      ["Na listagem, o que está parado é o que aparece SEM InstanceId.", "Liberar e `release-address`, e ele exige o AllocationId.", "A AWS recusa liberar um IP que ainda estÃ¡ associado — solte antes se for o caso."],
       ["aws ec2 allocate-address --domain vpc",
         "aws ec2 describe-addresses",
         "aws ec2 release-address --allocation-id <eip-parado>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "release-address") && enderecos(c).length >= 1),
-    d("ec2c-ami1", "ec2", 3, 120, "Backup antes de mexer em producao",
-      "Voce vai aplicar uma atualizacao arriscada e quer poder voltar atras. Tire uma <b>imagem</b> da maquina chamada <b>antes-do-upgrade</b> — e <b>sem reiniciar</b> ela, porque e producao.",
-      ["Imagem de maquina se chama AMI, e o comando e `create-image`.", "Por padrao a AWS REINICIA a maquina pra garantir disco consistente; a flag que evita isso diz exatamente isso no nome."],
+    d("ec2c-ami1", "ec2", 3, 120, "Backup antes de mexer em produção",
+      "Você vai aplicar uma atualização arriscada e quer poder voltar atrás. Tire uma <b>imagem</b> da máquina chamada <b>antes-do-upgrade</b> — e <b>sem reiniciar</b> ela, porque e produção.",
+      ["Imagem de máquina se chama AMI, e o comando é `create-image`.", "Por padrão a AWS REINICIA a máquina pra garantir disco consistente; a flag que evita isso diz exatamente isso no nome."],
       ["aws ec2 create-image --instance-id <id-da-instância> --name antes-do-upgrade --no-reboot"],
       (c) => imagens(c).some((im) => im.nome === "antes-do-upgrade" && im.semReboot)),
-    d("ec2c-ami2", "ec2", 3, 90, "Quais imagens sao minhas?",
-      "Liste as imagens da conta. <small>(sem filtrar por dono a AWS devolveria dezenas de milhares de AMIs publicas — por isso o <code>--owners self</code> e quase obrigatorio)</small>",
-      ["O filtro de dono e `--owners`, e o valor pra 'minhas' e `self`.", "Repare no State: a imagem leva alguns minutos ate ficar `available`."],
+    d("ec2c-ami2", "ec2", 3, 90, "Quais imagens são minhas?",
+      "Liste as imagens da conta. <small>(sem filtrar por dono a AWS devolveria dezenas de milhares de AMIs públicas — por isso o <code>--owners self</code> e quase obrigatório)</small>",
+      ["O filtro de dono e `--owners`, e o valor pra 'minhas' e `self`.", "Repare no State: a imagem leva alguns minutos até ficar `available`."],
       ["aws ec2 describe-images --owners self"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-images")),
-    d("ec2c-size1", "ec2", 3, 120, "Essa maquina esta grande demais",
-      "O Compute Optimizer apontou: a instancia usa 8% de CPU e esta pagando por uma grande. Compare os tipos, <b>pare</b> a maquina e troque ela pra <b>t3.small</b> — sem recriar nada e sem perder o disco.",
-      ["Primeiro compare: existe um `describe-…` que mostra vCPU e memoria de cada tipo.", "Trocar o tipo EXIGE a maquina parada — a AWS recusa com a maquina ligada.", "O comando e `modify-instance-attribute`, com `--attribute instanceType --value <tipo>`."],
+    d("ec2c-size1", "ec2", 3, 120, "Essa máquina está grande demais",
+      "O Compute Optimizer apontou: a instância usa 8% de CPU e está pagando por uma grande. Compare os tipos, <b>pare</b> a máquina e troque ela pra <b>t3.small</b> — sem recriar nada e sem perder o disco.",
+      ["Primeiro compare: existe um `describe-…` que mostra vCPU e memória de cada tipo.", "Trocar o tipo EXIGE a máquina parada — a AWS recusa com a máquina ligada.", "O comando é `modify-instance-attribute`, com `--attribute instanceType --value <tipo>`."],
       ["aws ec2 describe-instance-types --instance-types t3.micro t3.small",
         "aws ec2 stop-instances --instance-ids <id-da-instância>",
         "aws ec2 modify-instance-attribute --instance-id <id-da-instância> --attribute instanceType --value t3.small"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "modify-instance-attribute") &&
         ((instDe(c, (cmd.flags || {})["instance-id"]) || {}).tipo === "t3.small")),
     d("ec2c-fecha1", "ec2", 3, 130, "Feche a porta 22 que ficou aberta",
-      "A auditoria encontrou o grupo <b>acesso-ssh</b> com a porta <b>22</b> aberta pra <b>0.0.0.0/0</b> — o mundo inteiro. A trilha te ensinou a abrir; agora feche. <small>(o Session Manager da trilha de SSM e justamente o que substitui essa porta)</small>",
-      ["Abrir e `authorize-…`; fechar e o oposto dele, com o mesmo formato de argumentos.", "Voce precisa repetir protocolo, porta e faixa — e assim que a AWS sabe QUAL regra tirar.", "Se nada bater, a AWS nao reclama: confira depois com describe-security-groups."],
+      "A auditoria encontrou o grupo <b>acesso-ssh</b> com a porta <b>22</b> aberta pra <b>0.0.0.0/0</b> — o mundo inteiro. A trilha te ensinou a abrir; agora feche. <small>(o Session Manager da trilha de SSM é justamente o que substitui essa porta)</small>",
+      ["Abrir é `authorize-…`; fechar é o oposto dele, com o mesmo formato de argumentos.", "Você precisa repetir protocolo, porta e faixa — é assim que a AWS sabe QUAL regra tirar.", "Se nada bater, a AWS não reclama: confira depois com describe-security-groups."],
       ["aws ec2 revoke-security-group-ingress --group-name acesso-ssh --protocol tcp --port 22 --cidr 0.0.0.0/0"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "revoke-security-group-ingress") && !!grupoPorNome(c, "acesso-ssh")),
-    d("ec2c-fecha2", "ec2", 3, 110, "Restrinja tambem a saida",
-      "Controle que quase ninguem aplica: por padrao a maquina pode falar com qualquer lugar da internet, o que e otimo pra quem exfiltra dado. Crie o grupo <b>saida-restrita</b> e libere a saida <b>so</b> pra porta <b>443</b> dentro da rede <b>10.0.0.0/16</b>.",
-      ["Regra de saida tem comando proprio: `authorize-security-group-egress`.", "O grupo precisa existir antes — crie com create-security-group."],
+    d("ec2c-fecha2", "ec2", 3, 110, "Restrinja também a saída",
+      "Controle que quase ninguém aplica: por padrão a máquina pode falar com qualquer lugar da internet, o que é ótimo pra quem exfiltra dado. Crie o grupo <b>saida-restrita</b> e libere a saída <b>só</b> pra porta <b>443</b> dentro da rede <b>10.0.0.0/16</b>.",
+      ["Regra de saída tem comando próprio: `authorize-security-group-egress`.", "O grupo precisa existir antes — crie com create-security-group."],
       ["aws ec2 create-security-group --group-name saida-restrita --description \"Saida controlada\"",
         "aws ec2 authorize-security-group-egress --group-name saida-restrita --protocol tcp --port 443 --cidr 10.0.0.0/16"],
       (c) => (((grupoPorNome(c, "saida-restrita") || {}).saida) || []).length >= 1),
-    d("ec2c-limpa1", "ec2", 3, 100, "Faxina: chave e grupo que ninguem usa",
-      "Fim de projeto. Apague o par de chaves <b>chave-backup</b> e o grupo <b>saida-restrita</b>, que nao sao mais usados. <small>(apagar o par NAO expulsa quem ja tem o .pem — so impede novos usos)</small>",
-      ["Sao dois `delete-…`, um pra cada recurso.", "A AWS recusa apagar grupo que alguma instancia ainda usa — se acontecer, e dependencia, nao erro seu."],
+    d("ec2c-limpa1", "ec2", 3, 100, "Faxina: chave e grupo que ninguém usa",
+      "Fim de projeto. Apague o par de chaves <b>chave-backup</b> e o grupo <b>saida-restrita</b>, que não são mais usados. <small>(apagar o par NÃO expulsa quem já tem o .pem — só impede novos usos)</small>",
+      ["São dois `delete-…`, um pra cada recurso.", "A AWS recusa apagar grupo que alguma instância ainda usa — se acontecer, e dependencia, não erro seu."],
       ["aws ec2 delete-key-pair --key-name chave-backup",
         "aws ec2 delete-security-group --group-name saida-restrita"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-security-group") && !grupoPorNome(c, "saida-restrita")),
@@ -654,14 +654,14 @@
   // ----- NAT gateway entra na trilha de VPC, que é onde ele faz sentido -----
   at("cob-vpc-6", [
     d("ec2c-nat1", "vpc", 3, 140, "A sub-rede privada precisa baixar pacote",
-      "O banco esta numa sub-rede <b>privada</b> — inalcancavel de fora, como tem que ser. Mas ele precisa <b>sair</b> pra baixar atualizacao de seguranca. Isso e trabalho do <b>NAT gateway</b>: reserve um IP elastico e crie o NAT numa sub-rede sua.",
-      ["O NAT vai numa sub-rede PUBLICA e serve a privada — e por isso que ele precisa de um IP elastico proprio.", "Sao dois comandos: reservar o IP e criar o NAT apontando pra sub-rede e pra alocacao.", "Cuidado com a conta: o NAT cobra por hora E por GB que passa."],
+      "O banco estÃ¡ numa sub-rede <b>privada</b> — inalcançável de fora, como tem que ser. Mas ele precisa <b>sair</b> pra baixar atualização de segurança. Isso é trabalho do <b>NAT gateway</b>: reserve um IP elástico e crie o NAT numa sub-rede sua.",
+      ["O NAT vai numa sub-rede PUBLICA e serve a privada — é por isso que ele precisa de um IP elástico próprio.", "São dois comandos: reservar o IP e criar o NAT apontando pra sub-rede e pra alocação.", "Cuidado com a conta: o NAT cobra por hora E por GB que passa."],
       ["aws ec2 allocate-address --domain vpc",
         "aws ec2 create-nat-gateway --subnet-id <subnet-id> --allocation-id <eip-id>"],
       (c) => nats(c).some((n) => n.estado === "available")),
     d("ec2c-nat2", "vpc", 3, 120, "O NAT esquecido do ambiente de teste",
-      "Clássico de fatura: um NAT ligado num ambiente que ninguem usa ha meses. Liste os NAT gateways e <b>apague</b> o que voce acabou de criar. <small>(e lembre: o IP elastico dele continua seu, e parado ele cobra)</small>",
-      ["Primeiro liste pra pegar o NatGatewayId.", "Apagar o NAT nao libera o IP elastico — sao dois recursos separados na fatura."],
+      "Clássico de fatura: um NAT ligado num ambiente que ninguém usa há meses. Liste os NAT gateways e <b>apague</b> o que você acabou de criar. <small>(e lembre: o IP elástico dele continua seu, e parado ele cobra)</small>",
+      ["Primeiro liste pra pegar o NatGatewayId.", "Apagar o NAT não libera o IP elástico — são dois recursos separados na fatura."],
       ["aws ec2 describe-nat-gateways",
         "aws ec2 delete-nat-gateway --nat-gateway-id <nat-id>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-nat-gateway") &&
