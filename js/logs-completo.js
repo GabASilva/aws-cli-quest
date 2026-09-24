@@ -671,4 +671,19 @@
         "aws logs describe-queries --log-group-name /climb/app --status Complete"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "describe-queries") && String(cmd.flags.status || "") === "Complete"),
   ]);
+  // --- o filtro que não serve mais (delete-metric-filter + fixação) ---
+  const filtroDe = (c, g, f) => (((grupo(c, g) || {}).filtros) || {})[f];
+  at("logsc-fix-mf", [
+    d("logsc-mf-del1", "cloudwatch", 3, 100, "O timeout agora vem do APM",
+      "O time contratou uma ferramenta de APM que já mede timeout com mais precisão, e o alarme em cima da métrica <b>Timeouts</b> passou a disparar em dobro. <b>Remova</b> o filtro <b>conta-timeouts</b> do <b>/api/erros</b>.",
+      ["Todo `put-` de filtro tem o seu `delete-`.", "Remover pede o grupo e o nome do filtro — o log continua guardado, só para de virar métrica."],
+      ["aws logs delete-metric-filter --log-group-name /api/erros --filter-name conta-timeouts"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-metric-filter") && !!grupo(c, "/api/erros") && !filtroDe(c, "/api/erros", "conta-timeouts")),
+    d("logsc-mf-del2", "cloudwatch", 3, 110, "O filtro de teste não pode ficar",
+      "Você quer ver se o padrão <b>WARN</b> pega alguma coisa no <b>/climb/app</b> antes de propor um alarme. Crie o filtro <b>teste-avisos</b> (métrica <b>AvisosApp</b>, namespace <b>Climb</b>) e, depois de conferir, <b>remova</b> — filtro esquecido vira métrica paga que ninguém olha.",
+      ["O filtro se cria com o mesmo comando do conta-erros, trocando padrão, nome e métrica.", "No fim, o mesmo `delete-` que você acabou de usar."],
+      ["aws logs put-metric-filter --log-group-name /climb/app --filter-name teste-avisos --filter-pattern WARN --metric-transformations metricName=AvisosApp,metricNamespace=Climb,metricValue=1",
+        "aws logs delete-metric-filter --log-group-name /climb/app --filter-name teste-avisos"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "logs", "delete-metric-filter") && String(cmd.flags["filter-name"] || "") === "teste-avisos" && !filtroDe(c, "/climb/app", "teste-avisos")),
+  ]);
 })();
