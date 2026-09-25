@@ -53,21 +53,21 @@
       "A lista de security groups vem com tudo da conta. Olhe só o do servidor do laboratório, pelo id dele.",
       ["O `describe-security-groups` aceita `--group-ids`.", "O id do grupo do servidor aparece na listagem da atividade anterior."],
       ["aws ec2 describe-security-groups --group-ids <sg-lab>"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-security-groups") && cmd.flags["group-ids"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-security-groups") && (cmd.flags["group-ids"] !== undefined)),
   ]);
   at("diag-6", [
     d("fx-diag-rt2", "diagnostico", 3, 80, "A rota nova entrou mesmo?",
       "Antes de testar de novo, confirme que a rota <b>0.0.0.0/0</b> apareceu na tabela da sub-rede.",
       ["Mesmo `describe-route-tables`, só com a tabela do laboratório.", "A flag é `--route-table-ids`."],
       ["aws ec2 describe-route-tables --route-table-ids <rtb-id>"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-route-tables") && cmd.flags["route-table-ids"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-route-tables") && (cmd.flags["route-table-ids"] !== undefined)),
   ]);
   at("diag-10", [
     d("fx-diag-na2", "diagnostico", 3, 80, "A regra 40 saiu?",
       "Confira a ACL do laboratório e veja que a regra 40 sumiu — agora vale a 100.",
       ["Mesmo `describe-network-acls`, só a ACL do laboratório.", "A flag é `--network-acl-ids`."],
       ["aws ec2 describe-network-acls --network-acl-ids <acl-id>"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-network-acls") && cmd.flags["network-acl-ids"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-network-acls") && (cmd.flags["network-acl-ids"] !== undefined)),
   ]);
   at("cob-vpc-4", [
     d("fx-diag-na3", "diagnostico", 3, 100, "O servidor virou disparador de spam",

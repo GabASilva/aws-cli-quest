@@ -47,6 +47,18 @@
     } catch (e) { /* o comando principal já respondeu; rastro é acessório */ }
     return saida;
   };
+  // O delete-hosted-zone também devolve um ChangeInfo, e também jogava o id fora
+  // (o get-change dele dava NoSuchChange). Mesmo wrap.
+  const apagarZonaOriginal = SERVICOS.route53["delete-hosted-zone"];
+  SERVICOS.route53["delete-hosted-zone"] = function (conta, pos, flags) {
+    const saida = apagarZonaOriginal(conta, pos, flags);
+    try {
+      const st = est(conta);
+      const id = (String(saida).match(/"Id":\s*"\/change\/([A-Z0-9]+)"/) || [])[1];
+      if (id) st.mudancas[id] = { id, criadoEm: agoraIso(), consultas: 0 };
+    } catch (e) { /* idem */ }
+    return saida;
+  };
 
   Object.assign(SERVICOS.route53, {
     "get-hosted-zone": (conta, pos, flags) => {

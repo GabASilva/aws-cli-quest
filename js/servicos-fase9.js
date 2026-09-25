@@ -60,11 +60,17 @@
       avisarClimb("O Translate faz tradução neural sob demanda — ótimo pra legendas, suporte multilíngue e localizar conteúdo em tempo real. Suporta 'auto' pra detectar o idioma de origem.");
       return js({ TranslatedText: alvo, SourceLanguageCode: String(de) === "auto" ? "en" : String(de), TargetLanguageCode: String(para) });
     },
-    "list-languages": () => {
-      return js({ Languages: [
-        { LanguageCode: "pt", LanguageName: "Portuguese" }, { LanguageCode: "en", LanguageName: "English" },
-        { LanguageCode: "es", LanguageName: "Spanish" }, { LanguageCode: "fr", LanguageName: "French" },
-      ] });
+    "list-languages": (conta, pos, flags) => {
+      // --display-language-code: em que idioma vêm os NOMES dos idiomas
+      const nomes = {
+        en: { pt: "Portuguese", en: "English", es: "Spanish", fr: "French" },
+        pt: { pt: "Português", en: "Inglês", es: "Espanhol", fr: "Francês" },
+        es: { pt: "Portugués", en: "Inglés", es: "Español", fr: "Francés" },
+        fr: { pt: "Portugais", en: "Anglais", es: "Espagnol", fr: "Français" },
+      };
+      const exibir = flags && flags["display-language-code"] !== undefined ? String(flags["display-language-code"]) : "en";
+      if (!nomes[exibir]) throw new ErroCli("An error occurred (UnsupportedDisplayLanguageCodeException) when calling the ListLanguages operation: Display language code " + exibir + " is not supported.");
+      return js({ Languages: ["pt", "en", "es", "fr"].map((c) => ({ LanguageCode: c, LanguageName: nomes[exibir][c] })), DisplayLanguageCode: exibir });
     },
   };
 
@@ -109,12 +115,27 @@
       return js({ Sentiment: s, SentimentScore: scores });
     },
     "detect-entities": (conta, pos, flags) => {
-      exigirFlag(flags, "text");
+      const texto = String(exigirFlag(flags, "text"));
       exigirFlag(flags, "language-code");
-      return js({ Entities: [
-        { Type: "ORGANIZATION", Text: "AWS", Score: 0.99 },
-        { Type: "LOCATION", Text: "Brasil", Score: 0.97 },
-      ] });
+      // Antes devolvia sempre "AWS" e "Brasil", qualquer que fosse o texto.
+      // Agora as entidades saem DO texto: um dicionário pequeno pra tipar e,
+      // fora dele, palavra com inicial maiúscula (fora do começo) vira OTHER.
+      const tipos = {
+        ORGANIZATION: ["AWS", "Amazon", "Google", "Microsoft", "Petrobras", "Nubank", "Itaú"],
+        LOCATION: ["Brasil", "Seattle", "São Paulo", "Rio de Janeiro", "Portugal", "Virgínia", "Europa", "Lisboa"],
+        DATE: ["hoje", "ontem", "amanhã", "segunda", "janeiro", "dezembro"],
+      };
+      const achadas = [];
+      for (const [tipo, lista] of Object.entries(tipos)) {
+        for (const t of lista) if (new RegExp("(^|[^\\p{L}])" + t + "($|[^\\p{L}])", "u").test(texto)) achadas.push({ Type: tipo, Text: t, Score: 0.98 });
+      }
+      const palavras = texto.split(/\s+/);
+      palavras.forEach((p, i) => {
+        const limpa = p.replace(/[^\p{L}\p{N}-]/gu, "");
+        if (i > 0 && /^\p{Lu}/u.test(limpa) && !achadas.some((a) => a.Text.split(" ").indexOf(limpa) >= 0)) achadas.push({ Type: "OTHER", Text: limpa, Score: 0.71 });
+      });
+      if (!achadas.length) avisarClimb("Nenhuma entidade reconhecida. O Comprehend procura nomes de pessoas, lugares, organizações, datas e quantidades.");
+      return js({ Entities: achadas });
     },
     "detect-dominant-language": (conta, pos, flags) => {
       const texto = String(exigirFlag(flags, "text"));

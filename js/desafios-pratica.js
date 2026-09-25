@@ -107,7 +107,7 @@
   // key-pair
   at("ec2-5", [
     d("pec2-key1", "ec2", 2, 50, "Chave de backup", "Pra acessar as máquinas de backup você precisa de uma chave. Crie o par <b>chave-backup</b>.",
-      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 create-key-pair --key-name <nome>"], ["aws ec2 create-key-pair --key-name chave-backup"], (c) => !!c.ec2.keyPairs["chave-backup"]),
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 create-key-pair --key-name <nome>"], ["aws ec2 create-key-pair --key-name chave-backup"], (c) => !!(c.ec2.keyPairs["chave-backup"])),
   ]);
   // security group + authorize
   at("ec2-7", [
@@ -123,11 +123,11 @@
   // create-user
   at("iam-1", [
     d("piam-u1", "iam", 1, 50, "Chegou o Pedro", "Um dev novo entrou no time: o Pedro. Crie o usuário <b>pedro</b>.",
-      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-user --user-name <nome>"], ["aws iam create-user --user-name pedro"], (c) => !!c.iam.usuarios["pedro"]),
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-user --user-name <nome>"], ["aws iam create-user --user-name pedro"], (c) => !!(c.iam.usuarios["pedro"])),
     d("piam-u2", "iam", 1, 50, "Estagiária nova", "A Júlia começou o estágio hoje. Crie o usuário <b>julia</b>.",
-      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-user --user-name <nome>"], ["aws iam create-user --user-name julia"], (c) => !!c.iam.usuarios["julia"]),
+      ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-user --user-name <nome>"], ["aws iam create-user --user-name julia"], (c) => !!(c.iam.usuarios["julia"])),
     d("piam-u3", "iam", 2, 60, "Conta do robô de deploy", "O CI/CD precisa de uma identidade própria (não use a sua!). Crie o usuário <b>ci-deploy</b>.",
-      ["Contas de serviço são usuários normais, só que pra automação."], ["aws iam create-user --user-name ci-deploy"], (c) => !!c.iam.usuarios["ci-deploy"]),
+      ["Contas de serviço são usuários normais, só que pra automação."], ["aws iam create-user --user-name ci-deploy"], (c) => !!(c.iam.usuarios["ci-deploy"])),
   ]);
   // group + attach
   at("iam-5", [
@@ -142,7 +142,7 @@
   at("iam-6", [
     d("piam-r1", "iam", 3, 80, "Role pra uma Lambda", "Uma função Lambda vai precisar de permissões. Crie a role <b>role-lambda-logs</b> com o <b>trust.json</b>.",
       ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws iam help", "A forma do comando é: aws iam create-role --role-name <nome> --assume-role-policy-document <json de confiança>"], ["aws iam create-role --role-name role-lambda-logs --assume-role-policy-document file://trust.json"],
-      (c) => !!c.iam.roles["role-lambda-logs"]),
+      (c) => !!(c.iam.roles["role-lambda-logs"])),
   ]);
 
   // ===================== Lambda =====================
@@ -150,7 +150,7 @@
     d("plam-1", "lambda", 2, 70, "Redimensionar imagens", "Toda foto que sobe no S3 precisa virar miniatura. Crie a função <b>resize-imagens</b> (Python).",
       ["create-function --runtime python3.12 --handler index.handler --role arn:aws:iam::123456789012:role/lambda-exec --zip-file fileb://app.zip"],
       ["aws lambda create-function --function-name resize-imagens --runtime python3.12 --role arn:aws:iam::123456789012:role/lambda-exec --handler index.handler --zip-file fileb://app.zip"],
-      (c) => !!c.lambda.funcoes["resize-imagens"]),
+      (c) => !!(c.lambda.funcoes["resize-imagens"])),
     d("plam-2", "lambda", 2, 70, "Webhook de pagamento", "O gateway de pagamento vai chamar um webhook. Crie a função <b>webhook-pagamento</b> em <b>Node 20</b>.",
       ["--runtime nodejs20.x"], ["aws lambda create-function --function-name webhook-pagamento --runtime nodejs20.x --role arn:aws:iam::123456789012:role/lambda-exec --handler index.handler --zip-file fileb://app.zip"],
       (c) => { const f = c.lambda.funcoes["webhook-pagamento"]; return !!f && f.runtime === "nodejs20.x"; }),
@@ -167,10 +167,10 @@
     d("pdyn-1", "dynamodb", 2, 70, "Catálogo de produtos", "A loja precisa guardar os produtos. Crie a tabela <b>Catalogo</b> com chave de partição <b>sku</b> (texto).",
       ["--attribute-definitions AttributeName=sku,AttributeType=S --key-schema AttributeName=sku,KeyType=HASH --billing-mode PAY_PER_REQUEST"],
       ["aws dynamodb create-table --table-name Catalogo --attribute-definitions AttributeName=sku,AttributeType=S --key-schema AttributeName=sku,KeyType=HASH --billing-mode PAY_PER_REQUEST"],
-      (c) => !!c.dynamodb.tabelas["Catalogo"]),
+      (c) => !!(c.dynamodb.tabelas["Catalogo"])),
     d("pdyn-2", "dynamodb", 2, 70, "Sessões de usuário", "Pra manter quem está logado, crie a tabela <b>Sessoes</b> com chave <b>token</b> (texto).",
       ["chave token, tipo S"], ["aws dynamodb create-table --table-name Sessoes --attribute-definitions AttributeName=token,AttributeType=S --key-schema AttributeName=token,KeyType=HASH --billing-mode PAY_PER_REQUEST"],
-      (c) => !!c.dynamodb.tabelas["Sessoes"]),
+      (c) => !!(c.dynamodb.tabelas["Sessoes"])),
   ]);
   at("dyn-3", [
     d("pdyn-pi1", "dynamodb", 2, 70, "Cadastre o primeiro produto", "Crie a tabela <b>Itens</b> (chave id) e grave o primeiro item nela.",

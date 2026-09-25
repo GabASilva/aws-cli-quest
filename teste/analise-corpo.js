@@ -206,6 +206,37 @@ try {
   for (const a of perdidas) problemas.push(`âncora "${a}" não existia quando o bloco foi inserido — o arquivo carrega cedo demais (mova ele pra depois de quem cria "${a}")`);
 }
 
+// ---------- CORTE DO GABARITO: o arquivo servido ainda é JavaScript? ----------
+// O lib/sem-gabarito.js troca por null todo `[...]` no nível 0 de um d(...).
+// Um validador com `x["nome"]` solto ali vira `x null` e quebra o arquivo pro
+// aluno. Caiu 4 vezes em 24-25/09/2026; o teste/gabarito.js pegava, mas só no
+// fim. Aqui acusa junto com o resto, apontando a linha.
+{
+  let corte = null, vm = null;
+  try { corte = require("../lib/sem-gabarito.js"); vm = require("vm"); } catch (e) { /* fora do node */ }
+  if (corte && vm && typeof arquivos !== "undefined") {
+    const fsx = require("fs"), pathx = require("path");
+    for (const f of arquivos) {
+      let bruto;
+      try { bruto = fsx.readFileSync(pathx.join(__dirname, "..", "js", f), "utf8"); } catch (e) { continue; }
+      const r = corte.tirarGabarito(bruto);
+      const texto = typeof r === "string" ? r : (r && r.texto) || "";
+      // O pior caso NÃO quebra a sintaxe: `cmd.flags["x"]` vira `cmd.flagsnull`,
+      // que é JS válido e deixa o validador errado em silêncio. Conta os `null`
+      // grudados em identificador/parêntese antes e depois do corte.
+      const grudado = (t) => (t.match(/[A-Za-z0-9_$)\]]null(?![A-Za-z0-9_$])/g) || []).length;
+      if (grudado(texto) > grudado(bruto)) {
+        problemas.push(`${f} vira código ERRADO depois do corte de gabarito (${grudado(texto) - grudado(bruto)} acesso por índice colado em "null", ex.: cmd.flagsnull) — procure \`[...]\` solto dentro de um d(...) e embrulhe em parênteses ou use um helper`);
+      }
+      try { new vm.Script(texto, { filename: f }); }
+      catch (e) {
+        const linha = ((e.stack || "").match(new RegExp(f.replace(/\./g, "\\.") + ":(\\d+)")) || [])[1];
+        problemas.push(`${f} QUEBRA depois do corte de gabarito (${e.message}${linha ? ", linha " + linha + " do texto cortado" : ""}) — procure \`[...]\` solto dentro de um d(...) e troque por um helper ou embrulhe em parênteses`);
+      }
+    }
+  }
+}
+
 // ---------- FIXAÇÃO: o molde boot.dev, medido ----------
 // Pedido do Gabriel (21/09/2026): cada comando com uma atividade que ensina o
 // caso de uso E uma ou duas de fixação, e cada atividade introduzindo UM

@@ -278,6 +278,12 @@ Ao mexer em atividade, no servidor ou na regra de acesso:
   usar o texto cortado. Na primeira versão ele lia do disco e punha o original
   no cache comprimido — quem aceitava gzip recebia tudo, e um `curl` sem
   compressão parecia limpo. **Teste no navegador, não só com curl.**
+- **`[...]` solto dentro de `d(...)` vira `null` no corte** — e o pior caso NÃO
+  quebra a sintaxe: `c.iam.usuarios["pedro"]` vira `c.iam.usuariosnull`, o
+  validador fica sempre falso e a atividade não completa pra ninguém. Ficou
+  assim em produção de 17 a 25/09 em 9 atividades. O `teste/analise.js` acusa
+  (seção do corte de gabarito); a regra é: acesso por índice dentro de `d(...)`
+  vai **entre parênteses** ou num helper declarado fora.
 - O `validar` FICA no cliente, de propósito: 35 dos 556 validadores usam
   helpers do escopo do próprio arquivo, e serializá-los quebraria 6% das
   atividades. Sem dica e sem solução, o validador só confere — não entrega.

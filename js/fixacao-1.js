@@ -359,7 +359,7 @@
       ["Criar o grupo você já sabe (min 1, max 1, desejado 1, zona us-east-1a).", "Com máquina no ar, o `delete-auto-scaling-group` só vai com `--force-delete`."],
       ["aws autoscaling create-auto-scaling-group --auto-scaling-group-name grupo-teste-carga --launch-template LaunchTemplateName=modelo-web,Version=1 --min-size 1 --max-size 1 --desired-capacity 1 --availability-zones us-east-1a",
         "aws autoscaling delete-auto-scaling-group --auto-scaling-group-name grupo-teste-carga --force-delete"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "autoscaling", "delete-auto-scaling-group") && cmd.flags["force-delete"] !== undefined && !asg(c, "grupo-teste-carga")),
+      (c, cmd, ok) => ok && ehCmd(cmd, "autoscaling", "delete-auto-scaling-group") && (cmd.flags["force-delete"] !== undefined) && !asg(c, "grupo-teste-carga")),
   ]);
 
   // ---------------- CloudWatch (alarmes, painéis, logs) ----------------
@@ -368,7 +368,7 @@
       "O plantonista cuida só do disco e da API. Liste apenas os alarmes <b>disco-cheio</b> e <b>latencia-api</b>, em vez da lista inteira.",
       ["A listagem de alarmes aceita nomes.", "A flag é `--alarm-names`, com os nomes separados por espaço."],
       ["aws cloudwatch describe-alarms --alarm-names disco-cheio latencia-api"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "cloudwatch", "describe-alarms") && cmd.flags["alarm-names"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudwatch", "describe-alarms") && (cmd.flags["alarm-names"] !== undefined)),
   ]);
   at("cw-6", [
     d("fx-cw-del1", "cloudwatch", 2, 70, "Dois alarmes de teste de uma vez",
@@ -779,7 +779,7 @@
       "Antes de apagar um apelido, confira quantos a chave dos relatórios tem. Liste só os aliases <b>dela</b>.",
       ["O `list-aliases` aceita `--key-id` pra filtrar por chave.", "Aqui também só vale o KeyId (o que o describe-key mostrou), não o alias."],
       ["aws kms list-aliases --key-id <chave-do-alias:alias/chave-relatorios>"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "list-aliases") && cmd.flags["key-id"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "list-aliases") && (cmd.flags["key-id"] !== undefined)),
   ]);
   at("kms-5", [
     d("fx-kms-enc1", "kms", 3, 80, "Cifre o relatório do trimestre",
@@ -863,7 +863,7 @@
       "O parceiro de frete encerrou as atividades e o token não vale mais nada. Apague o <b>token-api-frete</b> <b>sem janela de recuperação</b>. <small>(use com cuidado: sem janela, não há restore)</small>",
       ["O `delete-secret` tem uma flag que pula a janela de proteção.", "É a `--force-delete-without-recovery`."],
       ["aws secretsmanager delete-secret --secret-id token-api-frete --force-delete-without-recovery"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "delete-secret") && cmd.flags["force-delete-without-recovery"] !== undefined && !segredo(c, "token-api-frete")),
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "delete-secret") && (cmd.flags["force-delete-without-recovery"] !== undefined) && !segredo(c, "token-api-frete")),
     d("fx-sec-res1", "secretsmanager", 3, 100, "O estagiário apagou a senha dos relatórios",
       "Reproduza o susto: guarde a <b>senha-relatorios</b> (valor <b>rel-2026</b>), apague com a janela padrão e restaure antes que seja tarde.",
       ["Criar e apagar você já sabe — sem o `--recovery-window-in-days`, a janela é de 30 dias.", "No fim, o `restore-secret` da atividade anterior."],
@@ -891,7 +891,7 @@
       "O banco novo exige senha com letra maiúscula, minúscula, número <b>e</b> símbolo — senão rejeita. Gere uma de <b>20</b> caracteres que garanta pelo menos um de cada tipo.",
       ["Mesmo `get-random-password`, com outra flag.", "A flag é `--require-each-included-type`."],
       ["aws secretsmanager get-random-password --password-length 20 --require-each-included-type"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "get-random-password") && cmd.flags["require-each-included-type"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "get-random-password") && (cmd.flags["require-each-included-type"] !== undefined)),
   ]);
   at("sec-10", [
     d("fx-sec-rot1", "secretsmanager", 3, 110, "A senha dos relatórios troca a cada trimestre",
@@ -1217,7 +1217,7 @@
       "O dev pergunta o endereço do Redis. Descreva só o <b>cache-loja</b>, pedindo as informações dos nós — é ali que está o endpoint.",
       ["O `describe-cache-clusters` aceita o id do cluster.", "Sem `--show-cache-node-info`, o endereço não vem."],
       ["aws elasticache describe-cache-clusters --cache-cluster-id cache-loja --show-cache-node-info"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-cache-clusters") && cmd.flags["show-cache-node-info"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-cache-clusters") && (cmd.flags["show-cache-node-info"] !== undefined)),
   ]);
   at("cache-5", [
     d("fx-ec-sg2", "elasticache", 2, 80, "O cache dos relatórios mora noutro lugar",
@@ -1857,7 +1857,7 @@
       "Liste só as 5 consultas mais recentes — o histórico inteiro não interessa agora.",
       ["Mesmo `list-query-executions`, com `--max-results`."],
       ["aws athena list-query-executions --max-results 5"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "athena", "list-query-executions") && cmd.flags["max-results"] !== undefined),
+      (c, cmd, ok) => ok && ehCmd(cmd, "athena", "list-query-executions") && (cmd.flags["max-results"] !== undefined)),
   ]);
 
   // ---------------- Kinesis ----------------
@@ -1922,5 +1922,76 @@
       ["aws ec2 create-route --route-table-id <rtb-novo> --gateway-id <igw-de:10.41.0.0/16> --destination-cidr-block 0.0.0.0/0",
         "aws ec2 delete-route --route-table-id <rtb-novo> --destination-cidr-block 0.0.0.0/0"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-route")),
+  ]);
+
+  // ============================================================
+  // Leva 13 (25/09): os últimos — Trusted Advisor, IA, Redshift,
+  // CloudFormation, ACM e Route 53
+  // (organizations create-organization fica sem reforço de propósito: a
+  // organização só se cria uma vez por conta; repetir é AlreadyInOrganization)
+  // ============================================================
+  at("ta-2", [
+    d("fx-ta-r2", "support", 2, 80, "Quem ainda usa usuário do IAM?",
+      "Veja agora o resultado da checagem de uso do IAM (id <b>DAvU99Dc4C</b>) — é ela que aponta conta usando a senha do root no dia a dia.",
+      ["Mesmo `describe-trusted-advisor-check-result`, outro `--check-id`.", "O id de cada checagem aparece no describe-trusted-advisor-checks."],
+      ["aws support describe-trusted-advisor-check-result --check-id DAvU99Dc4C --language pt"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "support", "describe-trusted-advisor-check-result") && String(cmd.flags["check-id"] || "") === "DAvU99Dc4C"),
+  ]);
+  at("cob-rek-1", [
+    d("fx-rek-f2", "rekognition", 2, 90, "A foto do evento, com todos os detalhes",
+      "O marketing quer saber o clima do público na foto <b>evento.jpg</b> (bucket <b>meu-bucket</b>). Detecte os rostos pedindo <b>todos</b> os atributos — sem isso, a emoção não vem.",
+      ["Mesmo `detect-faces`, com outra imagem.", "A flag que traz tudo é `--attributes ALL`."],
+      ["aws rekognition detect-faces --image '{\"S3Object\":{\"Bucket\":\"meu-bucket\",\"Name\":\"evento.jpg\"}}' --attributes ALL"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "rekognition", "detect-faces") && String(cmd.flags.attributes || "") === "ALL"),
+  ]);
+  at("cob-trad-1", [
+    d("fx-trad-l2", "translate", 1, 50, "Os idiomas em português",
+      "O menu do app mostra os idiomas pro usuário brasileiro. Liste os idiomas com os nomes <b>em português</b>.",
+      ["Mesmo `list-languages`, com o idioma de exibição.", "A flag é `--display-language-code pt`."],
+      ["aws translate list-languages --display-language-code pt"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "translate", "list-languages") && String(cmd.flags["display-language-code"] || "") === "pt"),
+  ]);
+  at("cob-comp-1", [
+    d("fx-comp-e2", "comprehend", 2, 80, "Quem e onde, em inglês",
+      "Chegou uma notícia em inglês pro time de inteligência de mercado. Extraia as entidades de <b>Amazon opened an office in Seattle</b>.",
+      ["Mesmo `detect-entities`, outro texto e outro idioma.", "O idioma do texto vai em `--language-code en`."],
+      ["aws comprehend detect-entities --text \"Amazon opened an office in Seattle\" --language-code en"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "comprehend", "detect-entities") && String(cmd.flags["language-code"] || "") === "en"),
+  ]);
+  at("cob-bed-1", [
+    d("fx-bed-g2", "bedrock", 2, 80, "E o modelo da Anthropic?",
+      "Compare com outro modelo: busque os detalhes do <b>anthropic.claude-3-5-sonnet-20240620-v1:0</b> e veja se ele aceita imagem na entrada.",
+      ["Mesmo `get-foundation-model`, outro `--model-identifier`."],
+      ["aws bedrock get-foundation-model --model-identifier anthropic.claude-3-5-sonnet-20240620-v1:0"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "bedrock", "get-foundation-model") && /anthropic/.test(String(cmd.flags["model-identifier"] || ""))),
+  ]);
+  at("rs-3", [
+    d("fx-rs-d2", "redshift", 3, 100, "Desligue, mas guarde uma cópia",
+      "O warehouse de BI de teste (<b>bi-teste</b>, dc2.large, 1 nó, usuário admin) vai sair — mas o financeiro quer os dados guardados. Crie pra ver o cenário e apague <b>com</b> snapshot final, chamado <b>bi-teste-final</b>.",
+      ["Criar você já sabe.", "Em vez de `--skip-final-cluster-snapshot`, a outra escolha é `--final-cluster-snapshot-identifier <nome>`."],
+      ["aws redshift create-cluster --cluster-identifier bi-teste --node-type dc2.large --master-username admin --master-user-password SenhaExemplo123 --number-of-nodes 1",
+        "aws redshift delete-cluster --cluster-identifier bi-teste --final-cluster-snapshot-identifier bi-teste-final"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "redshift", "delete-cluster") && (cmd.flags["final-cluster-snapshot-identifier"] !== undefined) && !((((c.redshift || {}).clusters) || {})["bi-teste"])),
+  ]);
+  at("cfn-9", [
+    d("fx-cfn-ds2", "cloudformation", 2, 60, "O stack terminou de subir?",
+      "O pipeline só segue quando o stack está pronto. Veja só o <b>StackStatus</b> do <b>site2</b>.",
+      ["Mesmo `describe-stacks`, com `--query`.", "O caminho é `Stacks[0].StackStatus`."],
+      ["aws cloudformation describe-stacks --stack-name site2 --query Stacks[0].StackStatus"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudformation", "describe-stacks") && /StackStatus/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("acm-9", [
+    d("fx-acm-rn2", "acm", 3, 80, "O CNAME voltou pro DNS",
+      "O time recolocou no DNS o registro de validação que alguém tinha apagado. Force a checagem de renovação de novo pra confirmar que agora vai.",
+      ["Mesmo `renew-certificate` de antes."],
+      ["aws acm renew-certificate --certificate-arn <cert-arn>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "acm", "renew-certificate")),
+  ]);
+  at("fx-r53-dz1", [
+    d("fx-r53-gc2", "route53", 3, 70, "A zona de teste saiu mesmo?",
+      "O <code>delete-hosted-zone</code> também devolve um ChangeInfo. Acompanhe essa mudança até ela ficar INSYNC.",
+      ["Mesmo `get-change` de antes, com o id que o delete devolveu."],
+      ["aws route53 get-change --id <change-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "route53", "get-change")),
   ]);
 })();

@@ -135,7 +135,7 @@
       ["O nome é seu, a URL é da AWS: quem traduz um no outro é o get-queue-url.", "A flag aqui é `--queue-name`, e não `--queue-url`."],
       ["aws sqs create-queue --queue-name notas-fiscais",
         "aws sqs get-queue-url --queue-name notas-fiscais"],
-      (c, cmd, ok) => ok && ehCmd(cmd, "sqs", "get-queue-url") && cmd.flags["queue-name"] === "notas-fiscais"),
+      (c, cmd, ok) => ok && ehCmd(cmd, "sqs", "get-queue-url") && (cmd.flags["queue-name"] === "notas-fiscais")),
   ]);
   // purge-queue — o botão perigoso
   at("cob-sqs-2", [
