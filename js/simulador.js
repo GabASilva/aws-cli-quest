@@ -440,8 +440,21 @@ const cmdS3api = {
     const nome = exigirFlag(flags, "bucket");
     if (!NOME_BUCKET_VALIDO.test(nome)) throw new ErroCli("An error occurred (InvalidBucketName) when calling the CreateBucket operation: The specified bucket is not valid.");
     if (conta.s3.buckets[nome]) throw new ErroCli("An error occurred (BucketAlreadyOwnedByYou) when calling the CreateBucket operation: Your previous request to create the named bucket succeeded and you already own it.");
-    conta.s3.buckets[nome] = { criadoEm: dataFormatada(), objetos: {}, website: null, politica: null, versionamento: null };
-    return js({ Location: "/" + nome });
+    // Região do bucket: fora de us-east-1 a API crua EXIGE o LocationConstraint
+    // (o s3 mb resolve isso sozinho; o create-bucket não). Pegadinha clássica.
+    const conf = flags["create-bucket-configuration"] !== undefined ? parsearShorthand(String(flags["create-bucket-configuration"])) : {};
+    const restricao = conf.LocationConstraint ? String(conf.LocationConstraint) : "";
+    // Só a --region EXPLÍCITA conta: quem configurou sa-east-1 no aws configure
+    // não pode ter o cob-s3-1 quebrado por isso.
+    const regiaoPedido = String(flags.region || "us-east-1");
+    if (restricao === "us-east-1") {
+      throw new ErroCli("An error occurred (InvalidLocationConstraint) when calling the CreateBucket operation: The specified location-constraint is not valid\nEm us-east-1 NÃO se passa LocationConstraint: é a região padrão do S3.");
+    }
+    if (!restricao && regiaoPedido !== "us-east-1") {
+      throw new ErroCli("An error occurred (IllegalLocationConstraintException) when calling the CreateBucket operation: The unspecified location constraint is incompatible for the region specific endpoint this request was sent to.\nFora de us-east-1, diga a região também no corpo: --create-bucket-configuration LocationConstraint=" + regiaoPedido);
+    }
+    conta.s3.buckets[nome] = { criadoEm: dataFormatada(), objetos: {}, website: null, politica: null, versionamento: null, regiao: restricao || regiaoPedido };
+    return js({ Location: restricao ? "http://" + nome + ".s3.amazonaws.com/" : "/" + nome });
   },
 
   "list-buckets": (conta) => {

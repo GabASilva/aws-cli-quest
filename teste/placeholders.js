@@ -83,7 +83,7 @@ function resolverPlaceholders(conta, linha) {
     linha = linha.replace(/<receipt-handle>/g, handle);
   }
   // Lote: os comandos *-batch precisam de DOIS comprovantes. De trás pra
-  // frente porque a fila que interessa é a que a própria atividade criou.
+  // frente porque a fila que interessa é a que a própria atividade criou.
   if (linha.includes("<handle-1>") || linha.includes("<handle-2>")) {
     let par = [];
     for (const f of Object.values((conta.sqs || {}).filas || {}).reverse()) {
@@ -161,7 +161,12 @@ function resolverPlaceholders(conta, linha) {
   // consulta de log (Insights) e Web ACL do WAF — ids sorteados na criação
   if (linha.includes("<consulta-id>") && conta.logs) { const _q = Object.keys(conta.logs.consultas || {}); if (_q.length) linha = linha.replace(/<consulta-id>/g, _q[_q.length - 1]); }
   if (linha.includes("<waf-id>") && conta.waf) { const _w = Object.values(conta.waf.acls); if (_w.length) linha = linha.replace(/<waf-id>/g, _w[_w.length - 1].id); }
-  if (linha.includes("<sub-arn>") && conta.sns) { for (const t of Object.values(conta.sns.topicos || {})) { const a = (t.assinaturas || [])[(t.assinaturas || []).length - 1]; if (a) { linha = linha.replace(/<sub-arn>/g, a.arn); break; } } }
+  // a inscrição por SMS (o cliente que pediu pra sair) — procura em todos os tópicos
+  if (linha.includes("<sub-sms>") && conta.sns) { let _a = ""; for (const t of Object.values(conta.sns.topicos || {})) { const s = (t.assinaturas || []).find((x) => x.protocolo === "sms"); if (s) { _a = s.arn; break; } } linha = linha.replace(/<sub-sms>/g, _a); }
+  // <sub-arn>: a inscrição do tópico criado por ÚLTIMO (a que a atividade acabou
+  // de fazer). Pegar a do primeiro tópico cancelava a inscrição SMS de outra
+  // atividade sem ninguém perceber (achado em 25/09/2026).
+  if (linha.includes("<sub-arn>") && conta.sns) { for (const t of Object.values(conta.sns.topicos || {}).reverse()) { const a = (t.assinaturas || [])[(t.assinaturas || []).length - 1]; if (a) { linha = linha.replace(/<sub-arn>/g, a.arn); break; } } }
   // cobertura: tabela de rotas, sub-rede e flow log criados nas proprias atividades
   if (linha.includes("<rtb-novo>") && conta.vpc) { const _t = Object.keys(conta.vpc.tabelas || {}); if (_t.length) linha = linha.replace(/<rtb-novo>/g, _t[_t.length - 1]); }
   if (linha.includes("<subnet-id>") && conta.vpc) { const _s = Object.keys(conta.vpc.subnets || {}); if (_s.length) linha = linha.replace(/<subnet-id>/g, _s[_s.length - 1]); }

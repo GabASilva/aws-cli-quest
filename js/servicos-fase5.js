@@ -170,16 +170,36 @@
       estado(conta);
       const caminho = String(exigirFlag(flags, "path"));
       const decifrar = flags["with-decryption"] !== undefined;
-      const achados = Object.values(conta.ssm.parametros).filter((p) => p.nome.startsWith(caminho));
+      // Sem --recursive, só o nível imediato: /loja pega /loja/url-api, mas
+      // não /loja/pagamento/chave. É assim na AWS, e pega muita gente.
+      const base = caminho.endsWith("/") ? caminho : caminho + "/";
+      const recursivo = flags.recursive !== undefined;
+      const achados = Object.values(conta.ssm.parametros).filter((p) =>
+        p.nome.startsWith(base) && (recursivo || p.nome.slice(base.length).indexOf("/") < 0));
+      if (!recursivo && Object.values(conta.ssm.parametros).some((p) => p.nome.startsWith(base) && p.nome.slice(base.length).indexOf("/") >= 0)) {
+        avisarClimb("Tem parâmetro em nível mais fundo que ficou de fora. Pra descer a hierarquia inteira, use --recursive.");
+      }
       if (!achados.length) avisarClimb(`Nenhum parâmetro em "${caminho}". Repare que o caminho é hierárquico: /loja/ pega /loja/url-api, /loja/senha-db...`);
       return js({ Parameters: achados.map((p) => ({
         Name: p.nome, Type: p.tipo, Version: p.versao,
         Value: p.tipo === "SecureString" && !decifrar ? "AQICAHh" + hexAleatorio(16) : p.valor,
       })) });
     },
-    "describe-parameters": (conta) => {
+    "describe-parameters": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.ssm.parametros);
+      // --parameter-filters Key=Type,Values=SecureString | Key=Name,Option=BeginsWith,Values=/loja
+      const filtro = [flags && flags["parameter-filters"]].concat(pos || []).filter((x) => x !== undefined).map(String).join(" ");
+      const chave = (filtro.match(/Key=([A-Za-z]+)/) || [])[1];
+      const opcao = (filtro.match(/Option=([A-Za-z]+)/) || [])[1] || "Equals";
+      const valor = (filtro.match(/Values=([^\s,]+)/) || [])[1];
+      let l = Object.values(conta.ssm.parametros);
+      if (chave && valor) {
+        if (chave === "Type") l = l.filter((p) => p.tipo === valor);
+        else if (chave === "Name") l = l.filter((p) => (opcao === "BeginsWith" ? p.nome.startsWith(valor) : p.nome === valor));
+        else if (chave === "Path") l = l.filter((p) => p.nome.startsWith(valor.endsWith("/") ? valor : valor + "/"));
+        else throw new ErroCli("An error occurred (InvalidFilterKey) when calling the DescribeParameters operation: filtro " + chave + " não suportado. Use Type, Name ou Path.");
+        if (!l.length) { avisarClimb("Nenhum parâmetro casou com o filtro " + chave + "=" + valor + "."); return ""; }
+      }
       if (!l.length) { avisarClimb("Nenhum parâmetro ainda. Crie um com: aws ssm put-parameter --name /loja/url-api --value https://api.loja.com --type String"); return ""; }
       return js({ Parameters: l.map((p) => ({ Name: p.nome, Type: p.tipo, Version: p.versao, LastModifiedDate: p.criadoEm })) });
     },
@@ -279,9 +299,17 @@
       avisarClimb("O launch template é a RECEITA da máquina (imagem, tipo, chave). O Auto Scaling usa ela pra subir cópias iguais.");
       return js({ LaunchTemplate: { LaunchTemplateId: id, LaunchTemplateName: nome, DefaultVersionNumber: 1, LatestVersionNumber: 1, CreateTime: agoraIso() } });
     },
-    "describe-launch-templates": (conta) => {
+    "describe-launch-templates": (conta, pos, flags) => {
       estado(conta);
-      return js({ LaunchTemplates: Object.values(conta.autoscaling.modelos).map((m) => ({
+      let modelos = Object.values(conta.autoscaling.modelos);
+      // --launch-template-names a b: nome que não existe é ERRO na AWS, não lista vazia
+      if (flags && flags["launch-template-names"] !== undefined) {
+        const nomes = [String(flags["launch-template-names"])].concat((pos || []).map(String));
+        const falta = nomes.find((n) => !conta.autoscaling.modelos[n]);
+        if (falta) throw new ErroCli("An error occurred (InvalidLaunchTemplateName.NotFoundException) when calling the DescribeLaunchTemplates operation: At least one of the launch templates specified in the request does not exist.");
+        modelos = nomes.map((n) => conta.autoscaling.modelos[n]);
+      }
+      return js({ LaunchTemplates: modelos.map((m) => ({
         LaunchTemplateId: m.id, LaunchTemplateName: m.nome, CreateTime: m.criadoEm, LatestVersionNumber: 1,
       })) });
     },

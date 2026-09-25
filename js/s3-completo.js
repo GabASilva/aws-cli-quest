@@ -206,8 +206,8 @@
       return okSilencioso("Bucket \"" + nome + "\" existe e está acessível.");
     },
     "get-bucket-location": (conta, pos, flags) => {
-      bucketDe(conta, flags, "GetBucketLocation");
-      const r = REGIAO(conta);
+      const [, b] = bucketDe(conta, flags, "GetBucketLocation");
+      const r = b.regiao || REGIAO(conta);
       avisarClimb("Região importa: transferência entre regiões CUSTA, e latência de bucket do outro lado do mundo aparece no tempo de resposta da sua aplicação.");
       return js({ LocationConstraint: r === "us-east-1" ? null : r });
     },

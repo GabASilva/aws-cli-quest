@@ -216,7 +216,7 @@ try {
 // É estrito só nas famílias de id abaixo (o conteúdo antigo entra como
 // contagem, pra virar fila de trabalho sem travar ninguém).
 // >>> Toda leva nova de atividades: ponha o prefixo dela aqui. <<<
-const LEVAS_ESTRITAS = ["psqs", "psns", "sqsc", "logsc", "ssmc", "iamc", "ec2c", "s3c", "ctn"];
+const LEVAS_ESTRITAS = ["psqs", "psns", "sqsc", "logsc", "ssmc", "iamc", "ec2c", "s3c", "ctn", "fx"];
 {
   const ehEstrita = (id) => LEVAS_ESTRITAS.some((p) => String(id).indexOf(p + "-") === 0);
   const usoPorCmd = {};
@@ -244,6 +244,17 @@ const LEVAS_ESTRITAS = ["psqs", "psns", "sqsc", "logsc", "ssmc", "iamc", "ec2c",
   console.log("\n=== FIXAÇÃO (molde boot.dev) ===");
   console.log(`curso inteiro: ${umaVez.length} comandos praticados UMA vez só · ${duplas.length} atividades introduzindo 2+ comandos inéditos`);
   console.log(`levas estritas (${LEVAS_ESTRITAS.join(", ")}): ${umaVezEstrita.length} sem fixação · ${duplasEstritas.length} com 2+ inéditos`);
+  // FIXACAO=1 node teste/analise.js → a fila de trabalho do conteúdo antigo,
+  // agrupada pela trilha de quem introduziu o comando.
+  if (typeof process !== "undefined" && process.env && process.env.FIXACAO) {
+    const trilhaDe = {};
+    for (const d of DESAFIOS) trilhaDe[d.id] = d.servico;
+    const fila = {};
+    for (const k of umaVez) (fila[trilhaDe[introduzidoPor[k]]] = fila[trilhaDe[introduzidoPor[k]]] || []).push(k + " (" + introduzidoPor[k] + ")");
+    for (const x of duplas) (fila[trilhaDe[x.id]] = fila[trilhaDe[x.id]] || []).push("DUPLA " + x.id + ": " + x.ineditos.join(" + "));
+    Object.keys(fila).sort((a, b) => fila[b].length - fila[a].length)
+      .forEach((t) => console.log(`\n[${t}] ${fila[t].length}\n  ` + fila[t].join("\n  ")));
+  }
   for (const k of umaVezEstrita) avisos.push(`sem fixação: "aws ${k}" só aparece em ${introduzidoPor[k]}`);
   for (const x of duplasEstritas) avisos.push(`${x.id} introduz ${x.ineditos.length} comandos de uma vez: ${x.ineditos.join(" + ")}`);
 }
