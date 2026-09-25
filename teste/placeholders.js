@@ -169,6 +169,9 @@ function resolverPlaceholders(conta, linha) {
     linha = linha.replace(/<subnet-de:([^>]+)>/g, (m, cidr) => (Object.values(conta.vpc.subnets || {}).find((s) => s.cidr === cidr) || {}).id || "");
     linha = linha.replace(/<igw-de:([^>]+)>/g, (m, cidr) => { const v = vpcDe(cidr); return (Object.values(conta.vpc.igws || {}).find((g) => g.vpc && g.vpc === v.id) || {}).id || ""; });
   }
+  // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
+  // operações de gestão da chave não aceitam alias, só o KeyId
+  if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");
   // volume pelo tamanho (<vol-tam:10>) — a trilha de EBS trabalha com dois discos
   if (linha.includes("<vol-tam:") && conta.ec2) linha = linha.replace(/<vol-tam:(\d+)>/g, (m, t) => (Object.values(conta.ec2.volumes || {}).find((v) => String(v.tamanho) === t) || {}).id || "");
   // a PENÚLTIMA instância viva (a última é a do <id-da-instância>)

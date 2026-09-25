@@ -747,4 +747,90 @@
         "aws elbv2 delete-target-group --target-group-arn <tg-arn>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "elbv2", "delete-target-group") && !tg(c, "tg-teste-carga")),
   ]);
+
+  // ============================================================
+  // Leva 5 (25/09): KMS — segunda chave e a ordem da trilha
+  // ============================================================
+  // Os cob-kms (describe-key, list-aliases, status de rotação, disable-key)
+  // vinham DEPOIS de agendar e cancelar a exclusão: olhar a chave vinha depois
+  // de destruí-la. Agora cada um fica junto do que ele observa.
+  const chaveDoAlias = (c, a) => (((c.kms || {}).chaves) || {})[(((c.kms || {}).aliases) || {})[a]];
+  mover(["cob-kms-1"], "kms-2");
+  mover(["cob-kms-2"], "kms-3");
+  mover(["cob-kms-3", "cob-kms-4"], "kms-6");
+  at("cob-kms-2", [
+    d("fx-kms-ca1", "kms", 2, 80, "Uma chave só pros relatórios",
+      "O time de BI quer os relatórios cifrados com uma chave <b>separada</b> da loja — assim dá pra revogar um sem derrubar o outro. Crie a chave com a descrição <b>chave dos relatorios</b> e dê a ela o apelido <b>alias/chave-relatorios</b>.",
+      ["Criar chave e criar alias você já fez.", "O `--target-key-id` do alias é o KeyId que volta na criação."],
+      ["aws kms create-key --description \"chave dos relatorios\"",
+        "aws kms create-alias --alias-name alias/chave-relatorios --target-key-id <key-id>"],
+      (c) => !!chaveDoAlias(c, "alias/chave-relatorios")),
+    d("fx-kms-lk1", "kms", 2, 50, "Quantas chaves a conta paga?",
+      "Cada chave que você cria custa por mês, usada ou não. Liste as chaves da conta e conte: agora são pelo menos duas.",
+      ["Mesmo comando do começo da trilha."],
+      ["aws kms list-keys"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "list-keys") && !!chaveDoAlias(c, "alias/chave-relatorios")),
+    d("fx-kms-dk1", "kms", 2, 70, "O KeyId por trás do apelido",
+      "Vários comandos da KMS não aceitam alias — pedem o KeyId. Descreva a chave pelo apelido <b>alias/chave-relatorios</b> e anote o <code>KeyId</code> que volta.",
+      ["O `describe-key` é dos poucos que aceitam o alias direto.", "O KeyId está dentro de KeyMetadata."],
+      ["aws kms describe-key --key-id alias/chave-relatorios"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "describe-key") && /chave-relatorios/.test(String(cmd.flags["key-id"] || ""))),
+    d("fx-kms-la1", "kms", 2, 60, "Quais apelidos essa chave tem?",
+      "Antes de apagar um apelido, confira quantos a chave dos relatórios tem. Liste só os aliases <b>dela</b>.",
+      ["O `list-aliases` aceita `--key-id` pra filtrar por chave.", "Aqui também só vale o KeyId (o que o describe-key mostrou), não o alias."],
+      ["aws kms list-aliases --key-id <chave-do-alias:alias/chave-relatorios>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "list-aliases") && cmd.flags["key-id"] !== undefined),
+  ]);
+  at("kms-5", [
+    d("fx-kms-enc1", "kms", 3, 80, "Cifre o relatório do trimestre",
+      "Cifre o texto <b>relatorio-q3</b> com a chave dos relatórios, usando o apelido dela.",
+      ["Mesmo `encrypt` de antes, outra chave.", "No encrypt o alias vale."],
+      ["aws kms encrypt --key-id alias/chave-relatorios --plaintext relatorio-q3"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "encrypt") && /chave-relatorios/.test(String(cmd.flags["key-id"] || ""))),
+    d("fx-kms-dec1", "kms", 3, 80, "Abra o relatório",
+      "O analista precisa ler o relatório. Decifre o blob que você acabou de gerar — e repare de novo que não precisa dizer qual chave.",
+      ["Mesmo `decrypt` de antes, com o blob novo."],
+      ["aws kms decrypt --ciphertext-blob <blob>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "decrypt") && !!chaveDoAlias(c, "alias/chave-relatorios")),
+  ]);
+  at("kms-6", [
+    d("fx-kms-rot1", "kms", 3, 70, "Rotação também nos relatórios",
+      "A auditoria exige rotação em TODA chave de cliente. Ligue a rotação na chave dos relatórios — pelo KeyId.",
+      ["Mesmo comando da chave da loja.", "Com o alias dá NotFoundException: pegue o KeyId no describe-key."],
+      ["aws kms enable-key-rotation --key-id <chave-do-alias:alias/chave-relatorios>"],
+      (c) => !!(chaveDoAlias(c, "alias/chave-relatorios") || {}).rotacao),
+  ]);
+  at("cob-kms-3", [
+    d("fx-kms-grs1", "kms", 3, 70, "E a chave da loja, está girando?",
+      "Confira também a chave da loja. <small>(é assim que o auditor confere: chave por chave, pelo KeyId)</small>",
+      ["Mesmo comando, com o KeyId da chave da loja."],
+      ["aws kms get-key-rotation-status --key-id <chave-do-alias:alias/chave-loja>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "get-key-rotation-status") && String(cmd.flags["key-id"] || "") === String((chaveDoAlias(c, "alias/chave-loja") || {}).id || "-")),
+  ]);
+  at("cob-kms-4", [
+    d("fx-kms-en1", "kms", 3, 80, "O susto passou: ligue de volta",
+      "Com a chave dos relatórios desabilitada, o painel de BI parou. Habilite a chave de novo.",
+      ["O contrário do disable é o `enable-key`.", "KeyId, não alias."],
+      ["aws kms enable-key --key-id <chave-do-alias:alias/chave-relatorios>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "enable-key") && (chaveDoAlias(c, "alias/chave-relatorios") || {}).estado === "Enabled"),
+    d("fx-kms-dis1", "kms", 3, 80, "O BI vai ficar três meses parado",
+      "O projeto de BI foi pausado por três meses. Em vez de apagar a chave (irreversível), desabilite — dá pra voltar quando o projeto voltar.",
+      ["Mesmo `disable-key` de antes."],
+      ["aws kms disable-key --key-id <chave-do-alias:alias/chave-relatorios>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "disable-key") && (chaveDoAlias(c, "alias/chave-relatorios") || {}).estado === "Disabled"),
+  ]);
+  at("kms-7", [
+    d("fx-kms-sch1", "kms", 3, 80, "O BI foi cancelado de vez",
+      "O projeto de BI foi encerrado. Agende a exclusão da chave dos relatórios — desta vez <b>sem</b> informar a janela, e veja quantos dias a AWS usa por padrão.",
+      ["Mesmo `schedule-key-deletion`, sem o `--pending-window-in-days`.", "O padrão é o prazo MAIS LONGO: 30 dias."],
+      ["aws kms schedule-key-deletion --key-id <chave-do-alias:alias/chave-relatorios>"],
+      (c) => (chaveDoAlias(c, "alias/chave-relatorios") || {}).estado === "PendingDeletion"),
+  ]);
+  at("kms-8", [
+    d("fx-kms-can1", "kms", 3, 80, "O jurídico precisa dos relatórios antigos",
+      "Uma auditoria fiscal pediu os relatórios cifrados do ano passado — sem a chave, eles viram lixo. Cancele a exclusão da chave dos relatórios. <small>(ela volta desabilitada, e é assim que deve ficar até alguém precisar abrir)</small>",
+      ["Mesmo `cancel-key-deletion` de antes."],
+      ["aws kms cancel-key-deletion --key-id <chave-do-alias:alias/chave-relatorios>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kms", "cancel-key-deletion") && (chaveDoAlias(c, "alias/chave-relatorios") || {}).estado === "Disabled"),
+  ]);
 })();

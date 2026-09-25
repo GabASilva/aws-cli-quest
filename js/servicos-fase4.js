@@ -274,9 +274,18 @@
   // ============================================================
   // KMS — chaves de criptografia
   // ============================================================
-  function acharChave(conta, flags, operacao) {
+  // aceitaAlias=false: as operações de GESTÃO da chave (rotação, habilitar,
+  // desabilitar, agendar e cancelar exclusão) só aceitam key ID ou key ARN —
+  // conferido na API Reference do KMS em 25/09/2026. Alias só vale pra
+  // describe-key e pras operações de cifra. Até essa data o CLImb aceitava
+  // alias em tudo, e o kms-6/7/8 ensinavam um comando que a AWS recusa.
+  function acharChave(conta, flags, operacao, aceitaAlias) {
     estado(conta);
     let id = String(exigirFlag(flags, "key-id"));
+    if (aceitaAlias === false && /^alias\/|:alias\//.test(id)) {
+      throw new ErroCli(`An error occurred (NotFoundException) when calling the ${operacao} operation: Invalid keyId '${id}'\n` +
+        `O ${operacao} não aceita alias: só o key ID ou o key ARN. Pegue o KeyId com: aws kms describe-key --key-id ${id}`);
+    }
     if (id.startsWith("alias/")) {
       const alvo = conta.kms.aliases[id];
       if (!alvo) throw new ErroCli(`An error occurred (NotFoundException) when calling the ${operacao} operation: Alias ${id} is not found.`);
@@ -336,9 +345,15 @@
       avisarClimb("Com o alias você usa 'alias/chave-loja' no lugar daquele id enorme — e pode trocar a chave por trás sem mexer na aplicação.");
       return okSilencioso(`Alias "${alias}" criado.`);
     },
-    "list-aliases": (conta) => {
+    "list-aliases": (conta, pos, flags) => {
       estado(conta);
-      return js({ Aliases: Object.entries(conta.kms.aliases).map(([a, id]) => ({
+      let pares = Object.entries(conta.kms.aliases);
+      // --key-id: só os apelidos de UMA chave (aqui também só vale KeyId/ARN)
+      if (flags && flags["key-id"] !== undefined) {
+        const k = acharChave(conta, flags, "ListAliases", false);
+        pares = pares.filter(([, id]) => id === k.id);
+      }
+      return js({ Aliases: pares.map(([a, id]) => ({
         AliasName: a, TargetKeyId: id, AliasArn: `arn:aws:kms:${REGIAO(conta)}:${CONTA_ID(conta)}:${a}`,
       })) });
     },
@@ -368,27 +383,27 @@
       return js({ KeyId: `arn:aws:kms:${REGIAO(conta)}:${CONTA_ID(conta)}:key/${id}`, Plaintext: resto.join(":"), EncryptionAlgorithm: "SYMMETRIC_DEFAULT" });
     },
     "enable-key-rotation": (conta, pos, flags) => {
-      const k = acharChave(conta, flags, "EnableKeyRotation");
+      const k = acharChave(conta, flags, "EnableKeyRotation", false);
       k.rotacao = true;
       avisarClimb("Com a rotação ligada, a AWS troca o material da chave todo ano sozinha — e o que foi cifrado antes continua abrindo.");
       return okSilencioso(`Rotação automática ligada na chave ${k.id}.`);
     },
     "get-key-rotation-status": (conta, pos, flags) => {
-      const k = acharChave(conta, flags, "GetKeyRotationStatus");
+      const k = acharChave(conta, flags, "GetKeyRotationStatus", false);
       return js({ KeyRotationEnabled: !!k.rotacao });
     },
     "disable-key": (conta, pos, flags) => {
-      const k = acharChave(conta, flags, "DisableKey");
+      const k = acharChave(conta, flags, "DisableKey", false);
       k.estado = "Disabled";
       return okSilencioso(`Chave ${k.id} desabilitada (ninguém cifra nem decifra com ela até habilitar de novo).`);
     },
     "enable-key": (conta, pos, flags) => {
-      const k = acharChave(conta, flags, "EnableKey");
+      const k = acharChave(conta, flags, "EnableKey", false);
       k.estado = "Enabled";
       return okSilencioso(`Chave ${k.id} habilitada.`);
     },
     "schedule-key-deletion": (conta, pos, flags) => {
-      const k = acharChave(conta, flags, "ScheduleKeyDeletion");
+      const k = acharChave(conta, flags, "ScheduleKeyDeletion", false);
       const dias = parseInt(flags["pending-window-in-days"] || "30", 10);
       if (dias < 7 || dias > 30) throw new ErroCli(`An error occurred (ValidationException) when calling the ScheduleKeyDeletion operation: PendingWindowInDays must be between 7 and 30.`);
       k.estado = "PendingDeletion";
@@ -397,7 +412,7 @@
       return js({ KeyId: `arn:aws:kms:${REGIAO(conta)}:${CONTA_ID(conta)}:key/${k.id}`, DeletionDate: k.apagandoEm });
     },
     "cancel-key-deletion": (conta, pos, flags) => {
-      const k = acharChave(conta, flags, "CancelKeyDeletion");
+      const k = acharChave(conta, flags, "CancelKeyDeletion", false);
       if (!k.apagandoEm) throw new ErroCli(`An error occurred (KMSInvalidStateException) when calling the CancelKeyDeletion operation: ${k.id} is not pending deletion.`);
       k.apagandoEm = null;
       k.estado = "Disabled";
@@ -545,20 +560,20 @@
       solucao: ["aws kms decrypt --ciphertext-blob <blob>"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "kms", "decrypt") },
     { id: "kms-6", servico: "kms", nivel: 3, xp: 80, titulo: "Rotação automática",
-      descricao: "Ligue a <b>rotação anual</b> da chave (a AWS troca o material sozinha e o que já foi cifrado continua abrindo).",
-      dicas: ["`enable-…` liga o serviço na conta — veja a lista de comandos com: aws kms help", "A forma do comando é: aws kms enable-key-rotation --key-id <id>"],
-      solucao: ["aws kms enable-key-rotation --key-id alias/chave-loja"],
+      descricao: "Ligue a <b>rotação anual</b> da chave da loja (a AWS troca o material sozinha e o que já foi cifrado continua abrindo). <small>(pegadinha: os comandos de GESTÃO da chave não aceitam o alias — só o KeyId ou o ARN. O <code>describe-key --key-id alias/chave-loja</code> te dá o KeyId)</small>",
+      dicas: ["`enable-…` liga o serviço na conta — veja a lista de comandos com: aws kms help", "Com o alias, a resposta é NotFoundException. Use o KeyId (o describe-key mostra).", "A forma do comando é: aws kms enable-key-rotation --key-id <KeyId>"],
+      solucao: ["aws kms enable-key-rotation --key-id <chave-do-alias:alias/chave-loja>"],
       validar: (c) => !!(c.kms && Object.values(c.kms.chaves).some((k) => k.rotacao)) },
     { id: "kms-7", servico: "kms", nivel: 3, xp: 90, titulo: "Agende a destruição",
       descricao: "Apagar chave é <b>irreversível</b> — o que foi cifrado com ela vira lixo pra sempre. Agende a exclusão com a janela mínima: <b>7</b> dias.",
-      dicas: ["`schedule-…` agenda uma execução — veja a lista de comandos com: aws kms help", "A forma do comando é: aws kms schedule-key-deletion --key-id <id> --pending-window-in-days <número>"],
-      solucao: ["aws kms schedule-key-deletion --key-id alias/chave-loja --pending-window-in-days 7"],
+      dicas: ["`schedule-…` agenda uma execução — veja a lista de comandos com: aws kms help", "Também aqui só vale o KeyId, não o alias.", "A forma do comando é: aws kms schedule-key-deletion --key-id <KeyId> --pending-window-in-days <número>"],
+      solucao: ["aws kms schedule-key-deletion --key-id <chave-do-alias:alias/chave-loja> --pending-window-in-days 7"],
       validar: (c) => !!(c.kms && Object.values(c.kms.chaves).some((k) => k.estado === "PendingDeletion")) },
     { id: "kms-8", servico: "kms", nivel: 3, xp: 90, titulo: "Cancele antes que seja tarde",
       descricao: "Ainda tem dado cifrado com ela! <b>Cancele</b> a exclusão e <b>habilite</b> a chave de novo (ela volta desabilitada).",
-      dicas: ["Primeiro: aws kms cancel-key-deletion --key-id <id>", "Depois: aws kms enable-key --key-id <id>"],
-      solucao: ["aws kms cancel-key-deletion --key-id alias/chave-loja",
-        "aws kms enable-key --key-id alias/chave-loja"],
+      dicas: ["Primeiro: aws kms cancel-key-deletion --key-id <KeyId>", "Depois: aws kms enable-key --key-id <KeyId> — os dois pedem o KeyId, não o alias."],
+      solucao: ["aws kms cancel-key-deletion --key-id <chave-do-alias:alias/chave-loja>",
+        "aws kms enable-key --key-id <chave-do-alias:alias/chave-loja>"],
       validar: (c) => !!(c.kms && Object.values(c.kms.chaves).some((k) => !k.apagandoEm && k.estado === "Enabled" && k.rotacao)) },
   ];
 
