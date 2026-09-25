@@ -8,9 +8,9 @@
 // - Botão fixo no topo da lateral abre um modal com as trilhas por grupo, uma
 //   caixa de marcar em cada, e atalhos (todas, só as grátis, em andamento, por
 //   carreira).
-// - Guarda as ESCONDIDAS (não as visíveis) no localStorage: trilha nova que
-//   entrar no app aparece sozinha, em vez de nascer escondida pra quem já
-//   tinha filtrado. É preferência deste navegador — perder não custa nada.
+// - Guarda as ESCONDIDAS (não as visíveis), junto do progresso: trilha nova
+//   que entrar no app aparece sozinha, em vez de nascer escondida pra quem já
+//   tinha filtrado. Com conta, a escolha vai junto pra qualquer aparelho.
 // - A trilha aberta e a da atividade na tela nunca somem, senão o clique num
 //   "Desafio do dia" levaria pra uma trilha invisível.
 // - É ESCOLHA, não substituição (ver memória decisoes-de-hud): sem filtro, a
@@ -22,18 +22,37 @@
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
-  const CHAVE = "climb.trilhas.ocultas";
+  // A escolha mora no progresso (jogo.trilhasOcultas): salvarJogo guarda no
+  // navegador e, com conta, sobe pra nuvem — o filtro acompanha a pessoa em
+  // qualquer aparelho. Sempre lido do `jogo` atual (nada de cache aqui): o
+  // login troca o objeto inteiro e o renderSidebar seguinte já reaplica.
+  // A chave antiga do localStorage (v160) é migrada uma vez e apagada.
+  const CHAVE_ANTIGA = "climb.trilhas.ocultas";
 
-  function ocultas() {
-    try { const b = localStorage.getItem(CHAVE); if (b) return new Set(JSON.parse(b)); } catch (e) { /* ok */ }
-    return new Set();
+  function migrarAntiga() {
+    if (typeof jogo === "undefined" || !jogo) return;
+    let bruto = null;
+    try { bruto = localStorage.getItem(CHAVE_ANTIGA); } catch (e) { return; }
+    if (!bruto) return;
+    try {
+      const lista = JSON.parse(bruto);
+      if (!Array.isArray(jogo.trilhasOcultas) && Array.isArray(lista)) {
+        jogo.trilhasOcultas = lista.filter((t) => typeof t === "string");
+        if (typeof salvarJogo === "function") salvarJogo();
+      }
+    } catch (e) { /* lixo: descarta */ }
+    try { localStorage.removeItem(CHAVE_ANTIGA); } catch (e) { /* ok */ }
+  }
+  function atuais() {
+    migrarAntiga();
+    const l = typeof jogo !== "undefined" && jogo && Array.isArray(jogo.trilhasOcultas) ? jogo.trilhasOcultas : [];
+    return new Set(l);
   }
   function salvar(set) {
-    try { localStorage.setItem(CHAVE, JSON.stringify([...set])); } catch (e) { /* ok: vale só nesta sessão */ }
-    memoria = set;
+    if (typeof jogo === "undefined" || !jogo) return;
+    jogo.trilhasOcultas = [...set];
+    if (typeof salvarJogo === "function") salvarJogo();
   }
-  let memoria = null; // se o localStorage falhar, a escolha vale até recarregar
-  const atuais = () => memoria || ocultas();
 
   const metas = () => (typeof SERVICOS_META !== "undefined" ? SERVICOS_META : []);
   function trilhaVisivelSempre() {

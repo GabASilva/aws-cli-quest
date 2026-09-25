@@ -98,6 +98,7 @@ function sincronizarNuvem() {
         perfilPublico: jogo.perfilPublico,
         atividadeDiaria: jogo.atividadeDiaria,
         streakDias: jogo.streakDias,
+        trilhasOcultas: jogo.trilhasOcultas,
         conta: jogo.conta,
       },
     });
@@ -131,6 +132,7 @@ function aplicarProgressoNuvem(perfil, progresso) {
     jogo.perfilPublico = progresso.perfilPublico || {};
     jogo.atividadeDiaria = progresso.atividadeDiaria || {};
     jogo.streakDias = progresso.streakDias || { atual: 0, melhor: 0, ultimo: "" };
+    if (Array.isArray(progresso.trilhasOcultas)) jogo.trilhasOcultas = progresso.trilhasOcultas;
     if (progresso.conta) jogo.conta = progresso.conta;
   }
   jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)
@@ -198,6 +200,9 @@ function mesclarEstados(local, nuvem) {
     perfilPublico: Object.assign({}, nuvem.perfilPublico, local.perfilPublico),
     atividadeDiaria,
     streakDias,
+    // filtro da lateral: preferência, não conquista — a da conta vale; sem
+    // escolha na conta, fica a que foi feita deslogado
+    trilhasOcultas: Array.isArray(nuvem.trilhasOcultas) ? nuvem.trilhasOcultas : local.trilhasOcultas,
   };
 }
 
@@ -216,6 +221,7 @@ function entrarComConta(perfil, progressoNuvem) {
     perfilPublico: jogo.perfilPublico,
     atividadeDiaria: jogo.atividadeDiaria,
     streakDias: jogo.streakDias,
+    trilhasOcultas: jogo.trilhasOcultas,
   };
   const tinhaLocal = Object.keys(local.concluidos || {}).length > 0;
   const tinhaNuvem = !!(progressoNuvem && Object.keys(progressoNuvem.concluidos || {}).length > 0);
@@ -234,6 +240,7 @@ function entrarComConta(perfil, progressoNuvem) {
   jogo.perfilPublico = merged.perfilPublico || {};
   jogo.atividadeDiaria = merged.atividadeDiaria || {};
   jogo.streakDias = merged.streakDias || { atual: 0, melhor: 0, ultimo: "" };
+  if (Array.isArray(merged.trilhasOcultas)) jogo.trilhasOcultas = merged.trilhasOcultas;
   jogo.conta = normalizarConta(merged.conta); // migra contas antigas (campos novos)
 
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }

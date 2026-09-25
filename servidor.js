@@ -523,6 +523,13 @@ function sanearProgresso(p) {
     melhor: intLimitado(sd.melhor, 10000),
     ultimo: typeof sd.ultimo === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sd.ultimo) ? sd.ultimo : "",
   };
+  // trilhas escondidas da lateral (filtro-trilhas.js): só ids de trilha, sem
+  // texto livre. Ausente = nunca escolheu (não vira lista vazia).
+  if (Array.isArray(p.trilhasOcultas)) {
+    out.trilhasOcultas = p.trilhasOcultas
+      .filter((t) => typeof t === "string" && /^[a-z0-9-]{1,40}$/.test(t))
+      .slice(0, 200);
+  }
   // `conta` é o estado da AWS simulada do próprio usuário — guarda como veio
   // (já limitado pelo teto de 100KB do corpo). Só barra chaves perigosas no topo.
   if (p.conta && typeof p.conta === "object") out.conta = mapaSeguro(p.conta, 50, (v) => v);
