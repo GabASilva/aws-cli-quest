@@ -461,6 +461,7 @@
     // Config
     "configservice.put-configuration-recorder": "cria o \"gravador\" que registra o histórico de configuração dos recursos. Sozinho ele ainda não grava.",
     "configservice.start-configuration-recorder": "liga a gravação — a partir daí toda mudança de config fica registrada.",
+    "configservice.stop-configuration-recorder": "pausa a gravação sem apagar o gravador — corta custo no laboratório, e em produção é sinal de alerta.",
     "configservice.put-config-rule": "cria uma regra que marca recursos fora do padrão (ex.: bucket S3 sem criptografia).",
     // Rekognition
     "rekognition.detect-labels": "manda a imagem e recebe o que tem nela (objetos, cenas), com a confiança de cada rótulo.",

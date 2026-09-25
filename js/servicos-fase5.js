@@ -269,7 +269,18 @@
     },
     "list-users": (conta, pos, flags) => {
       const p = acharPool(conta, flags, "ListUsers");
-      return js({ Users: Object.values(p.usuarios).map((u) => ({
+      let usuarios = Object.values(p.usuarios);
+      // --filter 'username = "maria"' (igual) ou 'username ^= "ma"' (começa com)
+      if (flags.filter !== undefined) {
+        // aceita 'username = "maria"' e também "username = \"maria\"" (o tokenizer
+        // deixa a barra do \" dentro de aspas duplas)
+        const m = String(flags.filter).match(/^\s*([\w:]+)\s*(\^?=)\s*[\\"]*([^"\\]*)[\\"]*\s*$/);
+        if (!m) throw new ErroCli("An error occurred (InvalidParameterException) when calling the ListUsers operation: filtro inválido. Forma: --filter 'username = \"maria\"' ou 'username ^= \"ma\"'");
+        const campo = { username: (u) => u.usuario, status: (u) => u.estado, "cognito:user_status": (u) => u.estado }[m[1]];
+        if (!campo) throw new ErroCli("An error occurred (InvalidParameterException) when calling the ListUsers operation: atributo não suportado no filtro: " + m[1]);
+        usuarios = usuarios.filter((u) => (m[2] === "^=" ? String(campo(u)).indexOf(m[3]) === 0 : String(campo(u)) === m[3]));
+      }
+      return js({ Users: usuarios.map((u) => ({
         Username: u.usuario, UserStatus: u.estado, Enabled: true, UserCreateDate: u.criadoEm,
       })) });
     },

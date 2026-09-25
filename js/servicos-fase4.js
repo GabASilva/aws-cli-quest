@@ -178,7 +178,15 @@
     },
     "get-tables": (conta, pos, flags) => {
       const b = acharBanco(conta, flags, "GetTables", "database-name");
-      return js({ TableList: Object.values(b.tabelas).map((t) => ({
+      let tabelas = Object.values(b.tabelas);
+      // --expression é uma REGEX sobre o nome da tabela (ex.: vend.*)
+      if (flags.expression !== undefined) {
+        let re;
+        try { re = new RegExp("^(?:" + String(flags.expression) + ")$"); }
+        catch (e) { throw new ErroCli("An error occurred (InvalidInputException) when calling the GetTables operation: expressão inválida: " + String(flags.expression)); }
+        tabelas = tabelas.filter((t) => re.test(t.nome));
+      }
+      return js({ TableList: tabelas.map((t) => ({
         Name: t.nome, DatabaseName: b.nome, CreateTime: t.criadoEm,
         StorageDescriptor: { Columns: t.colunas, Location: t.local },
       })) });

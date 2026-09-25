@@ -1328,4 +1328,280 @@
       ["aws polly delete-lexicon --name siglas-ti"],
       (c, cmd, ok) => ok && ehCmd(cmd, "polly", "delete-lexicon") && !lexico(c, "siglas-ti")),
   ]);
+
+  // ============================================================
+  // Leva 9 (25/09): Step Functions, Glue, Cognito, Beanstalk, API Gateway,
+  // Budgets, Organizations e Config
+  // ============================================================
+  const SFN = "arn:aws:states:us-east-1:123456789012:stateMachine:";
+  const maquina = (c, n) => (((c.sfn || {}).maquinas) || {})[n];
+  const crawler = (c, n) => (((c.glue || {}).crawlers) || {})[n];
+  const bancoGlue = (c, n) => (((c.glue || {}).bancos) || {})[n];
+  const poolDe = (c, nome) => Object.values(((c.cognito || {}).pools) || {}).find((p) => p.nome === nome);
+  const envEb = (c, n) => (((c.eb || {}).envs) || {})[n];
+  const appEb = (c, n) => (((c.eb || {}).apps) || {})[n];
+  const apiDe = (c, nome) => Object.values(((c.apigateway || {}).apis) || {}).find((a) => a.nome === nome);
+  const orcamento = (c, n) => (((c.budgets || {}).orcamentos) || {})[n];
+  const contaOrg = (c, nome) => Object.values(((c.org || {}).contas) || {}).find((a) => a.nome === nome);
+  const ouDe = (c, nome) => Object.values(((c.org || {}).ous) || {}).find((o) => o.nome === nome);
+  const cfgRegra = (c, n) => (((c.config || {}).regras) || {})[n];
+
+  // ---------------- Step Functions ----------------
+  // O describe-execution (cob-sfn-1) vinha depois de apagar a máquina.
+  mover(["cob-sfn-1"], "sfn-5");
+  at("sfn-3", [
+    d("fx-sfn-lsm1", "stepfunctions", 2, 60, "Qual é o ARN do fluxo?",
+      "Todo comando daqui pra frente pede o ARN da máquina, não o nome. Liste as máquinas e ache o da <b>pedido-fluxo</b>.",
+      ["Mesmo comando do começo da trilha."],
+      ["aws stepfunctions list-state-machines"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "stepfunctions", "list-state-machines") && !!maquina(c, "pedido-fluxo")),
+    d("fx-sfn-dsm1", "stepfunctions", 2, 60, "Com que permissão o fluxo roda?",
+      "A segurança quer saber qual role o fluxo usa pra chamar os outros serviços. Descreva a máquina trazendo só o <b>roleArn</b>.",
+      ["Mesmo `describe-state-machine`, com `--query`.", "O campo é `roleArn`."],
+      ["aws stepfunctions describe-state-machine --state-machine-arn " + SFN + "pedido-fluxo --query roleArn"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "stepfunctions", "describe-state-machine") && /roleArn/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("sfn-5", [
+    d("fx-sfn-le1", "stepfunctions", 3, 70, "Só as que deram certo",
+      "O relatório diário conta só as execuções que <b>terminaram com sucesso</b>. Liste as execuções da <b>pedido-fluxo</b> filtrando por status.",
+      ["O `list-executions` aceita um filtro de status.", "A flag é `--status-filter SUCCEEDED`."],
+      ["aws stepfunctions list-executions --state-machine-arn " + SFN + "pedido-fluxo --status-filter SUCCEEDED"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "stepfunctions", "list-executions") && String(cmd.flags["status-filter"] || "") === "SUCCEEDED"),
+  ]);
+  at("cob-sfn-1", [
+    d("fx-sfn-de1", "stepfunctions", 3, 70, "Só o status do chamado",
+      "O painel do suporte precisa só do status da execução <b>chamado-1</b>.",
+      ["Mesmo `describe-execution`, com `--query status`."],
+      ["aws stepfunctions describe-execution --execution-arn arn:aws:states:us-east-1:123456789012:execution:fluxo-suporte:chamado-1 --query status"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "stepfunctions", "describe-execution") && /status/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("sfn-6", [
+    d("fx-sfn-del1", "stepfunctions", 3, 80, "O fluxo do suporte também sai",
+      "O suporte migrou pra outra ferramenta. Apague a máquina <b>fluxo-suporte</b>.",
+      ["Mesmo `delete-state-machine`, outro ARN."],
+      ["aws stepfunctions delete-state-machine --state-machine-arn " + SFN + "fluxo-suporte"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "stepfunctions", "delete-state-machine") && !maquina(c, "fluxo-suporte")),
+  ]);
+
+  // ---------------- Glue ----------------
+  at("glue-4", [
+    d("fx-glue-gt1", "glue", 2, 60, "Só as tabelas de vendas",
+      "O catálogo vai ter dezenas de tabelas. Liste só as que começam com <b>vend</b>.",
+      ["O `get-tables` aceita `--expression`, que é uma expressão regular sobre o nome.", "Pra \"começa com vend\", a expressão é `vend.*`."],
+      ["aws glue get-tables --database-name dados_loja --expression vend.*"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "glue", "get-tables") && cmd.flags.expression !== undefined),
+  ]);
+  at("glue-5", [
+    d("fx-glue-cc1", "glue", 3, 100, "O robô dos clientes",
+      "Os dados de clientes estão em <b>s3://dados-loja-climb/clientes/</b>. Crie o crawler <b>crawler-clientes</b> apontando pra lá, no mesmo banco e com a mesma role.",
+      ["Mesmo `create-crawler`, outro nome e outro caminho."],
+      ["aws glue create-crawler --name crawler-clientes --role arn:aws:iam::123456789012:role/papel-glue --database-name dados_loja --targets '{\"S3Targets\":[{\"Path\":\"s3://dados-loja-climb/clientes/\"}]}'"],
+      (c) => !!crawler(c, "crawler-clientes")),
+  ]);
+  at("glue-6", [
+    d("fx-glue-sc1", "glue", 3, 70, "Solte o robô dos clientes",
+      "Rode o <b>crawler-clientes</b> pra ele descobrir as colunas.",
+      ["Mesmo `start-crawler`, outro nome."],
+      ["aws glue start-crawler --name crawler-clientes"],
+      (c) => ((crawler(c, "crawler-clientes") || {}).execucoes || 0) > 0),
+  ]);
+  at("cob-glue-1", [
+    d("fx-glue-gc1", "glue", 3, 70, "O robô dos clientes já terminou?",
+      "O script da madrugada só segue quando o crawler parou. Veja só o <b>estado</b> do <b>crawler-clientes</b>.",
+      ["Mesmo `get-crawler`, com `--query`.", "O caminho é `Crawler.State`."],
+      ["aws glue get-crawler --name crawler-clientes --query Crawler.State"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "glue", "get-crawler") && String(cmd.flags.name || "") === "crawler-clientes"),
+  ]);
+  at("cob-glue-2", [
+    d("fx-glue-dd1", "glue", 3, 90, "O rascunho do catálogo",
+      "Alguém criou o banco <b>catalogo_rascunho</b> pra testar um esquema. Crie pra ver o cenário e apague — os arquivos no S3 não são tocados.",
+      ["Criar e apagar banco você fez na atividade anterior."],
+      ["aws glue create-database --database-input '{\"Name\":\"catalogo_rascunho\"}'",
+        "aws glue delete-database --name catalogo_rascunho"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "glue", "delete-database") && !bancoGlue(c, "catalogo_rascunho")),
+  ]);
+
+  // ---------------- Cognito ----------------
+  at("cog-3", [
+    d("fx-cog-lp1", "cognito-idp", 2, 60, "Qual é o Id do pool?",
+      "O front-end pede o Id do pool (formato us-east-1_...). Liste os pools e ache o do <b>usuarios-loja</b>.",
+      ["Mesmo comando do começo da trilha — e não esqueça o `--max-results`, que é obrigatório."],
+      ["aws cognito-idp list-user-pools --max-results 10"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cognito-idp", "list-user-pools") && !!poolDe(c, "usuarios-loja")),
+    d("fx-cog-dp1", "cognito-idp", 2, 70, "Qual é a regra de senha?",
+      "O time de produto quer saber o tamanho mínimo de senha que o pool exige. Descreva o pool trazendo só as políticas.",
+      ["Mesmo `describe-user-pool`, com `--query`.", "O caminho é `UserPool.Policies`."],
+      ["aws cognito-idp describe-user-pool --user-pool-id <pool-id> --query UserPool.Policies"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cognito-idp", "describe-user-pool") && /Policies/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cog-6", [
+    d("fx-cog-lu1", "cognito-idp", 3, 70, "A Maria já trocou a senha?",
+      "O suporte recebeu um chamado da Maria. Liste só ela, filtrando pelo nome de usuário, e veja o <b>UserStatus</b>.",
+      ["O `list-users` aceita `--filter`.", "A forma é `--filter 'username = \"maria\"'` (com aspas simples por fora)."],
+      ["aws cognito-idp list-users --user-pool-id <pool-id> --filter 'username = \"maria\"'"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cognito-idp", "list-users") && /maria/.test(String(cmd.flags.filter || ""))),
+  ]);
+  at("cob-cog-1", [
+    d("fx-cog-adu1", "cognito-idp", 3, 90, "O cadastro duplicado",
+      "O Carlos se cadastrou duas vezes no pool de suporte. Crie o usuário <b>carlos</b> no <b>pool-suporte</b> pra ver o cenário e remova.",
+      ["Criar é o `admin-create-user`; remover é o comando da atividade anterior."],
+      ["aws cognito-idp admin-create-user --user-pool-id <pool-id> --username carlos",
+        "aws cognito-idp admin-delete-user --user-pool-id <pool-id> --username carlos"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cognito-idp", "admin-delete-user") && !!poolDe(c, "pool-suporte") && !((poolDe(c, "pool-suporte") || {}).usuarios || {}).carlos),
+    d("fx-cog-dup1", "cognito-idp", 3, 80, "O pool de suporte foi desativado",
+      "O suporte passou a usar o login da empresa. Apague o <b>pool-suporte</b> — e lembre que vão junto todos os usuários dele.",
+      ["Mesmo `delete-user-pool` de antes."],
+      ["aws cognito-idp delete-user-pool --user-pool-id <pool-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cognito-idp", "delete-user-pool") && !poolDe(c, "pool-suporte")),
+  ]);
+
+  // ---------------- Elastic Beanstalk ----------------
+  at("bs-3", [
+    d("fx-bs-da1", "elasticbeanstalk", 2, 60, "A aplicação foi registrada?",
+      "Confira só a aplicação <b>loja-app</b>, em vez de todas.",
+      ["O `describe-applications` aceita os nomes.", "A flag é `--application-names`."],
+      ["aws elasticbeanstalk describe-applications --application-names loja-app"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticbeanstalk", "describe-applications") && /loja-app/.test(String(cmd.flags["application-names"] || ""))),
+  ]);
+  at("bs-4", [
+    d("fx-bs-de1", "elasticbeanstalk", 2, 60, "Só o ambiente de produção",
+      "Veja só o <b>loja-prod</b> e pegue o CNAME — é o endereço que vai pro DNS.",
+      ["O `describe-environments` aceita `--environment-names`."],
+      ["aws elasticbeanstalk describe-environments --environment-names loja-prod"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticbeanstalk", "describe-environments") && /loja-prod/.test(String(cmd.flags["environment-names"] || ""))),
+    d("fx-bs-env2", "elasticbeanstalk", 2, 90, "Um ambiente de homologação",
+      "Antes de ir pra produção, o time quer testar numa cópia. Crie o ambiente <b>loja-homolog</b> na mesma aplicação, com a mesma plataforma.",
+      ["Mesmo `create-environment` do loja-prod, outro nome."],
+      ["aws elasticbeanstalk create-environment --application-name loja-app --environment-name loja-homolog --solution-stack-name \"64bit Amazon Linux 2023 v4.0.0 running Python 3.12\""],
+      (c) => !!envEb(c, "loja-homolog")),
+    d("fx-bs-te1", "elasticbeanstalk", 3, 90, "A homologação acabou",
+      "O teste passou. <b>Encerre</b> o ambiente <b>loja-homolog</b> — ele leva junto as máquinas, o balanceador e o Auto Scaling dele.",
+      ["Encerrar ambiente é o `terminate-environment`.", "A aplicação continua: só o ambiente sai."],
+      ["aws elasticbeanstalk terminate-environment --environment-name loja-homolog"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticbeanstalk", "terminate-environment") && String(cmd.flags["environment-name"] || "") === "loja-homolog" && (!envEb(c, "loja-homolog") || /Terminat/.test(String((envEb(c, "loja-homolog") || {}).status)))),
+  ]);
+  at("bs-5", [
+    d("fx-bs-del1", "elasticbeanstalk", 3, 80, "A aplicação de teste",
+      "Sobrou a aplicação <b>loja-app-teste</b>, sem nenhum ambiente. Crie pra ver o cenário e apague.",
+      ["Criar é o `create-application`; sem ambiente vivo, o `delete-application` passa direto."],
+      ["aws elasticbeanstalk create-application --application-name loja-app-teste",
+        "aws elasticbeanstalk delete-application --application-name loja-app-teste"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticbeanstalk", "delete-application") && !appEb(c, "loja-app-teste")),
+  ]);
+
+  // ---------------- API Gateway ----------------
+  at("apigw-3", [
+    d("fx-apigw-gra1", "apigateway", 2, 60, "Qual é o id da API?",
+      "Todo comando do API Gateway pede o id da API. Liste as APIs trazendo só os nomes e ids.",
+      ["Mesmo `get-rest-apis` do começo da trilha."],
+      ["aws apigateway get-rest-apis"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "apigateway", "get-rest-apis") && !!apiDe(c, "api-loja")),
+  ]);
+  at("apigw-4", [
+    d("fx-apigw-gr1", "apigateway", 2, 70, "O /pedidos entrou?",
+      "Confira que o caminho <b>/pedidos</b> aparece nos recursos da API.",
+      ["Mesmo `get-resources` de antes: agora vem a raiz e o /pedidos."],
+      ["aws apigateway get-resources --rest-api-id <api-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "apigateway", "get-resources") && Object.values((apiDe(c, "api-loja") || {}).recursos || {}).some((r) => r.parte === "pedidos")),
+  ]);
+  at("cob-apigw-1", [
+    d("fx-apigw-gs1", "apigateway", 3, 90, "Um ambiente pra homologar",
+      "Publique a mesma API no stage <b>homolog</b> e liste os stages — agora são dois, cada um com a sua URL.",
+      ["Publicar é o `create-deployment` com outro `--stage-name`.", "Depois, o `get-stages` da atividade anterior."],
+      ["aws apigateway create-deployment --rest-api-id <api-id> --stage-name homolog",
+        "aws apigateway get-stages --rest-api-id <api-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "apigateway", "get-stages") && !!(((apiDe(c, "api-suporte") || {}).estagios) || {}).homolog),
+    d("fx-apigw-del1", "apigateway", 3, 80, "A API do suporte sai do ar",
+      "O suporte vai usar outra ferramenta. Apague a <b>api-suporte</b> — os dois stages vão junto.",
+      ["Mesmo `delete-rest-api` de antes."],
+      ["aws apigateway delete-rest-api --rest-api-id <api-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "apigateway", "delete-rest-api") && !apiDe(c, "api-suporte")),
+  ]);
+
+  // ---------------- Budgets ----------------
+  at("bud-3", [
+    d("fx-bud-cn1", "budgets", 2, 80, "Avise antes de estourar",
+      "O alerta de 80% avisa depois que o gasto aconteceu. Crie um segundo alerta no <b>orcamento-mensal</b>, do tipo <b>FORECASTED</b> em <b>100%</b>: a AWS avisa quando a PREVISÃO do mês passar do teto, pro <b>financeiro@exemplo.com</b>.",
+      ["Mesmo `create-notification`, com outro tipo e outro limite.", "O tipo que olha pra previsão é `FORECASTED`."],
+      ["aws budgets create-notification --account-id 123456789012 --budget-name orcamento-mensal --notification '{\"NotificationType\":\"FORECASTED\",\"ComparisonOperator\":\"GREATER_THAN\",\"Threshold\":100,\"ThresholdType\":\"PERCENTAGE\"}' --subscribers '[{\"SubscriptionType\":\"EMAIL\",\"Address\":\"financeiro@exemplo.com\"}]'"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "budgets", "create-notification") && /FORECASTED/.test(String(cmd.flags.notification || ""))),
+    d("fx-bud-db1", "budgets", 2, 60, "O orçamento aparece na lista?",
+      "Confira que o <b>orcamento-mensal</b> está na lista de orçamentos da conta.",
+      ["Mesmo `describe-budgets` do começo — ele pede a conta."],
+      ["aws budgets describe-budgets --account-id 123456789012"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "budgets", "describe-budgets") && !!orcamento(c, "orcamento-mensal")),
+  ]);
+  at("cob-bud-1", [
+    d("fx-bud-dsc1", "budgets", 2, 70, "Qual é o teto mesmo?",
+      "O financeiro quer só o valor do teto do <b>orcamento-mensal</b>, sem o resto.",
+      ["Mesmo `describe-budget`, com `--query`.", "O caminho é `Budget.BudgetLimit`."],
+      ["aws budgets describe-budget --account-id 123456789012 --budget-name orcamento-mensal --query Budget.BudgetLimit"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "budgets", "describe-budget") && /BudgetLimit/.test(String(cmd.flags.query || ""))),
+    d("fx-bud-del1", "budgets", 3, 80, "O orçamento foi trocado por um anual",
+      "O financeiro passou a controlar por ano. Apague o <b>orcamento-mensal</b> de novo.",
+      ["Mesmo `delete-budget` de antes."],
+      ["aws budgets delete-budget --account-id 123456789012 --budget-name orcamento-mensal"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "budgets", "delete-budget") && !orcamento(c, "orcamento-mensal")),
+  ]);
+
+  // ---------------- Organizations ----------------
+  at("org-3", [
+    d("fx-org-ca1", "organizations", 2, 90, "Uma conta só pra segurança",
+      "Boa prática: logs e ferramentas de segurança numa conta separada, que ninguém do dia a dia mexe. Crie a conta <b>time-seguranca</b> com o e-mail <b>seguranca+aws@exemplo.com</b>.",
+      ["Mesmo `create-account`, outro nome e outro e-mail — o e-mail precisa ser único."],
+      ["aws organizations create-account --account-name time-seguranca --email seguranca+aws@exemplo.com"],
+      (c) => !!contaOrg(c, "time-seguranca")),
+  ]);
+  at("org-4", [
+    d("fx-org-ou1", "organizations", 3, 80, "Uma pasta pro desenvolvimento",
+      "As contas de desenvolvimento têm regras mais soltas que as de produção. Crie a OU <b>Desenvolvimento</b> na raiz.",
+      ["Mesmo `create-organizational-unit`, outro nome."],
+      ["aws organizations create-organizational-unit --name Desenvolvimento --parent-id r-root"],
+      (c) => !!ouDe(c, "Desenvolvimento")),
+  ]);
+  at("cob-org-1", [
+    d("fx-org-do1", "organizations", 3, 70, "Qual é a conta mãe?",
+      "A auditoria pede só o id da conta que paga a fatura (a management account).",
+      ["Mesmo `describe-organization`, com `--query`.", "O caminho é `Organization.MasterAccountId`."],
+      ["aws organizations describe-organization --query Organization.MasterAccountId"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "organizations", "describe-organization") && /MasterAccountId/.test(String(cmd.flags.query || ""))),
+  ]);
+
+  // ---------------- Config ----------------
+  at("cfg-3", [
+    d("fx-cfg-pr1", "configservice", 3, 80, "A role do gravador foi trocada",
+      "A segurança criou a role <b>config-role-v2</b> com menos permissão. Atualize o gravador <b>default</b> pra usar ela.",
+      ["O `put-configuration-recorder` cria e também ATUALIZA — mesmo nome, outra role."],
+      ["aws configservice put-configuration-recorder --configuration-recorder name=default,roleARN=arn:aws:iam::123456789012:role/config-role-v2"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "put-configuration-recorder") && /config-role-v2/.test(String(cmd.flags["configuration-recorder"] || ""))),
+  ]);
+  at("cob-cfg-1", [
+    d("fx-cfg-st1", "configservice", 3, 80, "Janela de manutenção",
+      "A conta de laboratório vai ficar parada no feriado e o Config cobra por item gravado. <b>Pare</b> a gravação do <b>default</b>.",
+      ["O par do start é o `stop-configuration-recorder`, com o mesmo `--configuration-recorder-name`."],
+      ["aws configservice stop-configuration-recorder --configuration-recorder-name default"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "stop-configuration-recorder") && !!(c.config || {}).recorder && !(c.config || {}).gravando),
+    d("fx-cfg-start2", "configservice", 3, 80, "Feriado acabou",
+      "O time voltou. Ligue a gravação de novo.",
+      ["Mesmo `start-configuration-recorder` do começo da trilha."],
+      ["aws configservice start-configuration-recorder --configuration-recorder-name default"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "start-configuration-recorder") && !!(c.config || {}).gravando),
+    d("fx-cfg-rs1", "configservice", 3, 70, "Voltou a gravar mesmo?",
+      "Confira o status só do gravador <b>default</b>: <code>recording</code> tem que estar true.",
+      ["Mesmo `describe-configuration-recorder-status`, com o nome.", "A flag é `--configuration-recorder-names`."],
+      ["aws configservice describe-configuration-recorder-status --configuration-recorder-names default"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "describe-configuration-recorder-status") && String(cmd.flags["configuration-recorder-names"] || "") === "default"),
+  ]);
+  at("cob-cfg-2", [
+    d("fx-cfg-dr1", "configservice", 3, 70, "Só a regra de criptografia",
+      "O auditor quer ver só a regra <b>s3-encriptado</b>.",
+      ["O `describe-config-rules` aceita os nomes.", "A flag é `--config-rule-names`."],
+      ["aws configservice describe-config-rules --config-rule-names s3-encriptado"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "describe-config-rules") && /s3-encriptado/.test(String(cmd.flags["config-rule-names"] || "")) && !!cfgRegra(c, "s3-encriptado")),
+    d("fx-cfg-st2", "configservice", 3, 80, "A conta de sandbox vai ser encerrada",
+      "Esta conta de sandbox vai ser fechada no fim do mês e ninguém mais usa. Pare a gravação pra não pagar por item gravado até lá.",
+      ["Mesmo `stop-configuration-recorder` da janela de manutenção."],
+      ["aws configservice stop-configuration-recorder --configuration-recorder-name default"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "stop-configuration-recorder") && !!(c.config || {}).recorder && !(c.config || {}).gravando),
+  ]);
 })();

@@ -157,9 +157,14 @@
       avisarClimb("O Beanstalk é o \"deploy fácil\": você sobe o código e ele monta EC2, load balancer e Auto Scaling por baixo, sem você configurar cada peça. Agora crie um ENVIRONMENT pra rodar a app.");
       return js({ Application: { ApplicationName: nome, Description: flags.description || undefined, DateCreated: agoraIso() } });
     },
-    "describe-applications": (conta) => {
+    "describe-applications": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.eb.apps);
+      let l = Object.values(conta.eb.apps);
+      if (flags && flags["application-names"] !== undefined) {
+        const nomes = [String(flags["application-names"])].concat((pos || []).map(String));
+        l = l.filter((a) => nomes.indexOf(a.nome) >= 0);
+        if (!l.length) return js({ Applications: [] });
+      }
       if (!l.length) { avisarClimb("Nenhuma aplicação ainda. Crie uma com: aws elasticbeanstalk create-application --application-name loja-app"); return js({ Applications: [] }); }
       return js({ Applications: l.map((a) => ({ ApplicationName: a.nome, Description: a.descricao, DateCreated: a.criadoEm })) });
     },
@@ -175,9 +180,16 @@
       avisarClimb(`Ambiente subindo. Em minutos ele fica Green e a app responde em http://${cname} — com EC2, load balancer e Auto Scaling criados automaticamente por baixo.`);
       return js({ EnvironmentName: env, ApplicationName: app, CNAME: cname, Status: "Launching", Health: "Grey" });
     },
-    "describe-environments": (conta) => {
+    "describe-environments": (conta, pos, flags) => {
       estado(conta);
-      return js({ Environments: Object.values(conta.eb.envs).map((e) => ({ EnvironmentName: e.nome, ApplicationName: e.app, CNAME: e.cname, Status: e.status, Health: e.saude, SolutionStackName: e.stack })) });
+      flags = flags || {};
+      let envs = Object.values(conta.eb.envs);
+      if (flags["environment-names"] !== undefined) {
+        const nomes = [String(flags["environment-names"])].concat((pos || []).map(String));
+        envs = envs.filter((e) => nomes.indexOf(e.nome) >= 0);
+      }
+      if (flags["application-name"] !== undefined) envs = envs.filter((e) => e.app === String(flags["application-name"]));
+      return js({ Environments: envs.map((e) => ({ EnvironmentName: e.nome, ApplicationName: e.app, CNAME: e.cname, Status: e.status, Health: e.saude, SolutionStackName: e.stack })) });
     },
     "terminate-environment": (conta, pos, flags) => {
       estado(conta);

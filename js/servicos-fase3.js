@@ -374,7 +374,11 @@
     },
     "list-executions": (conta, pos, flags) => {
       const m = acharMaquina(conta, flags, "ListExecutions");
-      return js({ executions: Object.values(conta.sfn.execucoes).filter((e) => e.maquina === m.nome).map((e) => ({
+      const st = flags["status-filter"] !== undefined ? String(flags["status-filter"]) : null;
+      if (st && ["RUNNING", "SUCCEEDED", "FAILED", "TIMED_OUT", "ABORTED", "PENDING_REDRIVE"].indexOf(st) < 0) {
+        throw new ErroCli("An error occurred (ValidationException) when calling the ListExecutions operation: --status-filter precisa ser RUNNING, SUCCEEDED, FAILED, TIMED_OUT ou ABORTED.");
+      }
+      return js({ executions: Object.values(conta.sfn.execucoes).filter((e) => e.maquina === m.nome && (!st || e.status === st)).map((e) => ({
         executionArn: e.arn, stateMachineArn: m.arn, name: e.nome, status: e.status, startDate: e.iniciadoEm,
       })) });
     },

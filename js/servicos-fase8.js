@@ -230,14 +230,34 @@
       avisarClimb(`Regra "${nome}" ativa. O Config vai avaliar os recursos e marcar quem está NON_COMPLIANT. Isso vira relatório de conformidade (útil pra auditoria/LGPD).`);
       return okSilencioso(`Regra "${nome}" criada.`);
     },
-    "describe-config-rules": (conta) => {
+    // Par do start (25/09/2026): parar o gravador é o que se faz pra cortar custo
+    // numa conta de laboratório — e é o que um invasor faz pra apagar rastro.
+    "stop-configuration-recorder": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.config.regras);
+      const nome = String(exigirFlag(flags, "configuration-recorder-name"));
+      if (!conta.config.recorder || nome !== "default") throw new ErroCli(`An error occurred (NoSuchConfigurationRecorderException) when calling the StopConfigurationRecorder operation: Cannot find configuration recorder with the specified name '${nome}'.`);
+      conta.config.gravando = false;
+      avisarClimb("Gravação parada: mudança feita a partir de agora NÃO entra no histórico. Numa conta de produção isso é alerta de segurança — é das primeiras coisas que alguém mal-intencionado desliga.");
+      return okSilencioso("Gravação de configuração parada.");
+    },
+    "describe-config-rules": (conta, pos, flags) => {
+      estado(conta);
+      let l = Object.values(conta.config.regras);
+      if (flags && flags["config-rule-names"] !== undefined) {
+        const nomes = [String(flags["config-rule-names"])].concat((pos || []).map(String));
+        const falta = nomes.find((n) => !conta.config.regras[n]);
+        if (falta) throw new ErroCli(`An error occurred (NoSuchConfigRuleException) when calling the DescribeConfigRules operation: The ConfigRule '${falta}' provided in the request is invalid. Please check the configRule name.`);
+        l = nomes.map((n) => conta.config.regras[n]);
+      }
       if (!l.length) { avisarClimb("Nenhuma regra ainda. Comece por uma regra gerenciada como s3-bucket-server-side-encryption-enabled."); }
       return js({ ConfigRules: l.map((r) => ({ ConfigRuleName: r.nome, ConfigRuleState: "ACTIVE", Source: r.fonte })) });
     },
-    "describe-configuration-recorder-status": (conta) => {
+    "describe-configuration-recorder-status": (conta, pos, flags) => {
       estado(conta);
+      if (flags && flags["configuration-recorder-names"] !== undefined) {
+        const nome = String(flags["configuration-recorder-names"]);
+        if (!conta.config.recorder || nome !== "default") throw new ErroCli(`An error occurred (NoSuchConfigurationRecorderException) when calling the DescribeConfigurationRecorderStatus operation: Cannot find configuration recorder with the specified name '${nome}'.`);
+      }
       return js({ ConfigurationRecordersStatus: conta.config.recorder ? [{ name: "default", recording: !!conta.config.gravando, lastStatus: conta.config.gravando ? "SUCCESS" : "PENDING" }] : [] });
     },
   };
