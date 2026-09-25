@@ -108,7 +108,9 @@ faixa (ex.: dyn-2 120xp) — é proposital, comemore o marco.
   completo. Revelar solução zera o XP — a dica NÃO pode ser a solução literal.
 - `solucao` precisa RODAR verde no fumaça (conta compartilhada entre todos os
   desafios do teste: cuidado com nome já usado e com ordem de dependências).
-  Placeholders suportados: `<id-da-instância>`, `<vpc-id>`, `<igw-id>`.
+  Placeholders suportados: `<id-da-instância>`, `<vpc-id>`, `<igw-id>` e os
+  demais de `teste/placeholders.js` — arquivo ÚNICO que o fumaça e o análise
+  usam. Placeholder novo entra lá, uma vez só.
 
 ### Depois de criar
 
