@@ -116,8 +116,16 @@
     },
     "get-dimension-values": (conta, pos, flags) => {
       estado(conta);
-      exigirFlag(flags, "dimension");
-      return js({ DimensionValues: custoPorServico(conta).map((l) => ({ Value: l[0], Attributes: {} })), TotalSize: custoPorServico(conta).length });
+      const dim = String(exigirFlag(flags, "dimension")).toUpperCase();
+      // Cada dimensão tem os SEUS valores — antes qualquer uma devolvia os serviços.
+      let valores;
+      if (dim === "SERVICE") valores = custoPorServico(conta).map((l) => l[0]);
+      else if (dim === "REGION") valores = [conta.regiao || "us-east-1", "sa-east-1", "global"].filter((v, i, a) => a.indexOf(v) === i);
+      else if (dim === "LINKED_ACCOUNT") valores = [CONTA_ID(conta)];
+      else if (dim === "USAGE_TYPE") valores = ["BoxUsage:t3.micro", "TimedStorage-ByteHrs", "DataTransfer-Out-Bytes"];
+      else if (dim === "INSTANCE_TYPE") valores = ["t3.micro", "t2.micro"];
+      else throw new ErroCli("An error occurred (ValidationException) when calling the GetDimensionValues operation: dimensão não suportada no simulador: " + dim + ". Use SERVICE, REGION, LINKED_ACCOUNT, USAGE_TYPE ou INSTANCE_TYPE.");
+      return js({ DimensionValues: valores.map((v) => ({ Value: v, Attributes: {} })), TotalSize: valores.length });
     },
   };
 

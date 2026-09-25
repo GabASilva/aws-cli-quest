@@ -108,7 +108,7 @@
 
     // ===================== Kinesis (o stream foi apagado na trilha) =====================
     { id: "cob-kin-1", servico: "kinesis", nivel: 2, xp: 90, titulo: "Quais canos existem?",
-      descricao: "Você apagou o stream anterior. Crie um novo chamado <b>sensores-fabrica</b> com <b>2</b> shards e depois <b>liste</b> os streams da conta.",
+      descricao: "A fábrica também vai mandar dados ao vivo. Crie o stream <b>sensores-fabrica</b> com <b>2</b> shards e depois <b>liste</b> os streams da conta.",
       dicas: ["São dois comandos: primeiro criar (você já fez isso na trilha), depois listar — e o verbo de listar costuma ser `list-…`.", "No create, as duas flags são `--stream-name` e `--shard-count`. Pra listar depois, o verbo `list-` com o recurso no plural — e esse não leva flag nenhuma."],
       solucao: [
         "aws kinesis create-stream --stream-name sensores-fabrica --shard-count 2",

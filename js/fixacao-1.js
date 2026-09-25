@@ -1730,4 +1730,174 @@
         "aws dynamodb delete-table --table-name CargaTeste"],
       (c, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "delete-table") && !(((c.dynamodb || {}).tabelas) || {}).CargaTeste),
   ]);
+
+  // ============================================================
+  // Leva 11 (25/09): segurança (GuardDuty, Macie, WAF, Inspector, Shield),
+  // Athena, Kinesis e Cost Explorer
+  // ============================================================
+  const detectores = (c) => Object.keys(((c.guardduty || {}).detectores) || {});
+  const macieJob = (c, n) => Object.values(((c.macie || {}).jobs) || {}).find((j) => j.nome === n);
+  const wafAcl = (c, n) => Object.values(((c.waf || {}).acls) || {}).find((a) => a.nome === n);
+  const stream = (c, n) => (((c.kinesis || {}).streams) || {})[n];
+
+  // ---------------- GuardDuty ----------------
+  at("gd-3", [
+    d("fx-gd-ld1", "guardduty", 3, 70, "Só o id, pro script",
+      "O script de auditoria precisa só do id do detector, sem a lista em volta.",
+      ["Mesmo `list-detectors`, com `--query`.", "O primeiro item da lista é `DetectorIds[0]`."],
+      ["aws guardduty list-detectors --query DetectorIds[0]"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "guardduty", "list-detectors") && /DetectorIds/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cob-gd-1", [
+    d("fx-gd-gf1", "guardduty", 3, 80, "Qual é a gravidade?",
+      "O plantão só é acordado se a gravidade passar de 7. Traga só a <b>Severity</b> dos achados.",
+      ["Mesmo `get-findings`, com `--query`.", "O caminho é `Findings[].Severity`."],
+      ["aws guardduty get-findings --detector-id <detector-id> --finding-ids f1 --query Findings[].Severity"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "guardduty", "get-findings") && /Severity/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cob-gd-2", [
+    d("fx-gd-del1", "guardduty", 3, 80, "O detector da conta de treino",
+      "Alguém ligou o GuardDuty de novo na conta de treino. Crie o detector pra ver o cenário e remova.",
+      ["Criar é o mesmo `create-detector --enable`.", "Remover é o `delete-detector` com o id que voltou."],
+      ["aws guardduty create-detector --enable",
+        "aws guardduty delete-detector --detector-id <detector-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "guardduty", "delete-detector") && detectores(c).length === 0),
+  ]);
+
+  // ---------------- Macie ----------------
+  at("cob-macie-1", [
+    d("fx-mac-cj1", "macie2", 2, 90, "Os documentos do RH",
+      "O RH guarda contratos no bucket <b>rh-documentos</b> e ninguém sabe se tem CPF solto lá dentro. Crie o job <b>varredura-rh</b>, de execução única, pra esse bucket.",
+      ["Mesmo `create-classification-job`, outro nome e outro bucket."],
+      ["aws macie2 create-classification-job --name varredura-rh --job-type ONE_TIME --s3-job-definition '{\"bucketDefinitions\":[{\"accountId\":\"123456789012\",\"buckets\":[\"rh-documentos\"]}]}'"],
+      (c) => !!macieJob(c, "varredura-rh")),
+  ]);
+  at("cob-macie-2", [
+    d("fx-mac-lj1", "macie2", 2, 60, "Só os nomes dos jobs",
+      "O relatório semanal lista só os nomes dos jobs de varredura.",
+      ["Mesmo `list-classification-jobs`, com `--query`.", "O caminho é `items[].name`."],
+      ["aws macie2 list-classification-jobs --query items[].name"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "macie2", "list-classification-jobs") && /name/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cob-macie-3", [
+    d("fx-mac-dis1", "macie2", 3, 80, "Liga pra auditoria, desliga depois",
+      "A auditoria anual precisa do Macie por um dia. Ligue, e — terminada a auditoria — desligue de novo.",
+      ["Ligar é o `enable-macie`; desligar, o comando da atividade anterior."],
+      ["aws macie2 enable-macie",
+        "aws macie2 disable-macie"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "macie2", "disable-macie") && (c.macie || {}).ligado === false),
+  ]);
+
+  // ---------------- WAF ----------------
+  at("cob-waf-1", [
+    d("fx-waf-lw1", "wafv2", 3, 70, "E o firewall do CloudFront?",
+      "Web ACL de CloudFront vive noutro escopo — e sempre na Virgínia. Liste as do escopo <b>CLOUDFRONT</b>, na região <b>us-east-1</b>.",
+      ["Mesmo `list-web-acls`, com `--scope CLOUDFRONT`.", "Esse escopo só existe em us-east-1: passe `--region us-east-1`."],
+      ["aws wafv2 list-web-acls --scope CLOUDFRONT --region us-east-1"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "wafv2", "list-web-acls") && String(cmd.flags.scope || "") === "CLOUDFRONT"),
+    d("fx-waf-gw1", "wafv2", 3, 70, "O que acontece com quem não casa com regra?",
+      "Veja só a <b>ação padrão</b> da <b>protege-loja</b>: é ela que decide o destino da requisição que nenhuma regra pegou.",
+      ["Mesmo `get-web-acl`, com `--query`.", "O caminho é `WebACL.DefaultAction`."],
+      ["aws wafv2 get-web-acl --name protege-loja --scope REGIONAL --id <waf-id> --query WebACL.DefaultAction"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "wafv2", "get-web-acl") && /DefaultAction/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cob-waf-2", [
+    d("fx-waf-del1", "wafv2", 3, 90, "O firewall de teste",
+      "O time criou a Web ACL <b>teste-waf</b> pra testar uma regra e esqueceu — ela cobra por mês. Crie (mesmos parâmetros da protege-loja, com o MetricName <b>teste-waf</b>) e apague.",
+      ["Criar é o `create-web-acl`.", "Apagar pede nome, escopo e id — o id veio na criação."],
+      ["aws wafv2 create-web-acl --name teste-waf --scope REGIONAL --default-action Allow={} --visibility-config SampledRequestsEnabled=true,CloudWatchMetricsEnabled=true,MetricName=teste-waf",
+        "aws wafv2 delete-web-acl --name teste-waf --scope REGIONAL --id <waf-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "wafv2", "delete-web-acl") && !wafAcl(c, "teste-waf")),
+  ]);
+
+  // ---------------- Inspector ----------------
+  at("cob-insp-1", [
+    d("fx-insp-st1", "inspector2", 2, 60, "Só o estado, pro painel",
+      "O painel de segurança mostra só se o Inspector está ligado. Traga só o estado da conta.",
+      ["Mesmo `batch-get-account-status`, com `--query`.", "O caminho é `accounts[0].state`."],
+      ["aws inspector2 batch-get-account-status --query accounts[0].state"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "inspector2", "batch-get-account-status") && /state/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cob-insp-2", [
+    d("fx-insp-dis1", "inspector2", 3, 80, "Varredura das imagens, só por hoje",
+      "O time de containers pediu uma varredura das imagens do ECR antes da auditoria. Ligue o Inspector pra <b>ECR</b> e, terminado, desligue.",
+      ["Ligar por tipo é o `enable --resource-types`.", "Desligar é o mesmo `disable`, com o mesmo tipo."],
+      ["aws inspector2 enable --resource-types ECR",
+        "aws inspector2 disable --resource-types ECR"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "inspector2", "disable") && /ECR/.test(String(cmd.flags["resource-types"] || ""))),
+  ]);
+
+  // ---------------- Shield ----------------
+  at("cob-shield-2", [
+    d("fx-shd-lp1", "shield", 2, 60, "Quais recursos estão no Advanced?",
+      "O financeiro quer saber se alguém assinou o Shield Advanced. Liste as proteções trazendo só os nomes — vazio quer dizer que só o Standard (grátis) está valendo.",
+      ["Mesmo `list-protections`, com `--query`.", "O caminho é `Protections[].Name`."],
+      ["aws shield list-protections --query Protections[].Name"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "shield", "list-protections") && /Name/.test(String(cmd.flags.query || ""))),
+  ]);
+
+  // ---------------- Athena ----------------
+  at("ath-3", [
+    d("fx-ath-gqe1", "athena", 2, 60, "Só o estado da consulta",
+      "O script espera a consulta terminar olhando só o estado: QUEUED, RUNNING, SUCCEEDED ou FAILED.",
+      ["Mesmo `get-query-execution`, com `--query`.", "O caminho é `QueryExecution.Status.State`."],
+      ["aws athena get-query-execution --query-execution-id <query-id> --query QueryExecution.Status.State"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "athena", "get-query-execution") && /State/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("ath-4", [
+    d("fx-ath-gqr1", "athena", 3, 100, "Quantas vendas no total?",
+      "Rode <b>SELECT count(*) FROM dados_loja.vendas</b> no mesmo bucket de resultados e traga só as <b>5</b> primeiras linhas da resposta — em consulta grande, pedir tudo de uma vez trava o script.",
+      ["Disparar é o `start-query-execution`.", "O `get-query-results` aceita `--max-results`."],
+      ["aws athena start-query-execution --query-string \"SELECT count(*) FROM dados_loja.vendas\" --result-configuration OutputLocation=s3://resultados-athena-climb/",
+        "aws athena get-query-results --query-execution-id <query-id> --max-results 5"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "athena", "get-query-results") && String(cmd.flags["max-results"] || "") === "5"),
+  ]);
+  at("ath-5", [
+    d("fx-ath-lqe1", "athena", 3, 70, "Só as últimas cinco",
+      "Liste só as 5 consultas mais recentes — o histórico inteiro não interessa agora.",
+      ["Mesmo `list-query-executions`, com `--max-results`."],
+      ["aws athena list-query-executions --max-results 5"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "athena", "list-query-executions") && cmd.flags["max-results"] !== undefined),
+  ]);
+
+  // ---------------- Kinesis ----------------
+  // Apagar o stream (kin-3) vinha ANTES de listar e descrever: agora é o fim.
+  mover(["cob-kin-1", "cob-kin-2"], "kin-2");
+  at("cob-kin-1", [
+    d("fx-kin-ls1", "kinesis", 2, 60, "Só os nomes dos streams",
+      "Um script precisa só dos nomes dos streams da conta.",
+      ["Mesmo `list-streams`, com `--query`.", "O caminho é `StreamNames`."],
+      ["aws kinesis list-streams --query StreamNames"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kinesis", "list-streams") && /StreamNames/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cob-kin-2", [
+    d("fx-kin-ds1", "kinesis", 3, 70, "Os ids dos shards",
+      "Pra ler os dados, o consumidor precisa do id de cada shard do <b>sensores-fabrica</b>. Traga só os ids.",
+      ["Mesmo `describe-stream`, com `--query`.", "O caminho é `StreamDescription.Shards[].ShardId`."],
+      ["aws kinesis describe-stream --stream-name sensores-fabrica --query StreamDescription.Shards[].ShardId"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kinesis", "describe-stream") && /ShardId/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("kin-3", [
+    d("fx-kin-del1", "kinesis", 3, 80, "A fábrica trocou de fornecedor",
+      "Os sensores vão mandar dados por outro sistema. Apague o stream <b>sensores-fabrica</b> — shard parado também cobra.",
+      ["Mesmo `delete-stream` de antes."],
+      ["aws kinesis delete-stream --stream-name sensores-fabrica"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "kinesis", "delete-stream") && !stream(c, "sensores-fabrica")),
+  ]);
+
+  // ---------------- Cost Explorer ----------------
+  at("ce-3", [
+    d("fx-ce-fc1", "ce", 2, 70, "A previsão dia a dia",
+      "O financeiro quer a previsão quebrada <b>por dia</b>, pra ver se o gasto acelera no fim do mês.",
+      ["Mesmo `get-cost-forecast`, com outra granularidade.", "É `--granularity DAILY`."],
+      ["aws ce get-cost-forecast --time-period '{\"Start\":\"2026-07-24\",\"End\":\"2026-08-01\"}' --metric UNBLENDED_COST --granularity DAILY"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ce", "get-cost-forecast") && String(cmd.flags.granularity || "") === "DAILY"),
+  ]);
+  at("cob-ce-1", [
+    d("fx-ce-dv1", "ce", 2, 70, "Em quais regiões tem gasto?",
+      "Alguém suspeita de recurso esquecido noutra região. Liste os valores da dimensão <b>REGION</b> no mesmo mês.",
+      ["Mesmo `get-dimension-values`, outra dimensão."],
+      ["aws ce get-dimension-values --dimension REGION --time-period '{\"Start\":\"2026-07-01\",\"End\":\"2026-07-31\"}'"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ce", "get-dimension-values") && String(cmd.flags.dimension || "") === "REGION"),
+  ]);
 })();
