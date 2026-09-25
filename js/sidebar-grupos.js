@@ -34,6 +34,8 @@
       servicos: ["kms", "acm", "cognito-idp", "secretsmanager", "guardduty", "inspector2", "macie2", "wafv2", "shield", "configservice", "cloudtrail"] },
     { id: "custos", nome: "Custos e governança", emoji: "💰",
       servicos: ["budgets", "ce", "organizations", "support"] },
+    { id: "cicd", nome: "Entrega de software (CI/CD)", emoji: "🚚",
+      servicos: ["codebuild"] },
     { id: "operacoes", nome: "Operações", emoji: "🛠️",
       servicos: ["cloudwatch", "ssm", "cloudformation"] },
     { id: "praticar", nome: "Praticar e desafiar", emoji: "🎯",
