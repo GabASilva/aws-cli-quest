@@ -833,4 +833,143 @@
       ["aws kms cancel-key-deletion --key-id <chave-do-alias:alias/chave-relatorios>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "kms", "cancel-key-deletion") && (chaveDoAlias(c, "alias/chave-relatorios") || {}).estado === "Disabled"),
   ]);
+
+  // ============================================================
+  // Leva 6 (25/09): Secrets Manager, ACM e CloudTrail
+  // ============================================================
+  const segredo = (c, n) => (((c.secrets || {}).segredos) || {})[n];
+  const certsAcm = (c) => Object.values(((c.acm || {}).certificados) || {});
+  const importados = (c) => certsAcm(c).filter((x) => x.tipo === "IMPORTED");
+  const trilhaCt = (c, n) => (((c.cloudtrail || {}).trilhas) || {})[n];
+
+  // ---------------- Secrets Manager ----------------
+  at("sec-3", [
+    d("fx-sec-ls1", "secretsmanager", 2, 60, "Só as senhas, não os tokens",
+      "Em conta de verdade são dezenas de segredos. Liste só os que o nome começa com <b>senha</b>.",
+      ["O `list-secrets` aceita `--filters`.", "A forma é `--filters Key=name,Values=<começo-do-nome>`."],
+      ["aws secretsmanager list-secrets --filters Key=name,Values=senha"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "list-secrets") && /Key=name/.test(String(cmd.flags.filters || ""))),
+  ]);
+  at("sec-4", [
+    d("fx-sec-up1", "secretsmanager", 2, 80, "O parceiro de frete trocou o token",
+      "A transportadora gera um token novo por ano. Guarde o <b>token-api-frete</b> com o valor <b>tk-2025</b> e depois troque pro <b>tk-2026</b> — sem mudar nada na aplicação.",
+      ["Criar o segredo você já sabe.", "Trocar é o mesmo `update-secret` da senha do banco."],
+      ["aws secretsmanager create-secret --name token-api-frete --secret-string tk-2025",
+        "aws secretsmanager update-secret --secret-id token-api-frete --secret-string tk-2026"],
+      (c) => (segredo(c, "token-api-frete") || {}).valor === "tk-2026"),
+  ]);
+  at("sec-6", [
+    d("fx-sec-del1", "secretsmanager", 3, 90, "A transportadora fechou",
+      "O parceiro de frete encerrou as atividades e o token não vale mais nada. Apague o <b>token-api-frete</b> <b>sem janela de recuperação</b>. <small>(use com cuidado: sem janela, não há restore)</small>",
+      ["O `delete-secret` tem uma flag que pula a janela de proteção.", "É a `--force-delete-without-recovery`."],
+      ["aws secretsmanager delete-secret --secret-id token-api-frete --force-delete-without-recovery"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "delete-secret") && cmd.flags["force-delete-without-recovery"] !== undefined && !segredo(c, "token-api-frete")),
+    d("fx-sec-res1", "secretsmanager", 3, 100, "O estagiário apagou a senha dos relatórios",
+      "Reproduza o susto: guarde a <b>senha-relatorios</b> (valor <b>rel-2026</b>), apague com a janela padrão e restaure antes que seja tarde.",
+      ["Criar e apagar você já sabe — sem o `--recovery-window-in-days`, a janela é de 30 dias.", "No fim, o `restore-secret` da atividade anterior."],
+      ["aws secretsmanager create-secret --name senha-relatorios --secret-string rel-2026",
+        "aws secretsmanager delete-secret --secret-id senha-relatorios",
+        "aws secretsmanager restore-secret --secret-id senha-relatorios"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "restore-secret") && !!segredo(c, "senha-relatorios") && !(segredo(c, "senha-relatorios") || {}).apagandoEm),
+  ]);
+  at("sec-7", [
+    d("fx-sec-ds1", "secretsmanager", 3, 70, "A senha dos relatórios passou por aqui?",
+      "A auditoria quer o histórico da <b>senha-relatorios</b>: quando nasceu, se já foi marcada pra apagar. Descreva o segredo — sem ler o valor.",
+      ["Mesmo comando da auditoria anterior, outro segredo."],
+      ["aws secretsmanager describe-secret --secret-id senha-relatorios"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "describe-secret") && String(cmd.flags["secret-id"] || "") === "senha-relatorios"),
+  ]);
+  at("sec-8", [
+    d("fx-sec-tag1", "secretsmanager", 3, 80, "De qual time é a senha dos relatórios?",
+      "Etiquete a <b>senha-relatorios</b> com <b>time=bi</b> — é assim que a fatura mostra quanto cada time gasta com segredos.",
+      ["Mesmo `tag-resource` de antes."],
+      ["aws secretsmanager tag-resource --secret-id senha-relatorios --tags Key=time,Value=bi"],
+      (c) => ((segredo(c, "senha-relatorios") || {}).tags || {}).time === "bi"),
+  ]);
+  at("sec-9", [
+    d("fx-sec-pw1", "secretsmanager", 3, 80, "A política exige de tudo um pouco",
+      "O banco novo exige senha com letra maiúscula, minúscula, número <b>e</b> símbolo — senão rejeita. Gere uma de <b>20</b> caracteres que garanta pelo menos um de cada tipo.",
+      ["Mesmo `get-random-password`, com outra flag.", "A flag é `--require-each-included-type`."],
+      ["aws secretsmanager get-random-password --password-length 20 --require-each-included-type"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "secretsmanager", "get-random-password") && cmd.flags["require-each-included-type"] !== undefined),
+  ]);
+  at("sec-10", [
+    d("fx-sec-rot1", "secretsmanager", 3, 110, "A senha dos relatórios troca a cada trimestre",
+      "O BI aceita trocar a senha a cada <b>90</b> dias. Ligue a rotação da <b>senha-relatorios</b> nesse prazo.",
+      ["Mesmo `rotate-secret` de antes, com outro número."],
+      ["aws secretsmanager rotate-secret --secret-id senha-relatorios --rotation-rules AutomaticallyAfterDays=90"],
+      (c) => (segredo(c, "senha-relatorios") || {}).rotacaoDias === 90),
+  ]);
+
+  // ---------------- ACM ----------------
+  at("acm-3", [
+    d("fx-acm-lc1", "acm", 2, 70, "Quais certificados ainda esperam o DNS?",
+      "Certificado parado em validação não protege nada. Liste só os que estão <b>PENDING_VALIDATION</b>.",
+      ["O `list-certificates` aceita um filtro de status.", "A flag é `--certificate-statuses`."],
+      ["aws acm list-certificates --certificate-statuses PENDING_VALIDATION"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "acm", "list-certificates") && /PENDING_VALIDATION/.test(String(cmd.flags["certificate-statuses"] || ""))),
+  ]);
+  at("acm-6", [
+    d("fx-acm-tag1", "acm", 3, 80, "O certificado também é do time de vendas",
+      "Além do ambiente, a fatura precisa do time. Acrescente <b>time=vendas</b> no mesmo certificado.",
+      ["Mesmo comando de etiqueta — ele ACRESCENTA, não substitui as que já existem."],
+      ["aws acm add-tags-to-certificate --certificate-arn <cert-arn> --tags Key=time,Value=vendas"],
+      (c) => certsAcm(c).some((x) => x.tags && x.tags.time === "vendas")),
+  ]);
+  at("acm-8", [
+    d("fx-acm-imp1", "acm", 3, 100, "O certificado comprado venceu",
+      "O certificado importado vence este mês, e a AWS não renova importado. Chegou o arquivo novo: <b>reimporte</b> no mesmo ARN, pra que o load balancer passe a usar o novo sem ninguém mexer nele.",
+      ["É o mesmo `import-certificate`, com um detalhe: você diz QUAL certificado está sendo trocado.", "A flag é `--certificate-arn`, com o ARN do importado."],
+      ["aws acm import-certificate --certificate-arn <cert-importado> --certificate file://cert.pem --private-key file://chave.pem"],
+      (c) => importados(c).some((x) => !!x.reimportadoEm)),
+    d("fx-acm-lt1", "acm", 3, 70, "O importado tem etiqueta?",
+      "Certificado importado nasce sem etiqueta nenhuma. Confira as do certificado importado.",
+      ["Mesmo `list-tags-for-certificate` de antes, com o ARN do importado."],
+      ["aws acm list-tags-for-certificate --certificate-arn <cert-importado>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "acm", "list-tags-for-certificate") && importados(c).some((x) => x.arn === String(cmd.flags["certificate-arn"] || ""))),
+  ]);
+  at("acm-10", [
+    d("fx-acm-get1", "acm", 3, 80, "Só a cadeia, por favor",
+      "O servidor já tem o certificado; faltou a <b>cadeia</b>. Baixe só ela do certificado importado.",
+      ["Mesmo `get-certificate`, recortado com `--query`.", "O campo é `CertificateChain`."],
+      ["aws acm get-certificate --certificate-arn <cert-importado> --query CertificateChain"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "acm", "get-certificate") && /CertificateChain/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("acm-4", [
+    d("fx-acm-del1", "acm", 3, 80, "O contrato do certificado comprado acabou",
+      "A empresa passou a usar só certificado da AWS. Apague o importado.",
+      ["Mesmo `delete-certificate`, com o ARN do importado.", "Certificado em uso por um load balancer não sai — aqui ele está livre."],
+      ["aws acm delete-certificate --certificate-arn <cert-importado>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "acm", "delete-certificate") && !importados(c).length),
+  ]);
+
+  // ---------------- CloudTrail ----------------
+  at("ct-3", [
+    d("fx-ct-dt1", "cloudtrail", 2, 60, "Onde essa trilha grava?",
+      "Um colega pergunta pra qual bucket vão os registros da <b>trilha-auditoria</b>. Mostre só ela.",
+      ["O `describe-trails` aceita a lista de nomes.", "A flag é `--trail-name-list`."],
+      ["aws cloudtrail describe-trails --trail-name-list trilha-auditoria"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudtrail", "describe-trails") && /trilha-auditoria/.test(String(cmd.flags["trail-name-list"] || ""))),
+  ]);
+  at("cob-ct-1", [
+    d("fx-ct-gts1", "cloudtrail", 3, 70, "Parou mesmo?",
+      "Confirme que a <b>trilha-auditoria</b> parou de gravar — o campo <code>IsLogging</code> tem que estar <b>false</b>. <small>(num alarme de segurança, é exatamente essa checagem que dispara o alerta)</small>",
+      ["Mesmo `get-trail-status` de antes."],
+      ["aws cloudtrail get-trail-status --name trilha-auditoria"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudtrail", "get-trail-status") && !!trilhaCt(c, "trilha-auditoria") && !(trilhaCt(c, "trilha-auditoria") || {}).gravando),
+    d("fx-ct-stop1", "cloudtrail", 3, 100, "A trilha do laboratório",
+      "O time de segurança montou a <b>trilha-lab</b> (no mesmo bucket <b>logs-auditoria-climb</b>) pra testar uma regra, ligou a gravação e agora precisa parar. Faça o ciclo inteiro.",
+      ["Criar a trilha e ligar a gravação você já fez.", "No fim, o `stop-logging` da atividade anterior."],
+      ["aws cloudtrail create-trail --name trilha-lab --s3-bucket-name logs-auditoria-climb",
+        "aws cloudtrail start-logging --name trilha-lab",
+        "aws cloudtrail stop-logging --name trilha-lab"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudtrail", "stop-logging") && !!trilhaCt(c, "trilha-lab") && !(trilhaCt(c, "trilha-lab") || {}).gravando),
+  ]);
+  at("cob-ct-2", [
+    d("fx-ct-del1", "cloudtrail", 3, 90, "O laboratório acabou",
+      "O teste acabou. Apague a <b>trilha-lab</b> — os registros que ela já entregou continuam no bucket.",
+      ["Mesmo `delete-trail` de antes."],
+      ["aws cloudtrail delete-trail --name trilha-lab"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudtrail", "delete-trail") && !trilhaCt(c, "trilha-lab")),
+  ]);
 })();

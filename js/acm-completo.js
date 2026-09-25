@@ -96,6 +96,16 @@
       const s = st(conta);
       exigirFlag(flags, "certificate");
       exigirFlag(flags, "private-key");
+      // REIMPORTAR: com --certificate-arn, a AWS troca o conteúdo MANTENDO o ARN —
+      // é assim que se "renova" um certificado importado sem mexer em quem usa ele.
+      if (flags["certificate-arn"] !== undefined) {
+        const antigo = s.certificados[String(flags["certificate-arn"])];
+        if (!antigo) throw new ErroCli("An error occurred (ResourceNotFoundException) when calling the ImportCertificate operation: Could not find certificate " + String(flags["certificate-arn"]) + ".");
+        if (antigo.tipo !== "IMPORTED") throw new ErroCli("An error occurred (ValidationException) when calling the ImportCertificate operation: Certificate " + antigo.arn + " was not imported; you can only reimport an imported certificate.");
+        antigo.reimportadoEm = agoraIso();
+        avisarClimb("Reimportado no MESMO ARN: o load balancer e o CloudFront que usam este certificado passam a servir o novo sem você mexer em nada. É assim que se renova certificado importado — a AWS não faz isso por você.");
+        return js({ CertificateArn: antigo.arn });
+      }
       const arn = `arn:aws:acm:us-east-1:123456789012:certificate/${hexAleatorio(8)}-${hexAleatorio(12)}`;
       s.certificados[arn] = {
         arn, dominio: flags["domain-name"] ? String(flags["domain-name"]) : "importado.exemplo.com",

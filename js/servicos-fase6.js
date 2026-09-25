@@ -293,9 +293,15 @@
       avisarClimb("Certificado pedido — mas ele fica PENDING_VALIDATION até você PROVAR que é dono do domínio (criando um registro DNS no Route 53). Depois de validado, dá pra usar HTTPS no load balancer e no CloudFront, de graça.");
       return js({ CertificateArn: arn });
     },
-    "list-certificates": (conta) => {
+    "list-certificates": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.acm.certificados);
+      let l = Object.values(conta.acm.certificados);
+      // --certificate-statuses PENDING_VALIDATION ISSUED ...
+      if (flags && flags["certificate-statuses"] !== undefined) {
+        const st = [String(flags["certificate-statuses"])].concat((pos || []).map(String));
+        l = l.filter((c) => st.indexOf(c.status) >= 0);
+        if (!l.length) return js({ CertificateSummaryList: [] });
+      }
       if (!l.length) { avisarClimb("Nenhum certificado ainda. Peça um com: aws acm request-certificate --domain-name loja-climb.com"); return js({ CertificateSummaryList: [] }); }
       return js({ CertificateSummaryList: l.map((c) => ({ CertificateArn: c.arn, DomainName: c.dominio, Status: c.status })) });
     },

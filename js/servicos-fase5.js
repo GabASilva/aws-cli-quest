@@ -78,9 +78,15 @@
         TrailARN: `arn:aws:cloudtrail:${REGIAO(conta)}:${CONTA_ID(conta)}:trail/${nome}`,
         IsMultiRegionTrail: !!conta.cloudtrail.trilhas[nome].multiRegiao, LogFileValidationEnabled: false });
     },
-    "describe-trails": (conta) => {
+    "describe-trails": (conta, pos, flags) => {
       estado(conta);
-      const t = Object.values(conta.cloudtrail.trilhas);
+      let t = Object.values(conta.cloudtrail.trilhas);
+      // --trail-name-list a b: nome que não existe simplesmente não volta
+      if (flags && flags["trail-name-list"] !== undefined) {
+        const nomes = [String(flags["trail-name-list"])].concat((pos || []).map(String));
+        t = t.filter((x) => nomes.indexOf(x.nome) >= 0);
+        if (!t.length) return js({ trailList: [] });
+      }
       if (!t.length) { avisarClimb("Nenhuma trilha ainda. Crie uma com: aws cloudtrail create-trail --name trilha-auditoria --s3-bucket-name <bucket>"); return ""; }
       return js({ trailList: t.map((x) => ({
         Name: x.nome, S3BucketName: x.bucket, IsMultiRegionTrail: !!x.multiRegiao,

@@ -257,10 +257,27 @@
         Name: nome, VersionId: conta.secrets.segredos[nome].versao,
       });
     },
-    "list-secrets": (conta) => {
+    "list-secrets": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.secrets.segredos);
+      flags = flags || {};
+      let l = Object.values(conta.secrets.segredos);
       if (!l.length) { avisarClimb("Nenhum segredo ainda. Crie um com: aws secretsmanager create-secret --name senha-banco-loja --secret-string ..."); return ""; }
+      // Igual à AWS: segredo marcado pra apagar SOME da lista, a não ser que
+      // você peça com --include-planned-deletion.
+      if (flags["include-planned-deletion"] === undefined) l = l.filter((s) => !s.apagandoEm);
+      // --filters Key=name,Values=<prefixo> (também tag-key e tag-value)
+      if (flags.filters !== undefined) {
+        const f = [String(flags.filters)].concat((pos || []).map(String)).join(" ");
+        const chave = (f.match(/Key=([a-z-]+)/) || [])[1];
+        const valor = String((f.match(/Values=([^\s,]+)/) || [])[1] || "").toLowerCase();
+        if (["name", "tag-key", "tag-value", "description"].indexOf(chave) < 0) {
+          throw new ErroCli("An error occurred (ValidationException) when calling the ListSecrets operation: filtro inválido. Use Key=name, tag-key, tag-value ou description.");
+        }
+        l = l.filter((s) => chave === "name" ? s.nome.toLowerCase().indexOf(valor) === 0
+          : chave === "description" ? String(s.descricao || "").toLowerCase().indexOf(valor) >= 0
+          : chave === "tag-key" ? Object.keys(s.tags || {}).some((k) => k.toLowerCase().indexOf(valor) === 0)
+          : Object.values(s.tags || {}).some((v) => String(v).toLowerCase().indexOf(valor) === 0));
+      }
       return js({ SecretList: l.map((s) => ({
         Name: s.nome, Description: s.descricao, CreatedDate: s.criadoEm,
         DeletedDate: s.apagandoEm || undefined,
@@ -274,6 +291,7 @@
     },
     "update-secret": (conta, pos, flags) => {
       const s = acharSegredo(conta, flags, "UpdateSecret");
+      if (s.apagandoEm) throw new ErroCli("An error occurred (InvalidRequestException) when calling the UpdateSecret operation: You can't perform this operation on the secret because it was marked for deletion.\nRestaure antes: aws secretsmanager restore-secret --secret-id " + s.nome);
       if (flags["secret-string"] !== undefined) { s.valor = String(flags["secret-string"]); s.versao = hexAleatorio(8); }
       if (flags.description !== undefined) s.descricao = String(flags.description);
       avisarClimb("Segredo atualizado: quem lê pelo nome já pega o valor novo — por isso a aplicação nunca precisa de senha no código.");
@@ -285,7 +303,9 @@
         delete conta.secrets.segredos[s.nome];
         return js({ ARN: `arn:aws:secretsmanager:${REGIAO(conta)}:${CONTA_ID(conta)}:secret:${s.nome}`, Name: s.nome, DeletionDate: agoraIso() });
       }
+      if (s.apagandoEm) throw new ErroCli("An error occurred (InvalidRequestException) when calling the DeleteSecret operation: You can't perform this operation on the secret because it was already scheduled for deletion.");
       const dias = parseInt(flags["recovery-window-in-days"] || "30", 10);
+      if (!(dias >= 7 && dias <= 30)) throw new ErroCli("An error occurred (InvalidParameterException) when calling the DeleteSecret operation: The RecoveryWindowInDays value must be between 7 and 30 days (inclusive).");
       s.apagandoEm = new Date(Date.now() + dias * 86400000).toISOString();
       avisarClimb(`Marcado pra apagar em ${dias} dias — dá pra desfazer com 'aws secretsmanager restore-secret'. É a rede de proteção do Secrets Manager.`);
       return js({ ARN: `arn:aws:secretsmanager:${REGIAO(conta)}:${CONTA_ID(conta)}:secret:${s.nome}`, Name: s.nome, DeletionDate: s.apagandoEm });
