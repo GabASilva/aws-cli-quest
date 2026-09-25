@@ -443,4 +443,114 @@
         "aws logs stop-query --query-id <consulta-id>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "logs", "stop-query")),
   ]);
+
+  // ============================================================
+  // Leva 3 (25/09): Lambda, DynamoDB e RDS
+  // ============================================================
+  const fn = (c, n) => (((c.lambda || {}).funcoes) || {})[n];
+  const aliasDe = (c, f, a) => (((fn(c, f) || {}).aliases) || {})[a];
+  const tabela = (c, n) => (((c.dynamodb || {}).tabelas) || {})[n];
+  const itemDe = (c, t, campo, valor) => ((tabela(c, t) || {}).itens || []).find((i) => cru(i[campo]) === valor);
+  const itemPedido = (c, cli, data) => ((tabela(c, "PedidosCliente") || {}).itens || []).find((i) => cru(i.cliente) === cli && cru(i.data) === data);
+  const cru = (v) => (v && typeof v === "object" ? Object.values(v)[0] : v);
+  const banco = (c, n) => (((c.rds || {}).instancias) || {})[n];
+
+  // ---------------- Lambda ----------------
+  at("lambda-9", [
+    d("fx-lam-gf1", "lambda", 2, 60, "Em que runtime o webhook roda?",
+      "O Node 20 vai sair de suporte e o time quer saber quais funções são afetadas. Veja a configuração da <b>webhook-pagamento</b>, mas traga só o <b>runtime</b>.",
+      ["O `get-function` traz a configuração e o código; o `--query` recorta.", "O campo é `Configuration.Runtime`."],
+      ["aws lambda get-function --function-name webhook-pagamento --query Configuration.Runtime"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "lambda", "get-function") && String(cmd.flags["function-name"] || "") === "webhook-pagamento"),
+  ]);
+  at("lamp-1", [
+    d("fx-lam-code1", "lambda", 2, 80, "A miniatura saiu borrada",
+      "O time corrigiu a qualidade das miniaturas e mandou um <b>app.zip</b> novo. Faça o deploy na <b>resize-imagens</b>.",
+      ["Mesmo comando de deploy, outra função."],
+      ["aws lambda update-function-code --function-name resize-imagens --zip-file fileb://app.zip"],
+      (c) => !!(fn(c, "resize-imagens") || {}).versaoCodigo),
+  ]);
+  at("lamp-2", [
+    d("fx-lam-pub1", "lambda", 3, 110, "A correção do frete vira a versão 2",
+      "O cálculo de frete estava errado. Faça o <b>deploy</b> do código corrigido na <b>processa-pedido</b> e <b>congele</b> uma versão nova com a descrição <b>correcao-frete</b>. <small>(publicar sem deploy no meio devolve a MESMA versão: não há o que congelar)</small>",
+      ["Primeiro o `update-function-code`, depois o `publish-version`.", "A descrição vai em `--description` — é ela que diz, meses depois, o que mudou naquela versão."],
+      ["aws lambda update-function-code --function-name processa-pedido --zip-file fileb://app.zip",
+        "aws lambda publish-version --function-name processa-pedido --description correcao-frete"],
+      (c) => ((fn(c, "processa-pedido") || {}).versoes || []).length >= 2),
+  ]);
+  at("lamp-3", [
+    d("fx-lam-al1", "lambda", 3, 100, "Homologação sempre no código mais novo",
+      "O time de QA quer testar sempre o último deploy, sem esperar versão. Crie o alias <b>homolog</b> da <b>processa-pedido</b> apontando pro <b>$LATEST</b>.",
+      ["Mesmo comando do alias prod.", "O $LATEST é um valor válido de `--function-version` — ele acompanha cada deploy."],
+      ["aws lambda create-alias --function-name processa-pedido --name homolog --function-version $LATEST"],
+      (c) => !!aliasDe(c, "processa-pedido", "homolog")),
+  ]);
+  at("lamp-4", [
+    d("fx-lam-perm1", "lambda", 3, 110, "A API também chama o processamento",
+      "O app mobile vai criar pedido por uma API, e o <b>API Gateway</b> precisa invocar a <b>processa-pedido</b>. Dê a permissão com o id <b>api-invoca</b> pro <b>apigateway.amazonaws.com</b>.",
+      ["Mesmo comando da permissão do S3.", "Cada permissão precisa de um `--statement-id` diferente."],
+      ["aws lambda add-permission --function-name processa-pedido --statement-id api-invoca --action lambda:InvokeFunction --principal apigateway.amazonaws.com"],
+      (c) => ((fn(c, "processa-pedido") || {}).permissoes || []).some((p) => /apigateway/.test(p.principal))),
+  ]);
+  at("cob-lam-1", [
+    d("fx-lam-lv1", "lambda", 2, 70, "O webhook nunca foi versionado",
+      "Antes de mexer no webhook, veja se dá pra voltar atrás: liste as versões da <b>webhook-pagamento</b>. <small>(se só vier o $LATEST, não há rollback possível — é hora de publicar uma)</small>",
+      ["Mesmo comando, outra função."],
+      ["aws lambda list-versions-by-function --function-name webhook-pagamento"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "lambda", "list-versions-by-function") && String(cmd.flags["function-name"] || "") === "webhook-pagamento"),
+  ]);
+  at("cob-lam-2", [
+    d("fx-lam-ua1", "lambda", 3, 100, "Promova a correção pra produção",
+      "O $LATEST foi um remendo de emergência. O certo é produção rodar uma versão congelada: reaponte o <b>prod</b> da <b>processa-pedido</b> pra <b>versão 2</b>, a da correção do frete.",
+      ["Mesmo comando do rollback, apontando pra um número.", "Versão que não existe dá erro — confira com o list-versions-by-function se precisar."],
+      ["aws lambda update-alias --function-name processa-pedido --name prod --function-version 2"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "lambda", "update-alias") && (aliasDe(c, "processa-pedido", "prod") || {}).versao === "2"),
+  ]);
+  at("cob-lam-3", [
+    d("fx-lam-gp1", "lambda", 3, 80, "O S3 e a API estão lá?",
+      "Antes de ligar o app mobile, confira que a política da <b>processa-pedido</b> tem as <b>duas</b> permissões: a do S3 e a do API Gateway.",
+      ["Mesmo comando da atividade anterior.", "Procure os dois Sid: s3-invoca e api-invoca."],
+      ["aws lambda get-policy --function-name processa-pedido"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "lambda", "get-policy") && ((fn(c, "processa-pedido") || {}).permissoes || []).length >= 2),
+  ]);
+  at("cob-lam-4", [
+    d("fx-lam-del1", "lambda", 3, 90, "A função de consulta era só um teste",
+      "A função <b>consulta</b> foi criada pra testar e ninguém usa. Apague ela — função parada não custa, mas confunde quem chega depois.",
+      ["O `delete-function` só pede o nome — e não tem lixeira, nem pergunta se você tem certeza."],
+      ["aws lambda delete-function --function-name consulta"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "lambda", "delete-function") && String(cmd.flags["function-name"] || "") === "consulta" && !fn(c, "consulta")),
+  ]);
+
+  // ---------------- DynamoDB ----------------
+  at("dynamodb-8", [
+    d("fx-dyn-dt1", "dynamodb", 2, 60, "A tabela de clientes já está pronta?",
+      "O script de carga falhou dizendo que a tabela não estava pronta. Veja só o <b>status</b> da tabela <b>clientes</b> — tabela recém-criada passa por CREATING antes de ACTIVE.",
+      ["O `describe-table` traz tudo; o `--query` recorta.", "O campo é `Table.TableStatus`."],
+      ["aws dynamodb describe-table --table-name clientes --query Table.TableStatus"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "describe-table") && String(cmd.flags["table-name"] || "") === "clientes"),
+  ]);
+  at("dynp-5", [
+    d("fx-dyn-upd1", "dynamodb", 3, 110, "O pedido foi entregue",
+      "O pedido da <b>ana</b> de <b>2026-07-01</b> chegou. Acrescente nele o campo <b>situacao</b> com o valor <b>entregue</b>, sem mexer no resto. <small>(o nome em inglês, status, é palavra reservada do DynamoDB — por isso o campo aqui é situacao)</small>",
+      ["Mesmo comando: o SET também CRIA o campo se ele não existir.", "Texto é tipo S: `{\":s\":{\"S\":\"entregue\"}}`."],
+      ["aws dynamodb update-item --table-name PedidosCliente --key '{\"cliente\":{\"S\":\"ana\"},\"data\":{\"S\":\"2026-07-01\"}}' --update-expression \"SET situacao = :s\" --expression-attribute-values '{\":s\":{\"S\":\"entregue\"}}'"],
+      (c) => cru((itemPedido(c, "ana", "2026-07-01") || {}).situacao) === "entregue"),
+  ]);
+  at("dynp-6", [
+    d("fx-dyn-del1", "dynamodb", 3, 100, "A sessão expirou",
+      "O usuário saiu e a sessão <b>sessao-expirada-01</b> precisa sumir da tabela <b>Sessoes</b>. Grave a sessão (chave <b>token</b>) pra ver o cenário e depois apague.",
+      ["Gravar é o `put-item`; a chave da Sessoes é `token`, tipo S.", "Apagar é o comando da atividade anterior — aqui a chave tem uma parte só."],
+      ["aws dynamodb put-item --table-name Sessoes --item '{\"token\":{\"S\":\"sessao-expirada-01\"}}'",
+        "aws dynamodb delete-item --table-name Sessoes --key '{\"token\":{\"S\":\"sessao-expirada-01\"}}'"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "delete-item") && !!tabela(c, "Sessoes") && !itemDe(c, "Sessoes", "token", "sessao-expirada-01")),
+  ]);
+
+  // ---------------- RDS ----------------
+  at("rds-9", [
+    d("fx-rds-start1", "rds", 2, 60, "Segunda de manhã no banco de dev",
+      "O <b>banco-stop</b> ficou parado o fim de semana pra economizar. O time chegou: ligue ele de novo.",
+      ["Mesmo comando da atividade anterior, outro banco."],
+      ["aws rds start-db-instance --db-instance-identifier banco-stop"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "rds", "start-db-instance") && (banco(c, "banco-stop") || {}).status === "available"),
+  ]);
 })();

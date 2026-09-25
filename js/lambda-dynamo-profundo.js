@@ -24,6 +24,9 @@
     const nome = String(exigirFlag(flags, "function-name"));
     const f = conta.lambda.funcoes[nome];
     if (!f) throw new ErroCli(`An error occurred (ResourceNotFoundException) when calling the ${op} operation: Function not found: ${nome}`);
+    // O create-function guarda a função sem o próprio nome; sem isto os ARNs
+    // de alias e de permissão saíam como "function:undefined" (achado em 25/09).
+    if (!f.nome) f.nome = nome;
     return f;
   }
 
@@ -42,8 +45,16 @@
     "publish-version": (conta, pos, flags) => {
       const f = acharFuncao(conta, flags, "PublishVersion");
       f.versoes = f.versoes || [];
+      // Igual à AWS: se o código não mudou desde a última versão, não nasce
+      // versão nova — volta a mesma. Publicar exige deploy no meio.
+      const codigo = f.versaoCodigo || 0;
+      const ultima = f.versoes[f.versoes.length - 1];
+      if (ultima && ultima.codigo === codigo) {
+        avisarClimb(`Nada mudou desde a versão ${ultima.versao}, então a AWS devolveu ELA — não criou versão nova. Pra congelar código novo, faça o deploy antes (update-function-code) e publique depois.`);
+        return js({ FunctionName: f.nome, Version: ultima.versao, LastModified: ultima.publicadaEm, State: "Active" });
+      }
       const v = String(f.versoes.length + 1);
-      f.versoes.push({ versao: v, publicadaEm: agoraIso() });
+      f.versoes.push({ versao: v, publicadaEm: agoraIso(), codigo, descricao: flags.description !== undefined ? String(flags.description) : "" });
       avisarClimb(`Versão ${v} publicada — uma FOTO imutável do código de agora. O $LATEST continua mudando a cada deploy, mas a versão ${v} fica congelada pra sempre. É assim que se consegue voltar atrás: basta apontar o alias pra versão anterior.`);
       return js({ FunctionName: f.nome, Version: v, LastModified: agoraIso(), State: "Active" });
     },
@@ -73,6 +84,9 @@
       const versao = String(exigirFlag(flags, "function-version"));
       f.aliases = f.aliases || {};
       if (!f.aliases[nome]) throw new ErroCli(`An error occurred (ResourceNotFoundException) when calling the UpdateAlias operation: Alias not found: ${nome}`);
+      if (versao !== "$LATEST" && !(f.versoes || []).some((v) => v.versao === versao)) {
+        throw new ErroCli(`An error occurred (ResourceNotFoundException) when calling the UpdateAlias operation: Function not found: versão ${versao} não existe.\nVeja as que existem com: aws lambda list-versions-by-function --function-name ${f.nome}`);
+      }
       const antes = f.aliases[nome].versao;
       f.aliases[nome].versao = versao;
       avisarClimb(`"${nome}" saiu da versão ${antes} pra ${versao}. Foi isso: um deploy (ou um rollback) sem mexer em quem chama a função. Nenhuma requisição caiu.`);
@@ -115,6 +129,43 @@
   }
   const cru = (v) => (v && typeof v === "object") ? Object.values(v)[0] : v;
 
+  // Palavras reservadas do DynamoDB (recorte da lista oficial, conferido em
+  // docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html
+  // em 25/09/2026): as que alguém usaria como NOME DE CAMPO. Nome reservado solto
+  // na expressão é ValidationException na AWS — o jeito é o apelido #x em
+  // --expression-attribute-names. Até 25/09 o dynp-4 ensinava "data > :d", que a
+  // AWS de verdade recusa.
+  const RESERVADAS = ("action add all and archive attribute backup between both bucket by capacity case " +
+    "cluster comment condition count create current data database date datetime day default delete desc " +
+    "describe domain duration end error exists export file filter first format from function get global " +
+    "group hash hour in index input item items key keys language last length level limit list load local " +
+    "location log map max member method min minute mode month name names new next not null number object " +
+    "of old on option or order output owner partition path percent permission plan position primary " +
+    "private public query range rank read record region replace request resource response result return " +
+    "role rule rules scan schema second section select session set size source start state status " +
+    "storage string sum system table temp text time timestamp token total ttl type unique unit update url " +
+    "usage user users uuid value values view window write year zone").split(" ");
+  // Troca #apelido pelo nome real e recusa nome reservado usado sem apelido.
+  function nomeCampo(bruto, flags, op, tipoExpr) {
+    const nome = String(bruto);
+    if (nome.charAt(0) === "#") {
+      let mapa = {};
+      const cruNomes = flags["expression-attribute-names"];
+      if (cruNomes !== undefined && cruNomes !== true) {
+        try { mapa = typeof cruNomes === "string" ? JSON.parse(cruNomes) : cruNomes; }
+        catch (e) { throw new ErroCli(`An error occurred (ValidationException) when calling the ${op} operation: --expression-attribute-names precisa ser JSON válido, no formato {"#d":"data"}.`); }
+      }
+      if (mapa[nome] === undefined) {
+        throw new ErroCli(`An error occurred (ValidationException) when calling the ${op} operation: Value provided in ExpressionAttributeNames unused in expressions or undefined: ${nome}\nDefina o apelido: --expression-attribute-names '{"${nome}":"<nome-do-campo>"}'`);
+      }
+      return String(mapa[nome]);
+    }
+    if (RESERVADAS.indexOf(nome.toLowerCase()) >= 0) {
+      throw new ErroCli(`An error occurred (ValidationException) when calling the ${op} operation: Invalid ${tipoExpr}: Attribute name is a reserved keyword; reserved keyword: ${nome}\n"${nome}" é palavra reservada do DynamoDB. Use um apelido: troque por #${nome.charAt(0)} na expressão e acrescente --expression-attribute-names '{"#${nome.charAt(0)}":"${nome}"}'`);
+    }
+    return nome;
+  }
+
   Object.assign(SERVICOS.dynamodb, {
     "query": (conta, pos, flags) => {
       const t = exigirTabela(conta, flags, "Query");
@@ -129,6 +180,7 @@
       if (!mPk) {
         throw new ErroCli(`An error occurred (ValidationException) when calling the Query operation: Query condition missed key schema element.\nA condição precisa começar pela chave de partição, com igualdade: "${hash} = :algo".\nQuery NÃO procura por campo comum — pra isso é o scan (que lê a tabela inteira).`);
       }
+      mPk[1] = nomeCampo(mPk[1], flags, "Query", "KeyConditionExpression");
       if (mPk[1] !== hash) {
         throw new ErroCli(`An error occurred (ValidationException) when calling the Query operation: Query condition missed key schema element: ${hash}\nVocê filtrou por "${mPk[1]}", que não é a chave de PARTIÇÃO desta tabela. Query só sabe ir direto na partição — o resto é scan.`);
       }
@@ -143,9 +195,11 @@
         const mBw = /^begins_with\s*\(\s*(\S+)\s*,\s*(:\S+)\s*\)$/i.exec(partes[1]);
         const mOp = /^(\S+)\s*(=|<|>|<=|>=)\s*(:\S+)$/.exec(partes[1]);
         if (mBw) {
+          const campoBw = nomeCampo(mBw[1], flags, "Query", "KeyConditionExpression");
           const p = String(cru(vals[mBw[2]]));
-          itens = itens.filter((i) => String(cru(i[mBw[1]]) || "").startsWith(p));
+          itens = itens.filter((i) => String(cru(i[campoBw]) || "").startsWith(p));
         } else if (mOp) {
+          mOp[1] = nomeCampo(mOp[1], flags, "Query", "KeyConditionExpression");
           const alvo = cru(vals[mOp[3]]);
           const num = !isNaN(Number(alvo));
           itens = itens.filter((i) => {
@@ -186,10 +240,10 @@
           const m = /^\s*(\S+)\s*=\s*(:\S+)\s*$/.exec(par);
           if (!m) throw new ErroCli(`An error occurred (ValidationException) when calling the UpdateItem operation: não entendi "${par.trim()}".\nA forma é: SET campo = :apelido (com o valor em --expression-attribute-values).`);
           if (vals[m[2]] === undefined) throw new ErroCli(`An error occurred (ValidationException) when calling the UpdateItem operation: o apelido ${m[2]} não foi definido em --expression-attribute-values.`);
-          item[m[1]] = vals[m[2]];
+          item[nomeCampo(m[1], flags, "UpdateItem", "UpdateExpression")] = vals[m[2]];
         }
       } else if (mRem) {
-        for (const c of mRem[1].split(",")) delete item[c.trim()];
+        for (const c of mRem[1].split(",")) delete item[nomeCampo(c.trim(), flags, "UpdateItem", "UpdateExpression")];
       } else {
         throw new ErroCli(`An error occurred (ValidationException) when calling the UpdateItem operation: o CLImb entende SET campo = :apelido e REMOVE campo.`);
       }
@@ -266,9 +320,9 @@
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "query") },
 
     { id: "dynp-4", servico: "dynamodb", nivel: 3, xp: 140, titulo: "Só os pedidos a partir de uma data",
-      descricao: "A chave de ordenação permite <b>recortar um intervalo</b> sem ler o resto. Traga só os pedidos da <b>ana</b> com data <b>maior que 2026-07-10</b>.",
-      dicas: ["Duas condições ligadas por AND: a partição com igualdade e a ordenação com o operador de comparação.", "A forma é: --key-condition-expression \"<chave> = :c AND <ordenacao> > :d\" com os DOIS apelidos definidos nos valores"],
-      solucao: ["aws dynamodb query --table-name PedidosCliente --key-condition-expression \"cliente = :c AND data > :d\" --expression-attribute-values '{\":c\":{\"S\":\"ana\"},\":d\":{\"S\":\"2026-07-10\"}}'"],
+      descricao: "A chave de ordenação permite <b>recortar um intervalo</b> sem ler o resto. Traga só os pedidos da <b>ana</b> com data <b>maior que 2026-07-10</b>. <small>(pegadinha: <code>data</code> é palavra reservada do DynamoDB — escrita solta na expressão, a AWS recusa)</small>",
+      dicas: ["Duas condições ligadas por AND: a partição com igualdade e a ordenação com o operador de comparação.", "Nome reservado vai por apelido: na expressão você escreve #d, e diz quem é o #d em --expression-attribute-names '{\"#d\":\"data\"}'.", "A forma é: --key-condition-expression \"<chave> = :c AND #d > :d\" com os DOIS valores em --expression-attribute-values"],
+      solucao: ["aws dynamodb query --table-name PedidosCliente --key-condition-expression \"cliente = :c AND #d > :d\" --expression-attribute-names '{\"#d\":\"data\"}' --expression-attribute-values '{\":c\":{\"S\":\"ana\"},\":d\":{\"S\":\"2026-07-10\"}}'"],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "query") && /AND/i.test(String((cmd.flags || {})["key-condition-expression"] || "")) },
 
     { id: "dynp-5", servico: "dynamodb", nivel: 3, xp: 120, titulo: "Mude um campo só",
@@ -304,7 +358,7 @@
       "lambda.update-alias": `aws lambda update-alias\n\nUSO\n    aws lambda update-alias --function-name processa-pedido \\\n        --name prod --function-version 2\n\nMove o apelido pra outra versão. Uma linha faz o deploy — e a mesma linha,\ncom o número antigo, faz o rollback.`,
       "lambda.add-permission": `aws lambda add-permission\n\nUSO\n    aws lambda add-permission --function-name processa-pedido \\\n        --statement-id s3-invoca --action lambda:InvokeFunction \\\n        --principal s3.amazonaws.com\n\nDeixa OUTRO serviço invocar a sua função. Não confunda:\n    role da função        -> o que a Lambda pode usar\n    esta permissão        -> quem pode chamar a Lambda\n\nSem ela o gatilho (S3, API Gateway, EventBridge) falha SILENCIOSAMENTE —\né uma das causas mais comuns de "meu trigger não dispara".`,
       "lambda.get-policy": `aws lambda get-policy\n\nUSO\n    aws lambda get-policy --function-name processa-pedido\n\nMostra quem tem permissão pra invocar a função. Se ninguém tem, a AWS\nresponde ResourceNotFoundException (não é uma política vazia — é a ausência\nde política).`,
-      "dynamodb.query": `aws dynamodb query\n\nUSO\n    aws dynamodb query --table-name PedidosCliente \\\n        --key-condition-expression "cliente = :c" \\\n        --expression-attribute-values '{":c":{"S":"ana"}}'\n\n    aws dynamodb query --table-name PedidosCliente \\\n        --key-condition-expression "cliente = :c AND data > :d" \\\n        --expression-attribute-values '{":c":{"S":"ana"},":d":{"S":"2026-07-10"}}'\n\nA operação mais importante do DynamoDB. Vai DIRETO na partição e lê só o que\ninteressa — diferente do scan, que lê a tabela inteira e descarta o resto.\n\nREGRAS:\n  - a condição SEMPRE começa pela chave de partição, com igualdade (=)\n  - na chave de ordenação valem =, <, >, <=, >= e begins_with(campo, :x)\n  - não dá pra filtrar por campo comum: pra isso é scan (ou um índice)\n  - --scan-index-forward false inverte a ordem\n\nOs valores não vão na expressão: vão em --expression-attribute-values,\nreferenciados por :apelido.`,
+      "dynamodb.query": `aws dynamodb query\n\nUSO\n    aws dynamodb query --table-name PedidosCliente \\\n        --key-condition-expression "cliente = :c" \\\n        --expression-attribute-values '{":c":{"S":"ana"}}'\n\n    aws dynamodb query --table-name PedidosCliente \\\n        --key-condition-expression "cliente = :c AND #d > :d" \\\n        --expression-attribute-names '{"#d":"data"}' \\\n        --expression-attribute-values '{":c":{"S":"ana"},":d":{"S":"2026-07-10"}}'\n\nA operação mais importante do DynamoDB. Vai DIRETO na partição e lê só o que\ninteressa — diferente do scan, que lê a tabela inteira e descarta o resto.\n\nREGRAS:\n  - a condição SEMPRE começa pela chave de partição, com igualdade (=)\n  - na chave de ordenação valem =, <, >, <=, >= e begins_with(campo, :x)\n  - não dá pra filtrar por campo comum: pra isso é scan (ou um índice)\n  - --scan-index-forward false inverte a ordem\n\nOs valores não vão na expressão: vão em --expression-attribute-values,\nreferenciados por :apelido.\n\nPALAVRA RESERVADA: data, status, name, date, count, type, user... são\nreservadas do DynamoDB e não podem aparecer soltas na expressão. Use um\napelido #x e diga quem ele é em --expression-attribute-names '{"#x":"data"}'.`,
       "dynamodb.update-item": `aws dynamodb update-item\n\nUSO\n    aws dynamodb update-item --table-name PedidosCliente \\\n        --key '{"cliente":{"S":"ana"},"data":{"S":"2026-07-01"}}' \\\n        --update-expression "SET valor = :v" \\\n        --expression-attribute-values '{":v":{"N":"199"}}'\n\nMuda SÓ os campos citados. É a diferença pro put-item, que substitui o item\ninteiro (e apaga o que você não mandou).\n\nSe o item não existir, ele é CRIADO (upsert) — não dá erro.\nAceita SET campo = :apelido e REMOVE campo.`,
       "dynamodb.delete-item": `aws dynamodb delete-item\n\nUSO\n    aws dynamodb delete-item --table-name PedidosCliente \\\n        --key '{"cliente":{"S":"ana"},"data":{"S":"2026-07-15"}}'\n\nApaga um item pela chave (todas as partes dela, se a chave for composta).\nÉ idempotente: apagar o que não existe responde sucesso, não erro.\nNão há lixeira.`,
     });
