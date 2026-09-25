@@ -48,6 +48,10 @@
     ["etiquet", "tag"],
     ["anex", "attach", "associ"],
     ["desanex", "detach", "disassoci"],
+    ["repet", "retry", "tent", "refaz"],
+    ["histor", "list"],
+    ["cancel", "stop", "abort"],
+    ["restaur", "restore", "recuper"],
   ];
   function alternativas(pedaco) {
     // casa o grupo se o que foi digitado é o começo de um radical ("apa" → apag) ou
