@@ -171,6 +171,9 @@ function resolverPlaceholders(conta, linha) {
     linha = linha.replace(/<subnet-de:([^>]+)>/g, (m, cidr) => (Object.values(conta.vpc.subnets || {}).find((s) => s.cidr === cidr) || {}).id || "");
     linha = linha.replace(/<igw-de:([^>]+)>/g, (m, cidr) => { const v = vpcDe(cidr); return (Object.values(conta.vpc.igws || {}).find((g) => g.vpc && g.vpc === v.id) || {}).id || ""; });
   }
+  // CodeBuild: o build mais recente e o último que FALHOU (FAILED)
+  if (linha.includes("<build-id>") && conta.codebuild) { const _b = Object.keys(conta.codebuild.builds || {}); linha = linha.replace(/<build-id>/g, _b.length ? _b[_b.length - 1] : ""); }
+  if (linha.includes("<build-falho>") && conta.codebuild) { const _f = Object.values(conta.codebuild.builds || {}).filter((b) => b.status === "FAILED"); linha = linha.replace(/<build-falho>/g, _f.length ? _f[_f.length - 1].id : ""); }
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");

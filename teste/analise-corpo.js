@@ -247,7 +247,7 @@ try {
 // É estrito só nas famílias de id abaixo (o conteúdo antigo entra como
 // contagem, pra virar fila de trabalho sem travar ninguém).
 // >>> Toda leva nova de atividades: ponha o prefixo dela aqui. <<<
-const LEVAS_ESTRITAS = ["psqs", "psns", "sqsc", "logsc", "ssmc", "iamc", "ec2c", "s3c", "ctn", "fx"];
+const LEVAS_ESTRITAS = ["psqs", "psns", "sqsc", "logsc", "ssmc", "iamc", "ec2c", "s3c", "ctn", "fx", "cb"];
 {
   const ehEstrita = (id) => LEVAS_ESTRITAS.some((p) => String(id).indexOf(p + "-") === 0);
   const usoPorCmd = {};

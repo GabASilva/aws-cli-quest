@@ -223,7 +223,8 @@
       // Filtros da AWS: --alarm-names (lista), --alarm-name-prefix e --state-value
       let alarmes = Object.values(conta.cloudwatch.alarmes);
       if (flags["alarm-names"] !== undefined) {
-        const nomes = [String(flags["alarm-names"])].concat((pos || []).map(String));
+        // alarm-names é flag de VÁRIOS valores no parser: já chega como lista
+        const nomes = [].concat(flags["alarm-names"]).concat(pos || []).map(String);
         alarmes = alarmes.filter((a) => nomes.indexOf(a.nome) >= 0);
       }
       if (flags["alarm-name-prefix"] !== undefined) alarmes = alarmes.filter((a) => a.nome.indexOf(String(flags["alarm-name-prefix"])) === 0);
