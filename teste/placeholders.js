@@ -16,6 +16,8 @@ function resolverPlaceholders(conta, linha) {
   if (linha.includes("<rtb-id>")) linha = linha.replace(/<rtb-id>/g, lab.rtb);
   if (linha.includes("<acl-id>")) linha = linha.replace(/<acl-id>/g, lab.acl);
   if (linha.includes("<igw-id>")) linha = linha.replace(/<igw-id>/g, lab.igw);
+  if (linha.includes("<sg-lab>")) linha = linha.replace(/<sg-lab>/g, lab.sg);
+  if (linha.includes("<vpc-lab>")) linha = linha.replace(/<vpc-lab>/g, lab.vpc);
   }
   if (linha.includes("<caminho-flowlog>")) {
   let chave = "";

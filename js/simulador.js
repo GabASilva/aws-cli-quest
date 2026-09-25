@@ -708,9 +708,21 @@ const cmdEc2 = {
     return js({ Return: true, SecurityGroupRules: [{ SecurityGroupRuleId: "sgr-0" + hexAleatorio(16), GroupId: grupo.id, IpProtocol: protocolo, FromPort: porta, ToPort: porta, CidrIpv4: cidr }] });
   },
 
-  "describe-security-groups": (conta) => {
+  "describe-security-groups": (conta, pos, flags) => {
+    let grupos = Object.values(conta.ec2.securityGroups);
+    flags = flags || {};
+    // --group-ids / --group-names: id ou nome que não existe é ERRO na AWS
+    if (flags["group-ids"] !== undefined || flags["group-names"] !== undefined) {
+      const porId = flags["group-ids"] !== undefined;
+      const pedidos = [String(porId ? flags["group-ids"] : flags["group-names"])].concat((pos || []).map(String));
+      const falta = pedidos.find((p) => !grupos.some((g) => (porId ? g.id : g.nome) === p));
+      if (falta) throw new ErroCli(porId
+        ? `An error occurred (InvalidGroup.NotFound) when calling the DescribeSecurityGroups operation: The security group '${falta}' does not exist`
+        : `An error occurred (InvalidGroup.NotFound) when calling the DescribeSecurityGroups operation: The security group '${falta}' does not exist in default VPC`);
+      grupos = grupos.filter((g) => pedidos.indexOf(porId ? g.id : g.nome) >= 0);
+    }
     return js({
-      SecurityGroups: Object.values(conta.ec2.securityGroups).map((g) => ({
+      SecurityGroups: grupos.map((g) => ({
         GroupId: g.id,
         GroupName: g.nome,
         Description: g.descricao,

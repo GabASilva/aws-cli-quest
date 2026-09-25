@@ -1900,4 +1900,27 @@
       ["aws ce get-dimension-values --dimension REGION --time-period '{\"Start\":\"2026-07-01\",\"End\":\"2026-07-31\"}'"],
       (c, cmd, ok) => ok && ehCmd(cmd, "ce", "get-dimension-values") && String(cmd.flags.dimension || "") === "REGION"),
   ]);
+
+  // ============================================================
+  // Leva 12 (25/09): o laboratório de diagnóstico de rede e o resto da VPC
+  // ============================================================
+  // (a parte do laboratório de diagnóstico mora no js/fixacao-2.js: as
+  // atividades diag-* nascem no lab-vpc.js, que carrega depois deste arquivo)
+
+  // ---------------- VPC: o que sobrou ----------------
+  at("cob-vpc-5", [
+    d("fx-vpc-eni1", "vpc", 3, 70, "Quais IPs privados estão em uso?",
+      "Antes de escolher o IP fixo de um servidor novo, veja quais IPs privados já estão ocupados nas interfaces de rede.",
+      ["Mesmo `describe-network-interfaces`, com `--query`.", "O caminho é `NetworkInterfaces[].PrivateIpAddress`."],
+      ["aws ec2 describe-network-interfaces --query NetworkInterfaces[].PrivateIpAddress"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-network-interfaces") && /PrivateIpAddress/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("fx-vpc-as1", [
+    d("fx-vpc-rt2", "vpc", 3, 100, "Teste de isolamento na rede pública",
+      "Pra provar que a sub-rede 10.41 só sai pela tabela nova, ponha a rota <b>0.0.0.0/0</b> pro gateway da VPC 10.41 e, depois do teste, remova.",
+      ["A rota nova é o `create-route` com o gateway da própria VPC.", "Tirar é o `delete-route`, com a tabela e o destino."],
+      ["aws ec2 create-route --route-table-id <rtb-novo> --gateway-id <igw-de:10.41.0.0/16> --destination-cidr-block 0.0.0.0/0",
+        "aws ec2 delete-route --route-table-id <rtb-novo> --destination-cidr-block 0.0.0.0/0"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-route")),
+  ]);
 })();

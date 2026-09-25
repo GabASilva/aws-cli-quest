@@ -60,7 +60,7 @@
       ],
       validar: (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-route") },
 
-    { id: "cob-vpc-7", servico: "diagnostico", nivel: 2, xp: 90, titulo: "Pare de gravar o tráfego",
+    { id: "cob-vpc-7", servico: "diagnostico", nivel: 3, xp: 90, titulo: "Pare de gravar o tráfego",
       descricao: "Os flow logs cobram por volume ingerido. <b>Apague</b> o flow log. <small>(o que já foi entregue no S3 continua lá — isso só para de gravar dali pra frente)</small>",
       dicas: ["Apagar é `delete-…`, e o nome do comando está no plural.", "A forma é: aws ec2 delete-flow-logs --flow-log-ids <id>"],
       solucao: ["aws ec2 delete-flow-logs --flow-log-ids <flowlog-id>"],
