@@ -349,9 +349,15 @@
       avisarClimb(`Pronto: ${desejado} instância(s) subiram sozinhas. Confira com 'aws ec2 describe-instances' — o grupo cuida de manter esse número, mesmo se uma cair.`);
       return okSilencioso(`Auto Scaling group "${nome}" criado.`);
     },
-    "describe-auto-scaling-groups": (conta) => {
+    "describe-auto-scaling-groups": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.autoscaling.grupos);
+      let l = Object.values(conta.autoscaling.grupos);
+      if (flags && flags["auto-scaling-group-names"] !== undefined) {
+        const nomes = [String(flags["auto-scaling-group-names"])].concat((pos || []).map(String));
+        l = l.filter((g) => nomes.indexOf(g.nome) >= 0);
+        // Nome que não existe NÃO é erro aqui: a AWS devolve a lista vazia.
+        if (!l.length) return js({ AutoScalingGroups: [] });
+      }
       if (!l.length) { avisarClimb("Nenhum grupo ainda. Crie um com: aws autoscaling create-auto-scaling-group ..."); return ""; }
       return js({ AutoScalingGroups: l.map((g) => ({
         AutoScalingGroupName: g.nome, MinSize: g.min, MaxSize: g.max, DesiredCapacity: g.desejado,
@@ -378,11 +384,16 @@
       const nome = exigirFlag(flags, "auto-scaling-group-name");
       const g = conta.autoscaling.grupos[nome];
       if (!g) throw new ErroCli(`An error occurred (ValidationError) when calling the UpdateAutoScalingGroup operation: AutoScalingGroup name not found - ${nome}`);
+      const antes = { min: g.min, max: g.max, desejado: g.desejado };
       if (flags["min-size"] !== undefined) g.min = parseInt(flags["min-size"], 10);
       if (flags["max-size"] !== undefined) g.max = parseInt(flags["max-size"], 10);
       if (flags["desired-capacity"] !== undefined) g.desejado = parseInt(flags["desired-capacity"], 10);
-      if (g.desejado < g.min) g.desejado = g.min;
-      if (g.desejado > g.max) g.desejado = g.max;
+      // A AWS não ajusta sozinha: desejado fora de [min, max] é ERRO.
+      if (g.desejado < g.min || g.desejado > g.max) {
+        const msg = "An error occurred (ValidationError) when calling the UpdateAutoScalingGroup operation: Desired capacity:" + g.desejado + " must be between the specified min size:" + g.min + " and max size:" + g.max;
+        Object.assign(g, antes);
+        throw new ErroCli(msg + "\nMude o --desired-capacity junto no mesmo comando.");
+      }
       ajustarCapacidade(conta, g);
       return okSilencioso(`Grupo "${nome}" atualizado (min ${g.min}, max ${g.max}, desejado ${g.desejado}).`);
     },

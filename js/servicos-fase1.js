@@ -135,10 +135,25 @@
       };
       return okSilencioso(`Alarme "${nome}" criado/atualizado.`);
     },
-    "describe-alarms": (conta) => {
+    "describe-alarms": (conta, pos, flags) => {
       estado(conta);
+      flags = flags || {};
+      // Filtros da AWS: --alarm-names (lista), --alarm-name-prefix e --state-value
+      let alarmes = Object.values(conta.cloudwatch.alarmes);
+      if (flags["alarm-names"] !== undefined) {
+        const nomes = [String(flags["alarm-names"])].concat((pos || []).map(String));
+        alarmes = alarmes.filter((a) => nomes.indexOf(a.nome) >= 0);
+      }
+      if (flags["alarm-name-prefix"] !== undefined) alarmes = alarmes.filter((a) => a.nome.indexOf(String(flags["alarm-name-prefix"])) === 0);
+      if (flags["state-value"] !== undefined) {
+        const estadoPedido = String(flags["state-value"]);
+        if (["OK", "ALARM", "INSUFFICIENT_DATA"].indexOf(estadoPedido) < 0) {
+          throw new ErroCli("An error occurred (ValidationError) when calling the DescribeAlarms operation: --state-value precisa ser OK, ALARM ou INSUFFICIENT_DATA.");
+        }
+        alarmes = alarmes.filter((a) => a.estado === estadoPedido);
+      }
       return js({
-        MetricAlarms: Object.values(conta.cloudwatch.alarmes).map((a) => ({
+        MetricAlarms: alarmes.map((a) => ({
           AlarmName: a.nome, MetricName: a.metrica, Namespace: a.namespace,
           Threshold: a.threshold !== undefined ? Number(a.threshold) : null,
           ComparisonOperator: a.comparador, StateValue: a.estado,
@@ -147,7 +162,8 @@
     },
     "delete-alarms": (conta, pos, flags) => {
       estado(conta);
-      const nomes = [].concat(flags["alarm-names"] || []);
+      // A lista vem espalhada: o 1º nome na flag, os outros como posicionais.
+      const nomes = [].concat(flags["alarm-names"] || []).concat(flags["alarm-names"] !== undefined ? (pos || []) : []).map(String);
       for (const n of nomes) delete conta.cloudwatch.alarmes[n];
       return okSilencioso("Alarme(s) removido(s).");
     },
@@ -169,9 +185,10 @@
       conta.logs.grupos[nome] = { nome, criadoEm: agoraIso() };
       return okSilencioso(`Grupo de logs "${nome}" criado.`);
     },
-    "describe-log-groups": (conta) => {
+    "describe-log-groups": (conta, pos, flags) => {
       estado(conta);
-      return js({ logGroups: Object.values(conta.logs.grupos).map((g) => ({ logGroupName: g.nome, arn: `arn:aws:logs:${conta.regiao || "us-east-1"}:${conta.contaId}:log-group:${g.nome}:*`, storedBytes: 0 })) });
+      const prefixo = flags && flags["log-group-name-prefix"] !== undefined ? String(flags["log-group-name-prefix"]) : "";
+      return js({ logGroups: Object.values(conta.logs.grupos).filter((g) => g.nome.indexOf(prefixo) === 0).map((g) => ({ logGroupName: g.nome, arn: `arn:aws:logs:${conta.regiao || "us-east-1"}:${conta.contaId}:log-group:${g.nome}:*`, storedBytes: 0 })) });
     },
     "delete-log-group": (conta, pos, flags) => {
       estado(conta);

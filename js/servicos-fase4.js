@@ -85,7 +85,9 @@
     "update-kubeconfig": (conta, pos, flags) => {
       const c = acharClusterEks(conta, flags, "UpdateKubeconfig");
       avisarClimb("Agora o kubectl fala com o cluster: 'kubectl get nodes' já funcionaria. É este comando que liga a AWS CLI ao Kubernetes.");
-      return `Added new context arn:aws:eks:${REGIAO(conta)}:${CONTA_ID(conta)}:cluster/${c.nome} to /home/ec2-user/.kube/config`;
+      // --alias dá um nome curto ao contexto (sem ele, o nome é o ARN inteiro)
+      const contexto = flags.alias !== undefined ? String(flags.alias) : `arn:aws:eks:${REGIAO(conta)}:${CONTA_ID(conta)}:cluster/${c.nome}`;
+      return `Added new context ${contexto} to /home/ec2-user/.kube/config`;
     },
     "create-nodegroup": (conta, pos, flags) => {
       const c = acharClusterEks(conta, flags, "CreateNodegroup", "cluster-name");

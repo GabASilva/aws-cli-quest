@@ -58,9 +58,15 @@
         createdAt: agoraIso(), imageTagMutability: "MUTABLE",
       } });
     },
-    "describe-repositories": (conta) => {
+    "describe-repositories": (conta, pos, flags) => {
       estado(conta);
-      const r = Object.values(conta.ecr.repositorios);
+      let r = Object.values(conta.ecr.repositorios);
+      if (flags && flags["repository-names"] !== undefined) {
+        const nomes = [String(flags["repository-names"])].concat((pos || []).map(String));
+        const falta = nomes.find((n) => !conta.ecr.repositorios[n]);
+        if (falta) throw new ErroCli(`An error occurred (RepositoryNotFoundException) when calling the DescribeRepositories operation: The repository with name '${falta}' does not exist in the registry with id '${CONTA_ID(conta)}'`);
+        r = nomes.map((n) => conta.ecr.repositorios[n]);
+      }
       if (!r.length) { avisarClimb("Nenhum repositório ainda. Crie um com: aws ecr create-repository --repository-name loja-imagens"); return ""; }
       return js({ repositories: r.map((x) => ({
         repositoryName: x.nome, repositoryUri: x.uri, registryId: CONTA_ID(conta), createdAt: x.criadoEm,
@@ -80,6 +86,23 @@
         avisarClimb("Repositório vazio — as imagens chegam pelo 'docker push' (fora da AWS CLI). O ECS aponta pra elas pela URI: " + r.uri + ":tag");
         return js({ imageIds: [] });
       }
+      // --filter tagStatus=TAGGED|UNTAGGED|ANY. Com o histórico semeado (ecr-completo)
+      // cada imagem tem digest fixo e a órfã aparece só como digest, igual à AWS.
+      const status = ((String(flags.filter || "").match(/tagStatus=([A-Z]+)/) || [])[1]) || "ANY";
+      if (["TAGGED", "UNTAGGED", "ANY"].indexOf(status) < 0) {
+        throw new ErroCli("An error occurred (InvalidParameterException) when calling the ListImages operation: tagStatus precisa ser TAGGED, UNTAGGED ou ANY.");
+      }
+      if (r.detalhes) {
+        const ids = [];
+        for (const d of r.detalhes) {
+          const tags = d.tags || [];
+          if (!tags.length && status !== "TAGGED") ids.push({ imageDigest: d.digest });
+          if (tags.length && status !== "UNTAGGED") for (const t of tags) ids.push({ imageDigest: d.digest, imageTag: t });
+        }
+        if (!ids.length) avisarClimb(status === "UNTAGGED" ? "Nenhuma imagem órfã: toda imagem tem pelo menos uma tag." : "Nenhuma imagem com esse filtro.");
+        return js({ imageIds: ids });
+      }
+      if (status === "UNTAGGED") return js({ imageIds: [] });
       return js({ imageIds: r.imagens.map((t) => ({ imageDigest: "sha256:" + hexAleatorio(64), imageTag: t })) });
     },
     "delete-repository": (conta, pos, flags) => {
@@ -134,9 +157,10 @@
         containerDefinitions: defs, requiresCompatibilities: ["FARGATE"],
       } });
     },
-    "list-task-definitions": (conta) => {
+    "list-task-definitions": (conta, pos, flags) => {
       estado(conta);
-      return js({ taskDefinitionArns: Object.values(conta.ecs.tarefas).map((t) =>
+      const prefixo = flags && flags["family-prefix"] !== undefined ? String(flags["family-prefix"]) : "";
+      return js({ taskDefinitionArns: Object.values(conta.ecs.tarefas).filter((t) => t.familia.indexOf(prefixo) === 0).map((t) =>
         `arn:aws:ecs:${REGIAO(conta)}:${CONTA_ID(conta)}:task-definition/${t.familia}:${t.revisao}`) });
     },
     "create-service": (conta, pos, flags) => {
@@ -199,6 +223,9 @@
       if (!conta.ecs.clusters[nome]) throw new ErroCli(`An error occurred (ClusterNotFoundException) when calling the DeleteCluster operation: Cluster not found.`);
       if (Object.values(conta.ecs.servicos).some((s) => s.cluster === nome)) {
         throw new ErroCli(`An error occurred (ClusterContainsServicesException) when calling the DeleteCluster operation: The Cluster cannot be deleted while Services are active.`);
+      }
+      if (Object.values(conta.ecs.execucoes || {}).some((t) => t.cluster === nome && t.estado === "RUNNING")) {
+        throw new ErroCli(`An error occurred (ClusterContainsTasksException) when calling the DeleteCluster operation: The Cluster cannot be deleted while Tasks are active.\nPare as tarefas antes: aws ecs stop-task --cluster ${nome} --task <id>`);
       }
       delete conta.ecs.clusters[nome];
       return okSilencioso(`Cluster "${nome}" apagado.`);
