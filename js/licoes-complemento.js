@@ -150,6 +150,9 @@
     "ec2.describe-subnets": "lista as sub-redes e em qual zona cada uma está. É aqui que se confere se uma sub-rede é pública (tem rota pra internet) ou privada.",
     "ec2.describe-vpcs": "mostra as redes virtuais da conta e suas faixas de IP. Toda conta já vem com uma VPC padrão — por isso costuma aparecer mais de uma.",
     "ec2.delete-vpc": "apaga a rede. Só sai vazia: sub-redes, gateways e instâncias precisam ir antes.",
+    "ec2.delete-subnet": "tira a sub-rede — o primeiro passo pra conseguir apagar a VPC.",
+    "ec2.detach-internet-gateway": "corta a saída da VPC pra internet; o gateway continua existindo.",
+    "ec2.delete-internet-gateway": "apaga o gateway já desconectado — gateway solto é resto de desmontagem mal feita.",
 
     // ---------- outros ----------
     "sts.get-caller-identity": "responde \"quem eu sou agora?\" — conta, usuário e ARN da identidade que está rodando o comando. É o primeiro comando pra conferir se o CLI está apontando pra conta certa.",

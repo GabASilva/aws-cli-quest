@@ -269,9 +269,16 @@
       conta.ec2.volumes[id] = { id, tamanho, tipo, az, estado: "available", instancia: null, device: null, criadoEm: agoraIso() };
       return js(volumeJson(conta, conta.ec2.volumes[id]));
     },
-    "describe-volumes": (conta) => {
+    "describe-volumes": (conta, pos, flags) => {
       estado(conta);
-      return js({ Volumes: Object.values(conta.ec2.volumes).map((v) => volumeJson(conta, v)) });
+      let l = Object.values(conta.ec2.volumes);
+      if (typeof filtrarEc2 === "function") {
+        l = filtrarEc2(l, flags, pos, "volume-ids", "DescribeVolumes", "InvalidVolume.NotFound", {
+          "volume-id": (v) => v.id, "status": (v) => v.estado, "size": (v) => v.tamanho, "volume-type": (v) => v.tipo,
+          "availability-zone": (v) => v.az, "attachment.instance-id": (v) => v.instancia || "",
+        });
+      }
+      return js({ Volumes: l.map((v) => volumeJson(conta, v)) });
     },
     "attach-volume": (conta, pos, flags) => {
       const v = acharVolume(conta, flags, "AttachVolume");
@@ -280,15 +287,18 @@
       const i = conta.ec2.instancias[inst];
       if (!i || i.estado === "terminated") throw new ErroCli(`An error occurred (InvalidInstanceID.NotFound) when calling the AttachVolume operation: The instance ID '${inst}' does not exist`);
       if (v.instancia) throw new ErroCli(`An error occurred (VolumeInUse) when calling the AttachVolume operation: vol ${v.id} is already attached to an instance`);
+      if (Object.values(conta.ec2.volumes).some((o) => o.instancia === inst && o.device === device)) {
+        throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the AttachVolume operation: Attachment point ${device} is already in use` + "\nUse outro device, como /dev/sdg.");
+      }
       v.instancia = inst; v.device = device; v.estado = "in-use";
       return js({ AttachTime: agoraIso(), Device: device, InstanceId: inst, State: "attaching", VolumeId: v.id });
     },
     "detach-volume": (conta, pos, flags) => {
       const v = acharVolume(conta, flags, "DetachVolume");
       if (!v.instancia) throw new ErroCli(`An error occurred (IncorrectState) when calling the DetachVolume operation: Volume '${v.id}' is in the 'available' state.`);
-      const inst = v.instancia;
+      const inst = v.instancia, device = v.device;
       v.instancia = null; v.device = null; v.estado = "available";
-      return js({ AttachTime: agoraIso(), Device: "/dev/sdf", InstanceId: inst, State: "detaching", VolumeId: v.id });
+      return js({ AttachTime: agoraIso(), Device: device, InstanceId: inst, State: "detaching", VolumeId: v.id });
     },
     "delete-volume": (conta, pos, flags) => {
       const v = acharVolume(conta, flags, "DeleteVolume");
@@ -304,7 +314,13 @@
     },
     "describe-snapshots": (conta, pos, flags) => {
       estado(conta);
-      return js({ Snapshots: Object.values(conta.ec2.snapshots).map((s) => ({
+      let snaps = Object.values(conta.ec2.snapshots);
+      if (typeof filtrarEc2 === "function") {
+        snaps = filtrarEc2(snaps, flags, (pos || []).filter((x) => String(x) !== "self"), "snapshot-ids", "DescribeSnapshots", "InvalidSnapshot.NotFound", {
+          "snapshot-id": (x) => x.id, "volume-id": (x) => x.volume, "description": (x) => x.descricao, "volume-size": (x) => x.tamanho,
+        });
+      }
+      return js({ Snapshots: snaps.map((s) => ({
         SnapshotId: s.id, VolumeId: s.volume, VolumeSize: s.tamanho, State: "completed",
         Progress: "100%", Description: s.descricao, StartTime: s.criadoEm, OwnerId: CONTA_ID(conta),
       })) });

@@ -16,6 +16,31 @@
   }
   const CIDR_OK = /^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/;
 
+  // --<recurso>-ids e --filters Name=x,Values=a,b nos describe-* de rede.
+  // Id que não existe é ERRO na AWS; filtro que não casa devolve lista vazia.
+  // Nome de filtro desconhecido também é erro (e diz quais existem).
+  function filtrarEc2(lista, flags, pos, flagIds, op, codigoNaoAchou, campos) {
+    flags = flags || {};
+    const extras = (pos || []).map(String);
+    if (flags[flagIds] !== undefined) {
+      const ids = [String(flags[flagIds])].concat(extras.filter((x) => /^[a-z]+-[0-9a-f]+$/.test(x)));
+      const falta = ids.find((id) => !lista.some((r) => r.id === id));
+      if (falta) throw new ErroCli(`An error occurred (${codigoNaoAchou}) when calling the ${op} operation: The ID '${falta}' does not exist`);
+      lista = lista.filter((r) => ids.indexOf(r.id) >= 0);
+    }
+    if (flags.filters !== undefined) {
+      const filtros = [String(flags.filters)].concat(extras.filter((x) => /^Name=/.test(x)));
+      for (const f of filtros) {
+        const nome = (f.match(/Name=([^,\s]+)/) || [])[1];
+        const valores = ((f.match(/Values=(.+)$/) || [])[1] || "").split(",").filter(Boolean);
+        if (!nome || !valores.length) throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the ${op} operation: filtro inválido "${f}". Forma: --filters Name=<nome>,Values=<valor>`);
+        if (!campos[nome]) throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the ${op} operation: The filter '${nome}' is invalid\nFiltros no simulador: ${Object.keys(campos).join(", ")}`);
+        lista = lista.filter((r) => valores.indexOf(String(campos[nome](r))) >= 0);
+      }
+    }
+    return lista;
+  }
+
   // ---------- VPC (subcomandos do aws ec2) ----------
   const cmdVpc = {
     "create-vpc": (conta, pos, flags) => {
@@ -26,14 +51,24 @@
       conta.vpc.vpcs[id] = { id, cidr, criadaEm: agoraIso(), igw: null };
       return js({ Vpc: { VpcId: id, CidrBlock: cidr, State: "available", IsDefault: false } });
     },
-    "describe-vpcs": (conta) => {
+    "describe-vpcs": (conta, pos, flags) => {
       estado(conta);
-      return js({ Vpcs: Object.values(conta.vpc.vpcs).map((v) => ({ VpcId: v.id, CidrBlock: v.cidr, State: "available", IsDefault: false })) });
+      const vpcs = filtrarEc2(Object.values(conta.vpc.vpcs), flags, pos, "vpc-ids", "DescribeVpcs", "InvalidVpcID.NotFound",
+        { "vpc-id": (v) => v.id, "cidr-block": (v) => v.cidr, "cidr": (v) => v.cidr });
+      return js({ Vpcs: vpcs.map((v) => ({ VpcId: v.id, CidrBlock: v.cidr, State: "available", IsDefault: false })) });
     },
     "delete-vpc": (conta, pos, flags) => {
       estado(conta);
       const id = exigirFlag(flags, "vpc-id");
       if (!conta.vpc.vpcs[id]) throw new ErroCli(`An error occurred (InvalidVpcID.NotFound) when calling the DeleteVpc operation: The vpc ID '${id}' does not exist`);
+      // A AWS não apaga em cascata: sub-rede ou gateway pendurado = DependencyViolation.
+      const penduradas = Object.values(conta.vpc.subnets).filter((s) => s.vpc === id);
+      const igwPreso = Object.values(conta.vpc.igws || {}).find((g) => g.vpc === id);
+      if (penduradas.length || igwPreso) {
+        throw new ErroCli(`An error occurred (DependencyViolation) when calling the DeleteVpc operation: The vpc '${id}' has dependencies and cannot be deleted.\n` +
+          (penduradas.length ? `Apague antes as sub-redes: ${penduradas.map((s) => s.id).join(", ")} (aws ec2 delete-subnet --subnet-id ...)\n` : "") +
+          (igwPreso ? `Desconecte antes o gateway: aws ec2 detach-internet-gateway --internet-gateway-id ${igwPreso.id} --vpc-id ${id}` : ""));
+      }
       delete conta.vpc.vpcs[id];
       for (const s of Object.values(conta.vpc.subnets)) if (s.vpc === id) delete conta.vpc.subnets[s.id];
       return okSilencioso(`VPC ${id} apagada.`);
@@ -44,13 +79,22 @@
       const cidr = exigirFlag(flags, "cidr-block");
       if (!conta.vpc.vpcs[vpcId]) throw new ErroCli(`An error occurred (InvalidVpcID.NotFound) when calling the CreateSubnet operation: The vpc ID '${vpcId}' does not exist`);
       if (!CIDR_OK.test(cidr)) throw new ErroCli(`An error occurred (InvalidParameterValue) when calling the CreateSubnet operation: Value (${cidr}) for parameter cidrBlock is invalid.`);
+      // A sub-rede tem que caber na faixa da VPC (e não pode ser maior que ela).
+      const faixa = (c) => { const [ip, bits] = c.split("/"); const n = ip.split(".").reduce((a, o) => a * 256 + Number(o), 0); return [n, Number(bits)]; };
+      const [redeVpc, bitsVpc] = faixa(conta.vpc.vpcs[vpcId].cidr);
+      const [redeSub, bitsSub] = faixa(cidr);
+      const cabe = bitsSub >= bitsVpc && Math.floor(redeSub / Math.pow(2, 32 - bitsVpc)) === Math.floor(redeVpc / Math.pow(2, 32 - bitsVpc));
+      if (!cabe) throw new ErroCli(`An error occurred (InvalidSubnet.Range) when calling the CreateSubnet operation: The CIDR '${cidr}' is invalid.\nA sub-rede precisa caber dentro da VPC ${vpcId} (${conta.vpc.vpcs[vpcId].cidr}). Confira se pegou o id da VPC certa.`);
+      if (Object.values(conta.vpc.subnets).some((s) => s.vpc === vpcId && s.cidr === cidr)) throw new ErroCli(`An error occurred (InvalidSubnet.Conflict) when calling the CreateSubnet operation: The CIDR '${cidr}' conflicts with another subnet`);
       const id = "subnet-0" + hexAleatorio(16);
       conta.vpc.subnets[id] = { id, vpc: vpcId, cidr, az: (conta.regiao || "us-east-1") + "a" };
       return js({ Subnet: { SubnetId: id, VpcId: vpcId, CidrBlock: cidr, AvailabilityZone: conta.vpc.subnets[id].az, State: "available" } });
     },
-    "describe-subnets": (conta) => {
+    "describe-subnets": (conta, pos, flags) => {
       estado(conta);
-      return js({ Subnets: Object.values(conta.vpc.subnets).map((s) => ({ SubnetId: s.id, VpcId: s.vpc, CidrBlock: s.cidr, AvailabilityZone: s.az, State: "available" })) });
+      const subnets = filtrarEc2(Object.values(conta.vpc.subnets), flags, pos, "subnet-ids", "DescribeSubnets", "InvalidSubnetID.NotFound",
+        { "vpc-id": (s) => s.vpc, "subnet-id": (s) => s.id, "cidr-block": (s) => s.cidr, "availability-zone": (s) => s.az });
+      return js({ Subnets: subnets.map((s) => ({ SubnetId: s.id, VpcId: s.vpc, CidrBlock: s.cidr, AvailabilityZone: s.az, State: "available" })) });
     },
     "create-internet-gateway": (conta) => {
       estado(conta);
@@ -68,7 +112,45 @@
       conta.vpc.vpcs[vpcId].igw = igw;
       return okSilencioso(`Internet gateway ${igw} conectado à VPC ${vpcId}.`);
     },
+
+    // ---------- desmontar a rede (25/09/2026) ----------
+    // A AWS não apaga VPC em cascata. A ordem é: sub-redes → desconectar o
+    // gateway → apagar o gateway → apagar a VPC. Estes três faltavam, e sem
+    // eles a mensagem de DependencyViolation mandava rodar comando inexistente.
+    "delete-subnet": (conta, pos, flags) => {
+      estado(conta);
+      const id = String(exigirFlag(flags, "subnet-id"));
+      const s = conta.vpc.subnets[id];
+      if (!s) throw new ErroCli(`An error occurred (InvalidSubnetID.NotFound) when calling the DeleteSubnet operation: The subnet ID '${id}' does not exist`);
+      const inst = Object.values((conta.ec2 || {}).instancias || {}).find((i) => i.subnet === id && i.estado !== "terminated");
+      if (inst) throw new ErroCli(`An error occurred (DependencyViolation) when calling the DeleteSubnet operation: The subnet '${id}' has dependencies and cannot be deleted.\nA instância ${inst.id} ainda está nela.`);
+      delete conta.vpc.subnets[id];
+      for (const t of Object.values(conta.vpc.tabelas || {})) if (t.associacoes) t.associacoes = t.associacoes.filter((x) => x !== id);
+      return okSilencioso(`Sub-rede ${id} apagada.`);
+    },
+    "detach-internet-gateway": (conta, pos, flags) => {
+      estado(conta);
+      const igw = String(exigirFlag(flags, "internet-gateway-id"));
+      const vpcId = String(exigirFlag(flags, "vpc-id"));
+      const g = conta.vpc.igws[igw];
+      if (!g) throw new ErroCli(`An error occurred (InvalidInternetGatewayID.NotFound) when calling the DetachInternetGateway operation: The gateway ID '${igw}' does not exist`);
+      if (g.vpc !== vpcId) throw new ErroCli(`An error occurred (Gateway.NotAttached) when calling the DetachInternetGateway operation: resource ${igw} is not attached to network ${vpcId}`);
+      g.vpc = null;
+      if (conta.vpc.vpcs[vpcId]) conta.vpc.vpcs[vpcId].igw = null;
+      avisarClimb("Gateway desconectado: a VPC perdeu a saída pra internet na hora. As rotas que apontavam pra ele ficam como 'blackhole' — o pacote vai e some.");
+      return okSilencioso(`Internet gateway ${igw} desconectado da VPC ${vpcId}.`);
+    },
+    "delete-internet-gateway": (conta, pos, flags) => {
+      estado(conta);
+      const igw = String(exigirFlag(flags, "internet-gateway-id"));
+      const g = conta.vpc.igws[igw];
+      if (!g) throw new ErroCli(`An error occurred (InvalidInternetGatewayID.NotFound) when calling the DeleteInternetGateway operation: The gateway ID '${igw}' does not exist`);
+      if (g.vpc) throw new ErroCli(`An error occurred (DependencyViolation) when calling the DeleteInternetGateway operation: The internetGateway '${igw}' has dependencies and cannot be deleted.\nDesconecte antes: aws ec2 detach-internet-gateway --internet-gateway-id ${igw} --vpc-id ${g.vpc}`);
+      delete conta.vpc.igws[igw];
+      return okSilencioso(`Internet gateway ${igw} apagado.`);
+    },
   };
+  if (typeof globalThis !== "undefined") globalThis.filtrarEc2 = filtrarEc2;
 
   // ---------- RDS ----------
   const ENGINES = ["mysql", "postgres", "mariadb", "aurora-mysql", "aurora-postgresql", "sqlserver-ex", "oracle-se2"];
@@ -215,10 +297,10 @@
       dicas: ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help", "A forma do comando é: aws ec2 create-vpc --cidr-block <faixa de ips>"], solucao: ["aws ec2 create-vpc --cidr-block 10.0.0.0/16"],
       validar: (conta) => !!(conta.vpc && Object.values(conta.vpc.vpcs).some((v) => v.cidr === "10.0.0.0/16")) },
     { id: "vpc-2", servico: "vpc", nivel: 2, xp: 70, titulo: "Crie uma sub-rede",
-      descricao: "Divida a VPC em uma <b>subnet</b> <b>10.0.1.0/24</b>. Você precisa do <b>--vpc-id</b> (pegue no describe-vpcs).",
+      descricao: "Divida a VPC <b>10.0.0.0/16</b> em uma <b>subnet</b> <b>10.0.1.0/24</b>. Você precisa do <b>--vpc-id</b> dela (pegue no describe-vpcs). <small>(a sub-rede tem que caber dentro da faixa da VPC — noutra VPC, a AWS recusa)</small>",
       dicas: ["Pegue o id: aws ec2 describe-vpcs", "aws ec2 create-subnet --vpc-id <id> --cidr-block <faixa de ips>"],
-      solucao: ["aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.1.0/24"],
-      validar: (conta) => !!(conta.vpc && Object.keys(conta.vpc.subnets).length > 0) },
+      solucao: ["aws ec2 create-subnet --vpc-id <vpc-de:10.0.0.0/16> --cidr-block 10.0.1.0/24"],
+      validar: (conta) => !!(conta.vpc && Object.values(conta.vpc.subnets).some((s) => s.cidr === "10.0.1.0/24")) },
     { id: "vpc-3", servico: "vpc", nivel: 2, xp: 60, titulo: "Porta pra internet",
       descricao: "Crie um <b>internet gateway</b> (a saída da VPC pra internet).",
       dicas: ["Criar recurso no AWS CLI é sempre `create-…` — veja a lista de comandos com: aws ec2 help"], solucao: ["aws ec2 create-internet-gateway"],

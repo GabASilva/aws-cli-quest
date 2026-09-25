@@ -57,9 +57,16 @@
       avisarClimb("O load balancer distribui o tráfego entre várias instâncias — se uma cai, ele para de mandar pra ela sozinho. O próximo passo é criar um target group e registrar as máquinas.");
       return js({ LoadBalancers: [{ LoadBalancerArn: arn, DNSName: dns, LoadBalancerName: nome, Type: tipo, State: { Code: "provisioning" }, Scheme: "internet-facing", AvailabilityZones: subnets.map((s) => ({ SubnetId: s })) }] });
     },
-    "describe-load-balancers": (conta) => {
+    "describe-load-balancers": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.elb.lbs);
+      let l = Object.values(conta.elb.lbs);
+      // --names a b: nome que não existe é ERRO na AWS (LoadBalancerNotFound)
+      if (flags && flags.names !== undefined) {
+        const nomes = [String(flags.names)].concat((pos || []).map(String));
+        const falta = nomes.find((n) => !conta.elb.lbs[n]);
+        if (falta) throw new ErroCli(`An error occurred (LoadBalancerNotFound) when calling the DescribeLoadBalancers operation: Load balancers '[${falta}]' not found`);
+        l = nomes.map((n) => conta.elb.lbs[n]);
+      }
       if (!l.length) { avisarClimb("Nenhum load balancer ainda. Crie um com: aws elbv2 create-load-balancer --name loja-alb --subnets subnet-a subnet-b"); return js({ LoadBalancers: [] }); }
       return js({ LoadBalancers: l.map((lb) => ({ LoadBalancerArn: lb.arn, DNSName: lb.dns, LoadBalancerName: lb.nome, Type: lb.tipo, State: { Code: "active" }, Scheme: "internet-facing" })) });
     },
@@ -75,13 +82,21 @@
       avisarClimb("O target group é o \"grupo de destino\": você registra as instâncias nele, e o load balancer manda o tráfego pra esse grupo. Registre as máquinas com 'aws elbv2 register-targets'.");
       return js({ TargetGroups: [{ TargetGroupArn: arn, TargetGroupName: nome, Protocol: String(flags.protocol), Port: parseInt(flags.port, 10), VpcId: String(flags["vpc-id"]), TargetType: "instance" }] });
     },
-    "describe-target-groups": (conta) => {
+    "describe-target-groups": (conta, pos, flags) => {
       estado(conta);
-      return js({ TargetGroups: Object.values(conta.elb.tgs).map((t) => ({ TargetGroupArn: t.arn, TargetGroupName: t.nome, Protocol: t.protocolo, Port: t.porta, VpcId: t.vpc, TargetType: "instance" })) });
+      let tgs = Object.values(conta.elb.tgs);
+      if (flags && flags.names !== undefined) {
+        const nomes = [String(flags.names)].concat((pos || []).map(String));
+        const falta = nomes.find((n) => !conta.elb.tgs[n]);
+        if (falta) throw new ErroCli(`An error occurred (TargetGroupNotFound) when calling the DescribeTargetGroups operation: One or more target groups not found`);
+        tgs = nomes.map((n) => conta.elb.tgs[n]);
+      }
+      return js({ TargetGroups: tgs.map((t) => ({ TargetGroupArn: t.arn, TargetGroupName: t.nome, Protocol: t.protocolo, Port: t.porta, VpcId: t.vpc, TargetType: "instance" })) });
     },
     "register-targets": (conta, pos, flags) => {
       const tg = acharTg(conta, flags, "RegisterTargets");
-      const alvos = String(exigirFlag(flags, "targets"));
+      // a lista vem espalhada: o 1º Id na flag, os outros como posicionais
+      const alvos = [String(exigirFlag(flags, "targets"))].concat((pos || []).map(String)).join(" ");
       const ids = (alvos.match(/Id=(i-[\w]+)/g) || []).map((m) => m.slice(3));
       if (!ids.length) throw new ErroCli(`An error occurred (InvalidTarget) when calling the RegisterTargets operation: Formato: --targets Id=i-xxxxxxxx Id=i-yyyyyyyy`);
       for (const id of ids) {
@@ -93,7 +108,14 @@
     },
     "describe-target-health": (conta, pos, flags) => {
       const tg = acharTg(conta, flags, "DescribeTargetHealth");
-      return js({ TargetHealthDescriptions: (tg.alvos || []).map((id) => ({ Target: { Id: id, Port: tg.porta }, TargetHealth: { State: conta.ec2.instancias[id] && conta.ec2.instancias[id].estado === "running" ? "healthy" : "unhealthy" } })) });
+      let alvos = tg.alvos || [];
+      if (flags.targets !== undefined) {
+        const pedidos = ([String(flags.targets)].concat((pos || []).map(String)).join(" ").match(/Id=(i-[\w]+)/g) || []).map((m) => m.slice(3));
+        alvos = pedidos;
+      }
+      return js({ TargetHealthDescriptions: alvos.map((id) => (tg.alvos || []).indexOf(id) < 0
+        ? { Target: { Id: id, Port: tg.porta }, TargetHealth: { State: "unused", Reason: "Target.NotRegistered" } }
+        : ({ Target: { Id: id, Port: tg.porta }, TargetHealth: { State: conta.ec2.instancias[id] && conta.ec2.instancias[id].estado === "running" ? "healthy" : "unhealthy" } })) });
     },
     "create-listener": (conta, pos, flags) => {
       const lb = acharLb(conta, flags, "CreateListener");
@@ -101,7 +123,8 @@
       exigirFlag(flags, "protocol");
       exigirFlag(flags, "default-actions");
       const id = `arn:aws:elasticloadbalancing:${REGIAO(conta)}:${CONTA_ID(conta)}:listener/app/${lb.nome}/${hexAleatorio(16)}`;
-      conta.elb.listeners[id] = { arn: id, lb: lb.nome, porta, protocolo: String(flags.protocol) };
+      const tgDaAcao = (String(flags["default-actions"]).match(/TargetGroupArn=([^,\s]+)/) || [])[1] || null;
+      conta.elb.listeners[id] = { arn: id, lb: lb.nome, porta, protocolo: String(flags.protocol), tg: tgDaAcao };
       avisarClimb("O listener é quem escuta numa porta (80/443) e encaminha pro target group. Com ele, o load balancer finalmente responde requisições.");
       return js({ Listeners: [{ ListenerArn: id, LoadBalancerArn: lb.arn, Port: porta, Protocol: String(flags.protocol) }] });
     },
@@ -113,6 +136,10 @@
     },
     "delete-target-group": (conta, pos, flags) => {
       const tg = acharTg(conta, flags, "DeleteTargetGroup");
+      const ouvinte = Object.values(conta.elb.listeners || {}).find((l) => l.tg === tg.arn);
+      if (ouvinte) {
+        throw new ErroCli(`An error occurred (ResourceInUse) when calling the DeleteTargetGroup operation: Target group '${tg.arn}' is currently in use by a listener or a rule` + " — apague antes o load balancer " + ouvinte.lb + " (ou o listener).");
+      }
       delete conta.elb.tgs[tg.nome];
       return okSilencioso(`Target group "${tg.nome}" apagado.`);
     },

@@ -120,9 +120,15 @@
       t.associacoes.push(sub);
       return js({ AssociationId: "rtbassoc-0" + hexAleatorio(16), AssociationState: { State: "associated" } });
     },
-    "describe-internet-gateways": (conta) => {
+    "describe-internet-gateways": (conta, pos, flags) => {
       rede(conta);
-      const l = Object.values(conta.vpc.igws);
+      let l = Object.values(conta.vpc.igws);
+      // --internet-gateway-ids e --filters (attachment.vpc-id): filtrarEc2 vem do servicos-fase1.js
+      if (typeof filtrarEc2 === "function") {
+        l = filtrarEc2(l, flags, pos, "internet-gateway-ids", "DescribeInternetGateways", "InvalidInternetGatewayID.NotFound",
+          { "internet-gateway-id": (g) => g.id, "attachment.vpc-id": (g) => g.vpc || "" });
+        if (!l.length && flags && flags.filters !== undefined) return js({ InternetGateways: [] });
+      }
       if (!l.length) { avisarClimb("Nenhum internet gateway. Crie com: aws ec2 create-internet-gateway"); return js({ InternetGateways: [] }); }
       return js({ InternetGateways: l.map((g) => ({
         InternetGatewayId: g.id, OwnerId: CONTA_ID(conta),

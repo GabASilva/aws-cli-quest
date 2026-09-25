@@ -553,4 +553,198 @@
       ["aws rds start-db-instance --db-instance-identifier banco-stop"],
       (c, cmd, ok) => ok && ehCmd(cmd, "rds", "start-db-instance") && (banco(c, "banco-stop") || {}).status === "available"),
   ]);
+
+  // ============================================================
+  // Leva 4 (25/09): VPC (com a desmontagem que faltava), EBS e ELB
+  // ============================================================
+  const vpcDe = (c, cidr) => Object.values(((c.vpc || {}).vpcs) || {}).find((v) => v.cidr === cidr);
+  const subnetDe = (c, cidr) => Object.values(((c.vpc || {}).subnets) || {}).find((s) => s.cidr === cidr);
+  const igwsSoltos = (c) => Object.values(((c.vpc || {}).igws) || {}).filter((g) => !g.vpc);
+  const volumeDe = (c, tam) => Object.values(((c.ec2 || {}).volumes) || {}).find((v) => v.tamanho === tam);
+  const snapDe = (c, desc) => Object.values(((c.ec2 || {}).snapshots) || {}).find((s) => s.descricao === desc);
+  const lb = (c, n) => (((c.elb || {}).lbs) || {})[n];
+  const tg = (c, n) => (((c.elb || {}).tgs) || {})[n];
+
+  // ---------------- VPC ----------------
+  at("vpc-8", [
+    d("fx-vpc-dv1", "vpc", 1, 50, "Qual é o id da rede de dados?",
+      "Você já tem várias VPCs e precisa do id só da rede isolada de dados, a <b>10.99.0.0/16</b>. Liste as VPCs filtrando por esse bloco.",
+      ["O `describe-vpcs` aceita filtro: `--filters Name=<campo>,Values=<valor>`.", "O campo do bloco de IP é `cidr-block`."],
+      ["aws ec2 describe-vpcs --filters Name=cidr-block,Values=10.99.0.0/16"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-vpcs") && /10\.99\.0\.0/.test(String(cmd.flags.filters || ""))),
+  ]);
+  at("vpc-6", [
+    d("fx-vpc-ds1", "vpc", 1, 50, "As sub-redes de uma rede só",
+      "Na lista de sub-redes aparece tudo misturado. Mostre só as da rede <b>10.41.0.0/16</b> (pegue o id dela com o describe-vpcs).",
+      ["Filtro de novo, agora pelo id da VPC dona da sub-rede.", "A forma é `--filters Name=vpc-id,Values=<id-da-vpc>`."],
+      ["aws ec2 describe-subnets --filters Name=vpc-id,Values=<vpc-de:10.41.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-subnets") && /vpc-id/.test(String(cmd.flags.filters || ""))),
+  ]);
+  at("vpc-9", [
+    d("fx-vpc-del1", "vpc", 2, 70, "A segunda rede nunca foi usada",
+      "A VPC <b>172.16.0.0/16</b> foi criada \"pra depois\" e ficou vazia. Apague ela — rede vazia não custa, mas confunde quem procura onde está cada coisa.",
+      ["Mesmo comando da atividade anterior; o id você acha no describe-vpcs.", "Ela sai porque está vazia: sem sub-rede e sem gateway."],
+      ["aws ec2 delete-vpc --vpc-id <vpc-de:172.16.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-vpc") && !vpcDe(c, "172.16.0.0/16")),
+  ]);
+  at("cob-vpc-3", [
+    d("fx-vpc-igw1", "vpc", 2, 80, "Essa rede sai pra internet?",
+      "Antes de subir o servidor web na rede <b>10.20.0.0/16</b>, confirme que ela tem um internet gateway ligado. Filtre os gateways pela VPC.",
+      ["O `describe-internet-gateways` também aceita `--filters`.", "O campo é `attachment.vpc-id`. Resposta vazia = nada sai dessa rede."],
+      ["aws ec2 describe-internet-gateways --filters Name=attachment.vpc-id,Values=<vpc-de:10.20.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-internet-gateways") && /attachment\.vpc-id/.test(String(cmd.flags.filters || ""))),
+  ]);
+  at("cob-vpc-6", [
+    d("fx-vpc-rt1", "vpc", 3, 90, "Uma tabela própria pra rede pública",
+      "A rede <b>10.41.0.0/16</b> também precisa de uma tabela de rotas própria, em vez de usar a principal. Crie a tabela nessa VPC.",
+      ["Mesmo comando da tabela que você criou antes, com o id da outra VPC."],
+      ["aws ec2 create-route-table --vpc-id <vpc-de:10.41.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "create-route-table") && String(cmd.flags["vpc-id"] || "") === ((vpcDe(c, "10.41.0.0/16") || {}).id || "-")),
+    d("fx-vpc-as1", "vpc", 3, 90, "Ligue a tabela na sub-rede pública",
+      "Tabela criada não vale nada sem associação. Ligue a tabela nova à sub-rede <b>10.41.1.0/24</b>.",
+      ["Mesmo comando da associação anterior.", "O id da sub-rede sai do describe-subnets; o da tabela, da resposta do create-route-table."],
+      ["aws ec2 associate-route-table --route-table-id <rtb-novo> --subnet-id <subnet-de:10.41.1.0/24>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "associate-route-table") && String(cmd.flags["subnet-id"] || "") === ((subnetDe(c, "10.41.1.0/24") || {}).id || "-")),
+    // --- desmontar uma rede: a ordem que a AWS exige ---
+    d("fx-vpc-hk1", "vpc", 3, 100, "A rede do hackathon",
+      "O hackathon de sexta precisa de uma rede com saída pra internet. Monte a VPC <b>10.60.0.0/16</b> com a sub-rede <b>10.60.1.0/24</b> e um internet gateway conectado.",
+      ["É a rede completa que você já montou: VPC, sub-rede, gateway e a conexão.", "Os ids de cada passo vêm na resposta do passo anterior."],
+      ["aws ec2 create-vpc --cidr-block 10.60.0.0/16",
+        "aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.60.1.0/24",
+        "aws ec2 create-internet-gateway",
+        "aws ec2 attach-internet-gateway --internet-gateway-id <igw-id> --vpc-id <vpc-id>"],
+      (c) => !!(vpcDe(c, "10.60.0.0/16") || {}).igw && !!subnetDe(c, "10.60.1.0/24")),
+    d("fx-vpc-dsub1", "vpc", 3, 90, "Acabou o hackathon: comece pela sub-rede",
+      "Tente apagar a VPC do hackathon e leia o erro: a AWS não apaga em cascata. O primeiro passo da desmontagem é tirar a sub-rede <b>10.60.1.0/24</b>.",
+      ["O `delete-vpc` vai responder DependencyViolation — e dizer o que está pendurado.", "Apagar sub-rede é o `delete-subnet`, com o `--subnet-id`."],
+      ["aws ec2 delete-subnet --subnet-id <subnet-de:10.60.1.0/24>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-subnet") && !!vpcDe(c, "10.60.0.0/16") && !subnetDe(c, "10.60.1.0/24")),
+    d("fx-vpc-dsub2", "vpc", 3, 100, "O projeto da rede 10.30 foi cancelado",
+      "A rede <b>10.30.0.0/16</b> tem uma sub-rede (<b>10.30.1.0/24</b>) e mais nada. Desmonte: sub-rede primeiro, VPC depois.",
+      ["Mesmo `delete-subnet` de antes.", "Sem sub-rede e sem gateway, o `delete-vpc` passa."],
+      ["aws ec2 delete-subnet --subnet-id <subnet-de:10.30.1.0/24>",
+        "aws ec2 delete-vpc --vpc-id <vpc-de:10.30.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-vpc") && !vpcDe(c, "10.30.0.0/16")),
+    d("fx-vpc-det1", "vpc", 3, 100, "Corte a saída do hackathon",
+      "A VPC do hackathon ainda tem o gateway conectado, e com ele não sai. Desconecte o internet gateway da VPC <b>10.60.0.0/16</b>.",
+      ["O contrário do attach é o `detach-internet-gateway`.", "Ele pede as DUAS pontas: `--internet-gateway-id` e `--vpc-id`."],
+      ["aws ec2 detach-internet-gateway --internet-gateway-id <igw-de:10.60.0.0/16> --vpc-id <vpc-de:10.60.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "detach-internet-gateway") && !!vpcDe(c, "10.60.0.0/16") && !(vpcDe(c, "10.60.0.0/16") || {}).igw),
+    d("fx-vpc-digw1", "vpc", 3, 90, "O gateway que ficou solto",
+      "Desconectado, o gateway continua existindo — sozinho, sem servir a ninguém. Apague ele.",
+      ["Agora que ele não está preso a nenhuma VPC, o `delete-internet-gateway` passa.", "Conectado, a resposta seria DependencyViolation."],
+      ["aws ec2 delete-internet-gateway --internet-gateway-id <igw-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-internet-gateway") && !igwsSoltos(c).length),
+    d("fx-vpc-dvpc2", "vpc", 3, 90, "Agora sim, a VPC do hackathon",
+      "Sub-rede fora, gateway desconectado e apagado. Feche a desmontagem apagando a VPC <b>10.60.0.0/16</b>.",
+      ["O mesmo `delete-vpc` que recusou lá no começo."],
+      ["aws ec2 delete-vpc --vpc-id <vpc-de:10.60.0.0/16>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-vpc") && !vpcDe(c, "10.60.0.0/16")),
+    d("fx-vpc-igw2", "vpc", 3, 120, "Alguém ligou internet na rede de dados",
+      "A rede <b>10.99.0.0/16</b> é isolada de propósito, e alguém conectou um gateway nela. Reproduza o erro (crie um gateway e conecte nessa VPC) e desfaça do jeito certo: desconecte e apague.",
+      ["Criar e conectar você já sabe.", "Desfazer é a mesma ordem da desmontagem: detach, depois delete."],
+      ["aws ec2 create-internet-gateway",
+        "aws ec2 attach-internet-gateway --internet-gateway-id <igw-id> --vpc-id <vpc-de:10.99.0.0/16>",
+        "aws ec2 detach-internet-gateway --internet-gateway-id <igw-id> --vpc-id <vpc-de:10.99.0.0/16>",
+        "aws ec2 delete-internet-gateway --internet-gateway-id <igw-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-internet-gateway") && !!vpcDe(c, "10.99.0.0/16") && !(vpcDe(c, "10.99.0.0/16") || {}).igw && !igwsSoltos(c).length),
+  ]);
+
+  // ---------------- EBS: um segundo disco atravessa a trilha ----------------
+  at("ebs-3", [
+    d("fx-ebs-cv1", "ebs", 2, 70, "Um disco só pros logs",
+      "Log enchendo o disco do sistema derruba a máquina. Crie um segundo volume, de <b>20 GiB</b>, tipo <b>gp3</b>, na zona <b>us-east-1a</b>, só pros logs.",
+      ["Mesmo comando do primeiro disco, outro tamanho.", "A zona tem que ser a mesma da máquina, senão o disco não encaixa."],
+      ["aws ec2 create-volume --availability-zone us-east-1a --size 20 --volume-type gp3"],
+      (c) => !!volumeDe(c, 20)),
+    d("fx-ebs-at1", "ebs", 2, 80, "Encaixe o disco de logs",
+      "Encaixe o volume de <b>20 GiB</b> na mesma máquina, no device <b>/dev/sdg</b>. <small>(o /dev/sdf já está ocupado pelo primeiro disco — tente, se quiser ver o erro)</small>",
+      ["Mesmo comando do primeiro encaixe.", "Cada disco na mesma máquina precisa de um device diferente."],
+      ["aws ec2 attach-volume --volume-id <vol-tam:20> --instance-id <id-da-instância> --device /dev/sdg"],
+      (c) => (volumeDe(c, 20) || {}).estado === "in-use"),
+    d("fx-ebs-dv1", "ebs", 2, 60, "Quais discos estão nessa máquina?",
+      "Antes de mexer na máquina, veja só os discos encaixados <b>nela</b>, em vez de todos da conta.",
+      ["O `describe-volumes` aceita `--filters`.", "O campo é `attachment.instance-id`."],
+      ["aws ec2 describe-volumes --filters Name=attachment.instance-id,Values=<id-da-instância>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-volumes") && /attachment\.instance-id/.test(String(cmd.flags.filters || ""))),
+  ]);
+  at("ebs-4", [
+    d("fx-ebs-snap1", "ebs", 2, 80, "Backup semanal dos logs",
+      "A auditoria pede os logs guardados por um ano. Tire um snapshot do disco de <b>20 GiB</b> com a descrição <b>logs-semanal</b>.",
+      ["Mesmo comando do backup-diario, outro disco."],
+      ["aws ec2 create-snapshot --volume-id <vol-tam:20> --description logs-semanal"],
+      (c) => !!snapDe(c, "logs-semanal")),
+  ]);
+  at("ebs-5", [
+    d("fx-ebs-ds1", "ebs", 2, 60, "Cadê o backup dos logs?",
+      "Com vários snapshots na conta, ache só o de descrição <b>logs-semanal</b>.",
+      ["O `describe-snapshots` aceita `--filters`.", "O campo é `description`."],
+      ["aws ec2 describe-snapshots --filters Name=description,Values=logs-semanal"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "describe-snapshots") && /logs-semanal/.test(String(cmd.flags.filters || ""))),
+  ]);
+  at("ebs-6", [
+    d("fx-ebs-dt1", "ebs", 3, 80, "O primeiro disco também sai",
+      "A máquina vai ser desligada de vez. Desencaixe também o disco de <b>10 GiB</b>.",
+      ["Mesmo comando da atividade anterior, outro volume."],
+      ["aws ec2 detach-volume --volume-id <vol-tam:10>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "detach-volume") && (volumeDe(c, 10) || {}).estado === "available"),
+  ]);
+  at("ebs-7", [
+    d("fx-ebs-del1", "ebs", 3, 80, "Nenhum disco solto na fatura",
+      "O disco de <b>10 GiB</b> ficou solto — e disco solto cobra todo mês. O snapshot já guardou o que importava: apague o volume.",
+      ["Mesmo comando da atividade anterior."],
+      ["aws ec2 delete-volume --volume-id <vol-tam:10>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "delete-volume") && !volumeDe(c, 10)),
+  ]);
+
+  // ---------------- ELB ----------------
+  at("elb-3", [
+    d("fx-elb-dlb1", "elbv2", 2, 70, "Qual é o endereço do balanceador?",
+      "O time de DNS precisa do endereço do <b>loja-alb</b> pra apontar o domínio. Mostre só ele e pegue o <code>DNSName</code>.",
+      ["O `describe-load-balancers` aceita os nomes que você quer ver.", "A flag é `--names`."],
+      ["aws elbv2 describe-load-balancers --names loja-alb"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elbv2", "describe-load-balancers") && String(cmd.flags.names || "") === "loja-alb"),
+    d("fx-elb-run1", "elbv2", 2, 70, "A primeira máquina atrás do balanceador",
+      "Balanceador sem máquina não balanceia nada. Suba a primeira instância web (<b>t2.micro</b>, a AMI de sempre) — ela vai entrar no grupo de destino já já.",
+      ["É o `run-instances` do EC2."],
+      ["aws ec2 run-instances --image-id ami-0abcd1234ef567890 --instance-type t2.micro"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "ec2", "run-instances")),
+  ]);
+  at("elb-4", [
+    d("fx-elb-reg1", "elbv2", 3, 90, "A outra máquina também entra",
+      "Você registrou uma máquina; a que você subiu antes ficou de fora e não recebe tráfego. Registre ela no <b>loja-tg</b> também.",
+      ["Mesmo comando, com o id da outra instância.", "Dá pra registrar várias de uma vez: `--targets Id=<a> Id=<b>`."],
+      ["aws elbv2 register-targets --target-group-arn <tg-arn> --targets Id=<instancia-anterior>"],
+      (c) => ((tg(c, "loja-tg") || {}).alvos || []).length >= 2),
+  ]);
+  at("elb-6", [
+    d("fx-elb-th1", "elbv2", 2, 70, "E aquela máquina específica?",
+      "Um usuário reclamou de erro, e a suspeita é uma máquina só. Veja a saúde apenas dela no <b>loja-tg</b>.",
+      ["O `describe-target-health` aceita `--targets` pra perguntar por alvos específicos.", "A forma é `--targets Id=<id-da-instância>`."],
+      ["aws elbv2 describe-target-health --target-group-arn <tg-arn> --targets Id=<id-da-instância>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elbv2", "describe-target-health") && /Id=/.test(String(cmd.flags.targets || ""))),
+  ]);
+  at("elb-7", [
+    d("fx-elb-del1", "elbv2", 3, 90, "O balanceador do teste de carga",
+      "O teste de carga subiu o <b>alb-teste-carga</b> e ninguém apagou — balanceador cobra por hora, com ou sem tráfego. Crie ele (as mesmas duas sub-redes) pra ver o cenário e apague.",
+      ["Criar você já sabe.", "Apagar pede o ARN, que vem na resposta do create."],
+      ["aws elbv2 create-load-balancer --name alb-teste-carga --subnets subnet-aaa1 subnet-bbb2",
+        "aws elbv2 delete-load-balancer --load-balancer-arn <lb-arn>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elbv2", "delete-load-balancer") && !lb(c, "alb-teste-carga")),
+  ]);
+  at("cob-elb-1", [
+    d("fx-elb-dtg1", "elbv2", 2, 70, "O grupo de destino da loja ainda existe?",
+      "Antes de apagar, confirme que o <b>loja-tg</b> está mesmo lá — e pegue o ARN dele.",
+      ["O `describe-target-groups` também aceita `--names`."],
+      ["aws elbv2 describe-target-groups --names loja-tg"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elbv2", "describe-target-groups") && String(cmd.flags.names || "") === "loja-tg"),
+  ]);
+  at("cob-elb-2", [
+    d("fx-elb-dtg2", "elbv2", 3, 90, "O grupo do teste de carga",
+      "O teste de carga também deixou o <b>tg-teste-carga</b> (HTTP, porta 80, na mesma VPC do loja-tg). Crie pra ver o cenário e apague. <small>(se ele estivesse preso a um listener, a AWS recusaria: ResourceInUse)</small>",
+      ["Criar é o `create-target-group`.", "Apagar pede o ARN, igual à atividade anterior."],
+      ["aws elbv2 create-target-group --name tg-teste-carga --protocol HTTP --port 80 --vpc-id vpc-0f00d1e00c11ab001",
+        "aws elbv2 delete-target-group --target-group-arn <tg-arn>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elbv2", "delete-target-group") && !tg(c, "tg-teste-carga")),
+  ]);
 })();

@@ -161,6 +161,18 @@ function resolverPlaceholders(conta, linha) {
   // consulta de log (Insights) e Web ACL do WAF — ids sorteados na criação
   if (linha.includes("<consulta-id>") && conta.logs) { const _q = Object.keys(conta.logs.consultas || {}); if (_q.length) linha = linha.replace(/<consulta-id>/g, _q[_q.length - 1]); }
   if (linha.includes("<waf-id>") && conta.waf) { const _w = Object.values(conta.waf.acls); if (_w.length) linha = linha.replace(/<waf-id>/g, _w[_w.length - 1].id); }
+  // Rede pelo CIDR: <vpc-de:10.60.0.0/16>, <subnet-de:10.60.1.0/24>, <igw-de:10.60.0.0/16>
+  // (o <vpc-id> pega a ÚLTIMA VPC, e a desmontagem precisa de uma específica)
+  if (conta.vpc && /<(vpc|subnet|igw)-de:/.test(linha)) {
+    const vpcDe = (cidr) => (Object.values(conta.vpc.vpcs || {}).find((v) => v.cidr === cidr) || {});
+    linha = linha.replace(/<vpc-de:([^>]+)>/g, (m, cidr) => vpcDe(cidr).id || "");
+    linha = linha.replace(/<subnet-de:([^>]+)>/g, (m, cidr) => (Object.values(conta.vpc.subnets || {}).find((s) => s.cidr === cidr) || {}).id || "");
+    linha = linha.replace(/<igw-de:([^>]+)>/g, (m, cidr) => { const v = vpcDe(cidr); return (Object.values(conta.vpc.igws || {}).find((g) => g.vpc && g.vpc === v.id) || {}).id || ""; });
+  }
+  // volume pelo tamanho (<vol-tam:10>) — a trilha de EBS trabalha com dois discos
+  if (linha.includes("<vol-tam:") && conta.ec2) linha = linha.replace(/<vol-tam:(\d+)>/g, (m, t) => (Object.values(conta.ec2.volumes || {}).find((v) => String(v.tamanho) === t) || {}).id || "");
+  // a PENÚLTIMA instância viva (a última é a do <id-da-instância>)
+  if (linha.includes("<instancia-anterior>") && conta.ec2) { const _v = Object.values(conta.ec2.instancias || {}).filter((i) => i.estado !== "terminated"); linha = linha.replace(/<instancia-anterior>/g, _v.length > 1 ? _v[_v.length - 2].id : ""); }
   // a inscrição por SMS (o cliente que pediu pra sair) — procura em todos os tópicos
   if (linha.includes("<sub-sms>") && conta.sns) { let _a = ""; for (const t of Object.values(conta.sns.topicos || {})) { const s = (t.assinaturas || []).find((x) => x.protocolo === "sms"); if (s) { _a = s.arn; break; } } linha = linha.replace(/<sub-sms>/g, _a); }
   // <sub-arn>: a inscrição do tópico criado por ÚLTIMO (a que a atividade acabou
