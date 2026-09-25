@@ -162,7 +162,10 @@
       // flag olha só a última hora e conclui que "não houve nada".
       const minutos = flags.duration ? parseInt(flags.duration, 10) : 60;
       const corte = Date.now() - minutos * 60000;
-      const dentro = s.eventos.filter((e) => Date.parse(e.quando) >= corte);
+      let dentro = s.eventos.filter((e) => Date.parse(e.quando) >= corte);
+      // --source-type e --source-identifier recortam de quem é o evento
+      if (flags["source-type"] !== undefined) dentro = dentro.filter((e) => e.tipo === String(flags["source-type"]));
+      if (flags["source-identifier"] !== undefined) dentro = dentro.filter((e) => e.origem === String(flags["source-identifier"]));
       const cortados = s.eventos.length - dentro.length;
       if (cortados > 0) {
         avisarClimb(

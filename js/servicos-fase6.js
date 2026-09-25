@@ -265,11 +265,21 @@
       avisarClimb("Cache guarda em memória o que é caro de buscar (uma consulta pesada, um perfil) — a aplicação lê do cache em microssegundos em vez de bater no banco toda hora. Redis é o mais usado.");
       return js({ CacheCluster: { CacheClusterId: id, Engine: engine, CacheNodeType: tipo, NumCacheNodes: nos, CacheClusterStatus: "creating" } });
     },
-    "describe-cache-clusters": (conta) => {
+    "describe-cache-clusters": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.elasticache.clusters);
+      flags = flags || {};
+      let l = Object.values(conta.elasticache.clusters);
+      if (flags["cache-cluster-id"] !== undefined) {
+        const id = String(flags["cache-cluster-id"]);
+        if (!conta.elasticache.clusters[id]) throw new ErroCli(`An error occurred (CacheClusterNotFound) when calling the DescribeCacheClusters operation: CacheCluster not found: ${id}`);
+        l = [conta.elasticache.clusters[id]];
+      }
       if (!l.length) { avisarClimb("Nenhum cache ainda. Crie um com: aws elasticache create-cache-cluster --cache-cluster-id cache-loja --engine redis --cache-node-type cache.t3.micro --num-cache-nodes 1"); return js({ CacheClusters: [] }); }
-      return js({ CacheClusters: l.map((c) => ({ CacheClusterId: c.id, Engine: c.engine, CacheNodeType: c.tipo, NumCacheNodes: c.nos, CacheClusterStatus: "available" })) });
+      // --show-cache-node-info traz os nós e o ENDEREÇO de cada um — é dali que a aplicação tira onde conectar
+      const comNos = flags["show-cache-node-info"] !== undefined;
+      return js({ CacheClusters: l.map((c) => Object.assign({ CacheClusterId: c.id, Engine: c.engine, CacheNodeType: c.tipo, NumCacheNodes: c.nos, CacheClusterStatus: "available" },
+        comNos ? { CacheNodes: Array.from({ length: c.nos || 1 }, (x, i) => ({ CacheNodeId: String(i + 1).padStart(4, "0"), CacheNodeStatus: "available",
+          Endpoint: { Address: `${c.id}.abc123.000${i + 1}.use1.cache.amazonaws.com`, Port: c.engine === "memcached" ? 11211 : 6379 } })) } : {})) });
     },
     "delete-cache-cluster": (conta, pos, flags) => {
       estado(conta);

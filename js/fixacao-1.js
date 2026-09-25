@@ -1132,4 +1132,200 @@
         "aws cloudfront delete-distribution --id <dist-id> --if-match <etag>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "delete-distribution") && !distDe(c, "cdn-assets-climb.s3.amazonaws.com")),
   ]);
+
+  // ============================================================
+  // Leva 8 (25/09): EFS, ElastiCache e Polly
+  // ============================================================
+  const fsDeToken = (c, t) => Object.values(((c.efs || {}).sistemas) || {}).find((f) => f.token === t);
+  const alvosDoFs = (c, t) => { const f = fsDeToken(c, t); return f ? Object.values(((c.efs || {}).alvos) || {}).filter((a) => a.fs === f.id || a.sistema === f.id || a.fileSystemId === f.id) : []; };
+  const pontosEfs = (c) => Object.values(((c.efs || {}).pontos) || {});
+  const ecache = (c) => c.elasticache || {};
+  const lexico = (c, n) => ((((c.polly || {}).lexicons) || {})[n]);
+  const tarefasPolly = (c) => Object.values(((c.polly || {}).tarefas) || {});
+  const LEX_TI = "'<?xml version=\"1.0\" encoding=\"UTF-8\"?><lexicon version=\"1.0\" xmlns=\"http://www.w3.org/2005/01/pronunciation-lexicon\" xml:lang=\"pt-BR\"><lexeme><grapheme>EC2</grapheme><alias>é cê dois</alias></lexeme></lexicon>'";
+
+  // ---------------- EFS ----------------
+  at("efs-3", [
+    d("fx-efs-dfs1", "efs", 2, 60, "Qual é o id do disco do time?",
+      "Com vários file systems na conta, ache o do time pelo token de criação <b>dados-efs</b>, em vez de ler a lista inteira.",
+      ["O `describe-file-systems` aceita o token com que o disco foi criado.", "A flag é `--creation-token`."],
+      ["aws efs describe-file-systems --creation-token dados-efs"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "describe-file-systems") && String(cmd.flags["creation-token"] || "") === "dados-efs"),
+  ]);
+  at("cob-efs-1", [
+    d("fx-efs-mt2", "efs", 2, 80, "O disco também na segunda zona",
+      "Com mount target numa zona só, as máquinas da outra zona não enxergam o disco — e se a zona cair, ninguém enxerga. Crie o segundo mount target na <b>subnet-bbb2</b>.",
+      ["Mesmo `create-mount-target`, outra sub-rede."],
+      ["aws efs create-mount-target --file-system-id <fs-id> --subnet-id subnet-bbb2"],
+      (c) => Object.values(((c.efs || {}).alvos) || {}).some((a) => a.subnet === "subnet-bbb2" || a.subnetId === "subnet-bbb2" || a.SubnetId === "subnet-bbb2")),
+    d("fx-efs-dmt1", "efs", 2, 70, "Agora são duas portas de entrada",
+      "Confira que o disco tem acesso nas <b>duas</b> sub-redes.",
+      ["Mesmo `describe-mount-targets` de antes."],
+      ["aws efs describe-mount-targets --file-system-id <fs-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "describe-mount-targets") && Object.keys(((c.efs || {}).alvos) || {}).length >= 2),
+  ]);
+  at("efs-5", [
+    d("fx-efs-lc1", "efs", 3, 100, "E se o arquivo voltar a ser usado?",
+      "O arquivo que desceu pra classe barata e volta a ser aberto todo dia fica caro de ler. Reescreva a regra do disco com <b>duas</b> políticas: desce depois de <b>30 dias</b> sem uso e <b>sobe de volta no primeiro acesso</b>.",
+      ["O `put-lifecycle-configuration` SUBSTITUI a regra inteira — mande as duas juntas.", "A segunda é `TransitionToPrimaryStorageClass=AFTER_1_ACCESS`, separada da primeira por espaço."],
+      ["aws efs put-lifecycle-configuration --file-system-id <fs-id> --lifecycle-policies TransitionToIA=AFTER_30_DAYS TransitionToPrimaryStorageClass=AFTER_1_ACCESS"],
+      (c) => Object.values(((c.efs || {}).sistemas) || {}).some((f) => (f.cicloVida || []).length >= 2)),
+  ]);
+  at("efs-7", [
+    d("fx-efs-ap1", "efs", 3, 100, "A pasta do faturamento",
+      "O sistema de faturamento vai usar o mesmo disco, isolado dos relatórios. Crie o ponto de acesso que entra direto em <b>/app-faturamento</b>.",
+      ["Mesmo `create-access-point`, outro caminho."],
+      ["aws efs create-access-point --file-system-id <fs-id> --root-directory Path=/app-faturamento"],
+      (c) => pontosEfs(c).some((p) => p.caminho === "/app-faturamento")),
+  ]);
+  at("efs-8", [
+    d("fx-efs-dap1", "efs", 3, 70, "Qual é a pasta do segundo ponto?",
+      "O auditor só quer a pasta do <b>segundo</b> ponto de acesso, sem o resto da resposta.",
+      ["Mesmo `describe-access-points`, recortado com `--query`.", "A lista começa em 0: o segundo é `AccessPoints[1].RootDirectory.Path`."],
+      ["aws efs describe-access-points --file-system-id <fs-id> --query AccessPoints[1].RootDirectory.Path"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "describe-access-points") && /RootDirectory/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("efs-9", [
+    d("fx-efs-dmt2", "efs", 3, 80, "A segunda zona vai ser desativada",
+      "A zona da <b>subnet-bbb2</b> vai sair do projeto. Apague o mount target dela — o disco continua acessível pela outra.",
+      ["Apagar mount target é o `delete-mount-target`, com o id DELE (não o do disco).", "O id sai do describe-mount-targets."],
+      ["aws efs delete-mount-target --mount-target-id <mt-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "delete-mount-target") && !Object.values(((c.efs || {}).alvos) || {}).some((a) => a.subnet === "subnet-bbb2" || a.subnetId === "subnet-bbb2" || a.SubnetId === "subnet-bbb2")),
+  ]);
+  at("efs-4", [
+    d("fx-efs-tmp1", "efs", 3, 80, "O disco temporário do teste",
+      "Alguém criou o disco <b>efs-temporario</b> pra um teste. Crie ele pra ver o cenário e confira a regra de economia — disco novo nasce sem nenhuma.",
+      ["Criar é o `create-file-system` com o token.", "Resposta vazia no `describe-lifecycle-configuration` = tudo na classe cara."],
+      ["aws efs create-file-system --creation-token efs-temporario",
+        "aws efs describe-lifecycle-configuration --file-system-id <fs-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "describe-lifecycle-configuration") && !!fsDeToken(c, "efs-temporario")),
+    d("fx-efs-tmp2", "efs", 3, 80, "Disco de teste não precisa de backup",
+      "Backup de disco que vai sumir amanhã é custo à toa. <b>Desligue</b> o backup automático do disco temporário.",
+      ["Mesmo `put-backup-policy`, com o outro valor.", "É `Status=DISABLED`."],
+      ["aws efs put-backup-policy --file-system-id <fs-id> --backup-policy Status=DISABLED"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "put-backup-policy") && /DISABLED/.test(String(cmd.flags["backup-policy"] || "")) && !!fsDeToken(c, "efs-temporario")),
+    d("fx-efs-tmp3", "efs", 3, 80, "Fim do teste",
+      "O teste acabou. Apague o disco temporário — sem mount target, ele sai direto.",
+      ["Mesmo `delete-file-system` de antes."],
+      ["aws efs delete-file-system --file-system-id <fs-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "efs", "delete-file-system") && !fsDeToken(c, "efs-temporario")),
+  ]);
+
+  // ---------------- ElastiCache ----------------
+  at("cache-4", [
+    d("fx-ec-dcc1", "elasticache", 2, 70, "Onde a aplicação conecta?",
+      "O dev pergunta o endereço do Redis. Descreva só o <b>cache-loja</b>, pedindo as informações dos nós — é ali que está o endpoint.",
+      ["O `describe-cache-clusters` aceita o id do cluster.", "Sem `--show-cache-node-info`, o endereço não vem."],
+      ["aws elasticache describe-cache-clusters --cache-cluster-id cache-loja --show-cache-node-info"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-cache-clusters") && cmd.flags["show-cache-node-info"] !== undefined),
+  ]);
+  at("cache-5", [
+    d("fx-ec-sg2", "elasticache", 2, 80, "O cache dos relatórios mora noutro lugar",
+      "O cache do BI vai ficar em sub-redes próprias. Crie o subnet group <b>cache-relatorios</b> (descrição <b>BI</b>) com a <b>subnet-aaa1</b> e a <b>subnet-bbb2</b>.",
+      ["Mesmo `create-cache-subnet-group` de antes."],
+      ["aws elasticache create-cache-subnet-group --cache-subnet-group-name cache-relatorios --cache-subnet-group-description BI --subnet-ids subnet-aaa1 subnet-bbb2"],
+      (c) => !!((ecache(c).subnetGroups || {})["cache-relatorios"])),
+    d("fx-ec-dsg1", "elasticache", 2, 60, "Confira só o grupo do BI",
+      "Veja só o <b>cache-relatorios</b>, em vez de todos.",
+      ["O `describe-cache-subnet-groups` aceita o nome do grupo.", "A flag é `--cache-subnet-group-name`."],
+      ["aws elasticache describe-cache-subnet-groups --cache-subnet-group-name cache-relatorios"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-cache-subnet-groups") && String(cmd.flags["cache-subnet-group-name"] || "") === "cache-relatorios"),
+  ]);
+  at("cache-6", [
+    d("fx-ec-rg2", "elasticache", 3, 110, "As sessões dos usuários não podem cair",
+      "Se o Redis das sessões cair, todo mundo é deslogado. Crie o replication group <b>sessoes-ha</b> (descrição <b>Sessoes</b>) com <b>3</b> nós: um primário e duas réplicas.",
+      ["Mesmo `create-replication-group`, com mais nós.", "Duas réplicas aguentam perder uma zona inteira."],
+      ["aws elasticache create-replication-group --replication-group-id sessoes-ha --replication-group-description Sessoes --num-cache-clusters 3"],
+      (c) => ((ecache(c).grupos || {})["sessoes-ha"] || {}).nos >= 3),
+  ]);
+  at("cache-7", [
+    d("fx-ec-drg1", "elasticache", 3, 70, "As sessões têm failover?",
+      "Confira só o <b>sessoes-ha</b>: quantos membros e se o failover automático está ligado.",
+      ["O `describe-replication-groups` aceita o id do grupo.", "A flag é `--replication-group-id`."],
+      ["aws elasticache describe-replication-groups --replication-group-id sessoes-ha"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-replication-groups") && String(cmd.flags["replication-group-id"] || "") === "sessoes-ha"),
+  ]);
+  at("cache-8", [
+    d("fx-ec-snap2", "elasticache", 3, 90, "Backup das sessões antes da manutenção",
+      "A AWS vai aplicar uma manutenção no fim de semana. Tire o snapshot <b>backup-sessoes</b> do <b>sessoes-ha</b> antes.",
+      ["Mesmo `create-snapshot`, outro grupo."],
+      ["aws elasticache create-snapshot --snapshot-name backup-sessoes --replication-group-id sessoes-ha"],
+      (c) => !!((ecache(c).snapshots || {})["backup-sessoes"])),
+  ]);
+  at("cache-9", [
+    d("fx-ec-dsnap1", "elasticache", 3, 70, "O backup da loja está pronto?",
+      "Veja só o snapshot <b>backup-cache-loja</b> e confirme que ele terminou.",
+      ["O `describe-snapshots` aceita o nome do snapshot.", "A flag é `--snapshot-name`."],
+      ["aws elasticache describe-snapshots --snapshot-name backup-cache-loja"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-snapshots") && String(cmd.flags["snapshot-name"] || "") === "backup-cache-loja"),
+  ]);
+  at("cache-10", [
+    d("fx-ec-ev1", "elasticache", 3, 80, "Só o que aconteceu com os grupos",
+      "No meio de tantos eventos, o time quer só os dos <b>replication groups</b> nas últimas 24 horas.",
+      ["Mesmo `describe-events`, com um filtro de tipo.", "A flag é `--source-type replication-group` — e a janela continua em minutos."],
+      ["aws elasticache describe-events --source-type replication-group --duration 1440"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "describe-events") && String(cmd.flags["source-type"] || "") === "replication-group"),
+  ]);
+  at("cache-3", [
+    d("fx-ec-del1", "elasticache", 3, 90, "O cache do teste de carga",
+      "O teste de carga deixou o <b>cache-teste</b> (redis, cache.t3.micro, 1 nó) ligado. Crie pra ver o cenário e apague — nó parado é cobrado por hora.",
+      ["Criar você já sabe.", "Apagar é o mesmo `delete-cache-cluster`."],
+      ["aws elasticache create-cache-cluster --cache-cluster-id cache-teste --engine redis --cache-node-type cache.t3.micro --num-cache-nodes 1",
+        "aws elasticache delete-cache-cluster --cache-cluster-id cache-teste"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "elasticache", "delete-cache-cluster") && !((ecache(c).clusters || {})["cache-teste"])),
+  ]);
+
+  // ---------------- Polly ----------------
+  at("pol-3", [
+    d("fx-pol-dv1", "polly", 2, 60, "O curso também sai em inglês",
+      "O time vai gravar a versão em inglês. Liste as vozes de <b>en-US</b>.",
+      ["Mesmo `describe-voices`, outro idioma."],
+      ["aws polly describe-voices --language-code en-US"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "polly", "describe-voices") && String(cmd.flags["language-code"] || "") === "en-US"),
+  ]);
+  at("pol-5", [
+    d("fx-pol-lx2", "polly", 2, 80, "EC2 não é \"equi dois\"",
+      "A narração lê <b>EC2</b> errado. Crie um segundo léxico, <b>siglas-ti</b>, ensinando a ler \"é cê dois\". <small>(o XML segue o mesmo formato do marcas-climb, trocando o grapheme e o alias)</small>",
+      ["Mesmo `put-lexicon`, outro nome e outro conteúdo.", "Troque `<grapheme>AWS</grapheme>` por `EC2` e o alias pela leitura certa."],
+      ["aws polly put-lexicon --name siglas-ti --content " + LEX_TI],
+      (c) => !!lexico(c, "siglas-ti")),
+    d("fx-pol-ll1", "polly", 2, 60, "Agora são dois léxicos",
+      "Confira que os dois léxicos estão na região.",
+      ["Mesmo `list-lexicons` de antes."],
+      ["aws polly list-lexicons"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "polly", "list-lexicons") && !!lexico(c, "siglas-ti")),
+    d("fx-pol-gl1", "polly", 2, 60, "O que o léxico das siglas diz?",
+      "Antes de usar na narração, leia o conteúdo do <b>siglas-ti</b>.",
+      ["Mesmo `get-lexicon`, outro nome."],
+      ["aws polly get-lexicon --name siglas-ti"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "polly", "get-lexicon") && String(cmd.flags.name || "") === "siglas-ti"),
+  ]);
+  at("pol-7", [
+    d("fx-pol-st2", "polly", 3, 100, "O capítulo dois, com outra voz",
+      "O capítulo dois vai ter narrador masculino. Dispare a síntese assíncrona do texto <b>Capitulo dois: servidores</b> com a voz <b>Ricardo</b>, no mesmo bucket.",
+      ["Mesmo `start-speech-synthesis-task`, outro texto e outra voz."],
+      ["aws polly start-speech-synthesis-task --text \"Capitulo dois: servidores\" --output-format mp3 --voice-id Ricardo --output-s3-bucket-name narracao-climb"],
+      (c) => tarefasPolly(c).some((t) => (t.voz || t.voice || t.vozId) === "Ricardo" || /Ricardo/.test(JSON.stringify(t)))),
+  ]);
+  at("pol-8", [
+    d("fx-pol-lt1", "polly", 3, 70, "Só as que já terminaram",
+      "O editor só quer as narrações <b>prontas</b>. Liste as tarefas com status <b>completed</b>.",
+      ["O `list-speech-synthesis-tasks` aceita um filtro de status.", "A flag é `--status`."],
+      ["aws polly list-speech-synthesis-tasks --status completed"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "polly", "list-speech-synthesis-tasks") && String(cmd.flags.status || "") === "completed"),
+  ]);
+  at("pol-9", [
+    d("fx-pol-gt1", "polly", 3, 70, "Só o status, pro script",
+      "O script de publicação só precisa saber se a tarefa terminou. Consulte a tarefa trazendo só o <b>TaskStatus</b>.",
+      ["Mesmo `get-speech-synthesis-task`, com `--query`.", "O caminho é `SynthesisTask.TaskStatus`."],
+      ["aws polly get-speech-synthesis-task --task-id <task-id> --query SynthesisTask.TaskStatus"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "polly", "get-speech-synthesis-task") && /TaskStatus/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("pol-10", [
+    d("fx-pol-dl1", "polly", 3, 80, "As siglas viraram padrão da voz",
+      "A voz nova já lê as siglas certo sozinha. Apague o léxico <b>siglas-ti</b>.",
+      ["Mesmo `delete-lexicon` de antes."],
+      ["aws polly delete-lexicon --name siglas-ti"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "polly", "delete-lexicon") && !lexico(c, "siglas-ti")),
+  ]);
 })();

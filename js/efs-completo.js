@@ -44,7 +44,9 @@
   Object.assign(SERVICOS.efs, {
     "put-lifecycle-configuration": (conta, pos, flags) => {
       const f = fsDe(conta, flags, "PutLifecycleConfiguration");
-      const bruto = String(exigirFlag(flags, "lifecycle-policies"));
+      // As políticas vêm espalhadas: a 1ª na flag, as outras como posicionais
+      // (antes só a primeira valia e a segunda sumia calada).
+      const bruto = [String(exigirFlag(flags, "lifecycle-policies"))].concat((pos || []).map(String)).join(" ");
       let politicas;
       if (bruto.trim().startsWith("[")) {
         try { politicas = JSON.parse(bruto); } catch (e) { throw new ErroCli("Error parsing parameter '--lifecycle-policies': Invalid JSON received."); }
