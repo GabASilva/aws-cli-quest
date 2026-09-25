@@ -210,8 +210,14 @@ function tokenizar(linha) {
   let atual = "";
   let aspas = null;
   let teveAlgo = false;
-  for (const ch of linha) {
+  const chars = Array.from(linha);
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
     if (aspas) {
+      // Dentro de aspas DUPLAS, como no shell: \" \\ \$ e \` viram o caractere.
+      // Antes, --filter "username = \"maria\"" chegava como username = \maria\.
+      // Dentro de aspas simples nada é escape (também como no shell).
+      if (aspas === '"' && ch === "\\" && i + 1 < chars.length && '"\\$`'.indexOf(chars[i + 1]) >= 0) { atual += chars[++i]; continue; }
       if (ch === aspas) aspas = null;
       else atual += ch;
     } else if (ch === '"' || ch === "'") {
