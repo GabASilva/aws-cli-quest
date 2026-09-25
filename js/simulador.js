@@ -813,6 +813,14 @@ const cmdIam = {
   "delete-user": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "user-name");
     if (!conta.iam.usuarios[nome]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteUser operation: The user with name ${nome} cannot be found.`);
+    // A AWS não apaga em cascata: usuário com chave, política ou grupo pendurado
+    // dá DeleteConflict. O desligamento de alguém tem ORDEM (25/09/2026).
+    const u = conta.iam.usuarios[nome];
+    const conflito = (o) => { throw new ErroCli(`An error occurred (DeleteConflict) when calling the DeleteUser operation: Cannot delete entity, must ${o} first.`); };
+    if ((u.chaves || []).length) conflito("delete access keys (aws iam delete-access-key)");
+    if ((u.politicas || []).length) conflito("detach all policies (aws iam detach-user-policy)");
+    if (Object.keys(u.inline || {}).length) conflito("delete policies (aws iam delete-user-policy)");
+    if (Object.values(conta.iam.grupos).some((g) => (g.membros || []).indexOf(nome) >= 0)) conflito("remove user from all groups (aws iam remove-user-from-group)");
     delete conta.iam.usuarios[nome];
     for (const g of Object.values(conta.iam.grupos)) g.membros = g.membros.filter((m) => m !== nome);
     return okSilencioso(`Usuário "${nome}" apagado.`);
@@ -1000,6 +1008,10 @@ const cmdIam = {
 
   "delete-policy": (conta, pos, flags) => {
     const p = exigirPolitica(conta, flags, "DeletePolicy");
+    const presa = (x) => (x.politicas || []).indexOf(p.arn) >= 0;
+    if (Object.values(conta.iam.usuarios).some(presa) || Object.values(conta.iam.grupos).some(presa) || Object.values(conta.iam.roles || {}).some(presa)) {
+      throw new ErroCli("An error occurred (DeleteConflict) when calling the DeletePolicy operation: Cannot delete a policy attached to entities.\nDesanexe antes de quem usa (detach-user-policy / detach-group-policy / detach-role-policy).");
+    }
     delete conta.iam.policies[p.nome];
     return okSilencioso(`Política "${p.nome}" apagada.`);
   },
@@ -1033,6 +1045,7 @@ const cmdIam = {
     const usuario = exigirFlag(flags, "user-name");
     const g = conta.iam.grupos[exigirFlag(flags, "group-name")];
     if (!g) throw new ErroCli("An error occurred (NoSuchEntity) when calling the RemoveUserFromGroup operation: o grupo não existe.");
+    if (!conta.iam.usuarios[usuario]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the RemoveUserFromGroup operation: The user with name ${usuario} cannot be found.`);
     g.membros = g.membros.filter((m) => m !== usuario);
     return okSilencioso(`"${usuario}" removido do grupo.`);
   },
@@ -1042,6 +1055,7 @@ const cmdIam = {
     const g = conta.iam.grupos[nome];
     if (!g) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteGroup operation: The group with name ${nome} cannot be found.`);
     if (g.membros.length) throw new ErroCli(`An error occurred (DeleteConflict) when calling the DeleteGroup operation: Cannot delete entity, must remove users from group first. Use remove-user-from-group antes.`);
+    if ((g.politicas || []).length) throw new ErroCli(`An error occurred (DeleteConflict) when calling the DeleteGroup operation: Cannot delete entity, must detach all policies first.\nDesanexe antes: aws iam detach-group-policy --group-name ${nome} --policy-arn <arn>`);
     delete conta.iam.grupos[nome];
     return okSilencioso(`Grupo "${nome}" apagado.`);
   },
@@ -1049,6 +1063,8 @@ const cmdIam = {
   "delete-role": (conta, pos, flags) => {
     const nome = exigirFlag(flags, "role-name");
     if (!conta.iam.roles[nome]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeleteRole operation: Role ${nome} cannot be found.`);
+    if ((conta.iam.roles[nome].politicas || []).length) throw new ErroCli("An error occurred (DeleteConflict) when calling the DeleteRole operation: Cannot delete entity, must detach all policies first.\nDesanexe antes: aws iam detach-role-policy --role-name " + nome + " --policy-arn <arn>");
+    if (Object.values(conta.iam.perfis || {}).some((p) => (p.roles || []).indexOf(nome) >= 0)) throw new ErroCli("An error occurred (DeleteConflict) when calling the DeleteRole operation: Cannot delete entity, must remove roles from instance profile first.");
     delete conta.iam.roles[nome];
     return okSilencioso(`Role "${nome}" apagada.`);
   },

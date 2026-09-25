@@ -1604,4 +1604,130 @@
       ["aws configservice stop-configuration-recorder --configuration-recorder-name default"],
       (c, cmd, ok) => ok && ehCmd(cmd, "configservice", "stop-configuration-recorder") && !!(c.config || {}).recorder && !(c.config || {}).gravando),
   ]);
+
+  // ============================================================
+  // Leva 10 (25/09): a faxina do IAM, que a trilha não ensinava
+  // ============================================================
+  // delete-user/group/role/policy, list-groups, list-roles e get-policy só
+  // apareciam nas trilhas de exercício. O simulador passou a exigir a ORDEM
+  // da AWS (DeleteConflict): chave, política e grupo saem antes do usuário.
+  const POL = "arn:aws:iam::123456789012:policy/";
+  const ARN_AWS = "arn:aws:iam::aws:policy/";
+  const iamGrupo = (c, n) => (((c.iam || {}).grupos) || {})[n];
+  const iamRole = (c, n) => (((c.iam || {}).roles) || {})[n];
+  const iamUser = (c, n) => (((c.iam || {}).usuarios) || {})[n];
+  const iamPol = (c, n) => (((c.iam || {}).policies) || {})[n];
+
+  at("iam-3", [
+    d("fx-iam-lg1", "iam", 1, 50, "O grupo apareceu?",
+      "Confira que o grupo <b>devs</b> entrou na lista de grupos da conta.",
+      ["Pra ver o que já existe, o verbo é `list-`, e o recurso vai no plural."],
+      ["aws iam list-groups"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-groups") && !!iamGrupo(c, "devs")),
+  ]);
+  at("iam-11", [
+    d("fx-iam-lg2", "iam", 2, 60, "Só os nomes dos grupos",
+      "O gestor quer só os nomes dos grupos numa lista, sem ARN nem data.",
+      ["Mesmo `list-groups`, recortado com `--query`.", "O caminho é `Groups[].GroupName`."],
+      ["aws iam list-groups --query Groups[].GroupName"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-groups") && /GroupName/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("iam-6", [
+    d("fx-iam-lr1", "iam", 3, 70, "A role está na conta?",
+      "Confira que a <b>papel-lambda</b> aparece na lista de roles — repare quantas roles a AWS já cria sozinha pros serviços.",
+      ["O verbo de listar e o recurso no plural."],
+      ["aws iam list-roles"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-roles") && !!iamRole(c, "papel-lambda")),
+  ]);
+  at("iam-8", [
+    d("fx-iam-lr2", "iam", 2, 60, "Só os nomes das roles",
+      "A lista de roles vem enorme. Traga só os nomes.",
+      ["Mesmo `list-roles`, com `--query`.", "O caminho é `Roles[].RoleName`."],
+      ["aws iam list-roles --query Roles[].RoleName"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "list-roles") && /RoleName/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("iam-9", [
+    d("fx-iam-gp1", "iam", 3, 70, "Qual versão da política está valendo?",
+      "Veja os detalhes da <b>acesso-s3</b> que você acabou de criar — repare no <code>DefaultVersionId</code>.",
+      ["Política gerenciada é consultada pelo ARN, não pelo nome.", "O ARN é `arn:aws:iam::123456789012:policy/acesso-s3`."],
+      ["aws iam get-policy --policy-arn " + POL + "acesso-s3"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-policy") && /acesso-s3/.test(String(cmd.flags["policy-arn"] || ""))),
+  ]);
+  at("iam-10", [
+    d("fx-iam-gp2", "iam", 2, 60, "Alguém usa essa política?",
+      "Antes de mexer na <b>acesso-s3</b>, descubra em quantos lugares ela está anexada.",
+      ["Mesmo `get-policy`, com `--query`.", "O caminho é `Policy.AttachmentCount`."],
+      ["aws iam get-policy --policy-arn " + POL + "acesso-s3 --query Policy.AttachmentCount"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "get-policy") && /AttachmentCount/.test(String(cmd.flags.query || ""))),
+  ]);
+  // --- a faxina: o fim da trilha é limpar, como no trabalho de verdade ---
+  at("iamc-fix-audit", [
+    d("fx-iam-du1", "iam", 3, 80, "O estágio da Júlia acabou",
+      "O contrato da estagiária terminou. Apague o usuário <b>julia</b>. <small>(conta de quem saiu e continua ativa é a porta que auditoria mais aponta)</small>",
+      ["Apagar usuário é o `delete-user`.", "Ela não tem chave, política nem grupo — então sai direto."],
+      ["aws iam delete-user --user-name julia"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-user") && String(cmd.flags["user-name"] || "") === "julia" && !iamUser(c, "julia")),
+    d("fx-iam-du2", "iam", 3, 110, "O Pedro saiu da empresa",
+      "O Pedro pediu demissão. Tente apagar o <b>pedro</b> e leia o erro: a AWS não deixa apagar usuário com política pendurada. Desanexe a <b>CloudWatchLogsReadOnlyAccess</b> dele e apague.",
+      ["O erro é DeleteConflict — e diz o que falta tirar.", "Desanexar política de usuário é o `detach-user-policy`; depois, o `delete-user`."],
+      ["aws iam detach-user-policy --user-name pedro --policy-arn " + ARN_AWS + "CloudWatchLogsReadOnlyAccess",
+        "aws iam delete-user --user-name pedro"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-user") && String(cmd.flags["user-name"] || "") === "pedro" && !iamUser(c, "pedro")),
+    d("fx-iam-dg1", "iam", 3, 80, "O time de analistas foi extinto",
+      "O grupo <b>analistas</b> não tem mais ninguém nem política. Apague ele.",
+      ["Apagar grupo é o `delete-group`.", "Grupo com membro ou política pendurada dá DeleteConflict."],
+      ["aws iam delete-group --group-name analistas"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-group") && String(cmd.flags["group-name"] || "") === "analistas" && !iamGrupo(c, "analistas")),
+    d("fx-iam-dg2", "iam", 3, 70, "O squad que nunca saiu do papel",
+      "O grupo <b>squad</b> foi criado pra um projeto que não aconteceu. Apague.",
+      ["Mesmo `delete-group` de antes."],
+      ["aws iam delete-group --group-name squad"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-group") && String(cmd.flags["group-name"] || "") === "squad" && !iamGrupo(c, "squad")),
+    d("fx-iam-dp1", "iam", 3, 80, "O rascunho de política",
+      "Alguém criou a política <b>rascunho-bi</b> (de <b>politica-publica.json</b>) e nunca usou. Crie pra ver o cenário e apague — política é apagada pelo ARN.",
+      ["Criar você já sabe.", "Apagar é o `delete-policy` com o `--policy-arn`."],
+      ["aws iam create-policy --policy-name rascunho-bi --policy-document file://politica-publica.json",
+        "aws iam delete-policy --policy-arn " + POL + "rascunho-bi"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-policy") && !iamPol(c, "rascunho-bi")),
+    d("fx-iam-dp2", "iam", 3, 110, "A política da consultoria",
+      "A consultoria usou a política <b>acesso-consultoria</b> na role <b>consultoria-auditoria</b>. Monte o cenário (crie e anexe) e desmonte na ordem certa: política anexada não pode ser apagada.",
+      ["Criar e anexar você já fez.", "A ordem é: desanexar da role, e só então apagar a política."],
+      ["aws iam create-policy --policy-name acesso-consultoria --policy-document file://politica-publica.json",
+        "aws iam attach-role-policy --role-name consultoria-auditoria --policy-arn " + POL + "acesso-consultoria",
+        "aws iam detach-role-policy --role-name consultoria-auditoria --policy-arn " + POL + "acesso-consultoria",
+        "aws iam delete-policy --policy-arn " + POL + "acesso-consultoria"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-policy") && !iamPol(c, "acesso-consultoria")),
+    d("fx-iam-dr1", "iam", 3, 80, "A role da consultoria sai de vez",
+      "O contrato acabou e a role <b>consultoria-auditoria</b> está vazia. Apague ela.",
+      ["Apagar role é o `delete-role`.", "Role com política anexada dá DeleteConflict — por isso a ordem da atividade anterior."],
+      ["aws iam delete-role --role-name consultoria-auditoria"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-role") && String(cmd.flags["role-name"] || "") === "consultoria-auditoria" && !iamRole(c, "consultoria-auditoria")),
+    d("fx-iam-dr2", "iam", 3, 70, "A role de logs que ninguém assumiu",
+      "A <b>role-lambda-logs</b> foi criada pra uma função que nunca existiu. Apague.",
+      ["Mesmo `delete-role` de antes."],
+      ["aws iam delete-role --role-name role-lambda-logs"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-role") && String(cmd.flags["role-name"] || "") === "role-lambda-logs" && !iamRole(c, "role-lambda-logs")),
+  ]);
+
+  // ---------------- S3 e DynamoDB: o que só existia em exercício ----------------
+  at("fx-s3-cb1", [
+    d("fx-s3-lb1", "s3", 2, 60, "Os buckets pela API crua",
+      "O <code>s3 ls</code> mostra os buckets em texto. Liste pela API crua, que devolve JSON — é o que script usa.",
+      ["O `s3api` tem o seu próprio `list-`."],
+      ["aws s3api list-buckets"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "list-buckets")),
+    d("fx-s3-lb2", "s3", 2, 60, "Só os nomes dos buckets",
+      "Um script precisa só dos nomes, um por linha. Liste os buckets trazendo só os nomes.",
+      ["Mesmo `list-buckets`, com `--query`.", "O caminho é `Buckets[].Name`."],
+      ["aws s3api list-buckets --query Buckets[].Name"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "s3api", "list-buckets") && /Name/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("fx-dyn-del1", [
+    d("fx-dyn-dt2", "dynamodb", 3, 90, "A tabela do teste de carga",
+      "O teste de carga criou a tabela <b>CargaTeste</b> (chave <b>id</b>, tipo S, sob demanda) e esqueceu. Crie pra ver o cenário e apague — a tabela inteira, com tudo dentro.",
+      ["Criar você já sabe.", "Apagar a tabela é o `delete-table`; não tem lixeira."],
+      ["aws dynamodb create-table --table-name CargaTeste --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST",
+        "aws dynamodb delete-table --table-name CargaTeste"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "dynamodb", "delete-table") && !(((c.dynamodb || {}).tabelas) || {}).CargaTeste),
+  ]);
 })();
