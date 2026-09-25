@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-25",
+      data: "25 set 2026",
+      titulo: "🧹 O curso inteiro ganhou reforço — e quatro lições que ensinavam errado foram corrigidas",
+      itens: [
+        "<b>🔁 O reforço chegou nas trilhas antigas.</b> Ontem foram os comandos novos; hoje foram os que já estavam no curso e apareciam numa atividade só. S3, EC2, IAM, VPC, EBS, load balancer, Lambda, DynamoDB, RDS, KMS, Secrets Manager, CloudWatch, containers, CloudFront, Route 53 e mais sete serviços ganharam a segunda prática de cada comando, num problema diferente. O curso passou de 909 para <b>1.075 atividades</b>.",
+        "<b>⚠️ Quatro lições ensinavam um comando que a AWS de verdade recusa</b>, e agora estão certas. Conferimos cada uma na documentação oficial: • no <b>DynamoDB</b>, <code>data</code> é palavra reservada, e a query por data precisa do apelido <code>#d</code> com <code>--expression-attribute-names</code>; • no <b>KMS</b>, rotação, habilitar, desabilitar e agendar exclusão só aceitam o <b>KeyId</b>, nunca o alias; • na <b>VPC</b>, uma atividade criava a sub-rede fora da faixa da rede; • e o simulador passou a recusar essas três coisas do mesmo jeito que a AWS recusa, com a mensagem de erro real.",
+        "<b>🧭 Trilhas na ordem do trabalho de verdade:</b> • no <b>ECS</b> e no <b>Auto Scaling</b>, apagar o serviço e o cluster vinha no meio da trilha, com vinte atividades depois; agora a faxina fica no fim; • no <b>KMS</b> e no <b>EventBridge</b>, olhar a chave e a regra vinha depois de apagá-las; e • a <b>VPC</b> ganhou a desmontagem que faltava — sub-rede, gateway e rede, na ordem que a AWS exige (<code>delete-subnet</code>, <code>detach-internet-gateway</code> e <code>delete-internet-gateway</code> são comandos novos).",
+        "<b>🎯 O simulador ficou mais parecido com a AWS em dezenas de detalhes</b> que apareceram no caminho: filtros como <code>--filters</code>, <code>--names</code> e prefixos que eram ignorados agora filtram; apagar alarme em lote apagava só o primeiro; publicar versão da Lambda sem deploy no meio agora devolve a mesma versão; target group em uso por um listener não pode mais ser apagado; e o certificado importado pode ser reimportado no mesmo ARN, que é como se renova de verdade.",
+      ],
+    },
+    {
       versao: "2026-09-24",
       data: "24 set 2026",
       titulo: "🔁 Cada comando novo agora volta pra ser praticado — 94 atividades de reforço",
