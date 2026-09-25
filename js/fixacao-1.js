@@ -1994,4 +1994,35 @@
       ["aws route53 get-change --id <change-id>"],
       (c, cmd, ok) => ok && ehCmd(cmd, "route53", "get-change")),
   ]);
+
+  // ============================================================
+  // Leva 14 (25/09): iam delete-policy-version (comando novo)
+  // ============================================================
+  // Sem ele, política com versão antiga não saía nunca — e o simulador
+  // deixava apagar mesmo assim. Agora a regra da AWS vale (DeleteConflict).
+  const versoesDe = (c, n) => Object.keys((iamPol(c, n) || {}).versions || {});
+  at("fx-iam-lpv1", [
+    d("fx-iam-dpv1", "iam", 3, 90, "A versão que quebrou tudo não volta mais",
+      "A <b>v2</b> da <b>acesso-s3</b> foi a que derrubou a aplicação, e ninguém vai reativar ela. Apague essa versão — política guarda no máximo 5, e versão morta ocupa vaga.",
+      ["Apagar uma versão é o `delete-policy-version`, com o ARN e o `--version-id`.", "A versão padrão não sai; a v2 não é mais a padrão desde o rollback."],
+      ["aws iam delete-policy-version --policy-arn " + POL + "acesso-s3 --version-id v2"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-policy-version") && !!iamPol(c, "acesso-s3") && versoesDe(c, "acesso-s3").indexOf("v2") < 0),
+  ]);
+  at("iamc-fix-ver", [
+    d("fx-iam-dpv2", "iam", 3, 90, "A versão do relatório que ninguém quer",
+      "Na <b>leitura-relatorios</b>, a <b>v2</b> também foi descartada depois do rollback. Apague ela.",
+      ["Mesmo `delete-policy-version`, outra política."],
+      ["aws iam delete-policy-version --policy-arn " + POL + "leitura-relatorios --version-id v2"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-policy-version") && !!iamPol(c, "leitura-relatorios") && versoesDe(c, "leitura-relatorios").indexOf("v2") < 0),
+  ]);
+  at("fx-iam-dp2", [
+    d("fx-iam-dp3", "iam", 3, 120, "Política com histórico não sai de uma vez",
+      "Monte o cenário: a política <b>relatorio-antigo</b> (de <b>politica-publica.json</b>) ganha uma versão nova já valendo. Agora ela precisa sumir — e a AWS não apaga política que tem mais de uma versão. Desmonte na ordem certa.",
+      ["Criar a política e publicar versão você já sabe.", "A ordem é: apagar a versão que NÃO é a padrão (a v1, depois do --set-as-default) e só então o `delete-policy`."],
+      ["aws iam create-policy --policy-name relatorio-antigo --policy-document file://politica-publica.json",
+        "aws iam create-policy-version --policy-arn " + POL + "relatorio-antigo --policy-document file://politica-publica.json --set-as-default",
+        "aws iam delete-policy-version --policy-arn " + POL + "relatorio-antigo --version-id v1",
+        "aws iam delete-policy --policy-arn " + POL + "relatorio-antigo"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "iam", "delete-policy") && !iamPol(c, "relatorio-antigo")),
+  ]);
 })();

@@ -1000,6 +1000,17 @@ const cmdIam = {
     return js({ PolicyVersion: { Document: v.documento, VersionId: vid, IsDefaultVersion: vid === p.defaultVersionId, CreateDate: v.criadoEm } });
   },
 
+  // Par do create-policy-version (25/09/2026): sem ele, política com versão
+  // antiga não tinha como ser apagada, e o limite de 5 versões travava tudo.
+  "delete-policy-version": (conta, pos, flags) => {
+    const p = exigirPolitica(conta, flags, "DeletePolicyVersion");
+    const vid = String(exigirFlag(flags, "version-id"));
+    if (!p.versions[vid]) throw new ErroCli(`An error occurred (NoSuchEntity) when calling the DeletePolicyVersion operation: Policy ${p.arn} version ${vid} does not exist or is not deletable.`);
+    if (vid === p.defaultVersionId) throw new ErroCli(`An error occurred (DeleteConflict) when calling the DeletePolicyVersion operation: Cannot delete the default version of a policy.\nTroque a padrão antes: aws iam set-default-policy-version --policy-arn ${p.arn} --version-id <outra>`);
+    delete p.versions[vid];
+    return okSilencioso(`Versão ${vid} da política "${p.nome}" apagada.`);
+  },
+
   "create-policy-version": (conta, pos, flags) => {
     const p = exigirPolitica(conta, flags, "CreatePolicyVersion");
     const doc = exigirFlag(flags, "policy-document");
@@ -1011,8 +1022,14 @@ const cmdIam = {
       try { documento = JSON.parse(doc); }
       catch (e) { throw new ErroCli("An error occurred (MalformedPolicyDocument) when calling the CreatePolicyVersion operation: JSON inválido."); }
     }
-    const num = Object.keys(p.versions).length + 1;
-    const vid = "v" + num;
+    // A AWS guarda no máximo 5 versões por política — e nunca reaproveita o
+    // número de uma versão apagada (depois de apagar a v2 de [v1,v2,v3], vem v4).
+    if (Object.keys(p.versions).length >= 5) {
+      throw new ErroCli("An error occurred (LimitExceeded) when calling the CreatePolicyVersion operation: A managed policy can have up to 5 versions. Before you create a new version, you must delete an existing version.\nApague uma versão antiga: aws iam delete-policy-version --policy-arn " + p.arn + " --version-id <v>");
+    }
+    const maior = Object.keys(p.versions).reduce((m, v) => Math.max(m, parseInt(v.slice(1), 10) || 0), p.maiorVersao || 0);
+    const vid = "v" + (maior + 1);
+    p.maiorVersao = maior + 1;
     p.versions[vid] = { documento, criadoEm: agoraIso() };
     if (flags["set-as-default"] !== undefined) { p.defaultVersionId = vid; p.atualizadoEm = agoraIso(); }
     return js({ PolicyVersion: { VersionId: vid, IsDefaultVersion: vid === p.defaultVersionId, CreateDate: p.versions[vid].criadoEm } });
@@ -1023,6 +1040,9 @@ const cmdIam = {
     const presa = (x) => (x.politicas || []).indexOf(p.arn) >= 0;
     if (Object.values(conta.iam.usuarios).some(presa) || Object.values(conta.iam.grupos).some(presa) || Object.values(conta.iam.roles || {}).some(presa)) {
       throw new ErroCli("An error occurred (DeleteConflict) when calling the DeletePolicy operation: Cannot delete a policy attached to entities.\nDesanexe antes de quem usa (detach-user-policy / detach-group-policy / detach-role-policy).");
+    }
+    if (Object.keys(p.versions || {}).length > 1) {
+      throw new ErroCli("An error occurred (DeleteConflict) when calling the DeletePolicy operation: This policy has more than one version. Before you delete a policy, you must delete the policy's versions. The default version is deleted with the policy.\nApague as versões que não são a padrão: aws iam delete-policy-version --policy-arn " + p.arn + " --version-id <v>");
     }
     delete conta.iam.policies[p.nome];
     return okSilencioso(`Política "${p.nome}" apagada.`);

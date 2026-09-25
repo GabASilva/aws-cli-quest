@@ -126,7 +126,8 @@
     "iam.create-policy": "cria uma permissão SUA, escrita num JSON. É o que se usa quando nenhuma política pronta da AWS serve — e o caminho pro \"mínimo privilégio\": liberar só o necessário.",
     "iam.get-policy": "mostra os dados da política (ARN, qual versão está valendo, quantas existem). É o \"crachá\" dela, não o conteúdo.",
     "iam.get-policy-version": "aqui sim vem o CONTEÚDO — o JSON com as permissões. Você precisa dizer QUAL versão, e é assim que se audita o que uma política realmente libera.",
-    "iam.create-policy-version": "políticas têm histórico: em vez de sobrescrever, você cria uma versão nova. Com <b>--set-as-default</b> ela passa a valer, e as antigas ficam guardadas pra você poder voltar atrás.",
+    "iam.delete-policy-version": "apaga uma versão antiga da política — abre espaço no limite de 5 e é o que libera apagar a política inteira.",
+    "iam.create-policy-version":"políticas têm histórico: em vez de sobrescrever, você cria uma versão nova. Com <b>--set-as-default</b> ela passa a valer, e as antigas ficam guardadas pra você poder voltar atrás.",
     "iam.detach-user-policy": "desanexa a permissão do usuário. Ele continua existindo, só perde o que aquela política dava — é o jeito certo de revogar acesso sem apagar a pessoa.",
     "iam.delete-policy": "apaga a política de vez. Só depois de desanexar de todo mundo — a AWS não deixa apagar algo em uso.",
 

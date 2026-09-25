@@ -401,6 +401,22 @@ USO
 
 Lista as versões da política e indica qual é a padrão (IsDefaultVersion).`,
 
+  "iam.delete-policy-version": `aws iam delete-policy-version
+
+USO
+    aws iam delete-policy-version --policy-arn <arn> --version-id v2
+
+Apaga UMA versão de uma política gerenciada.
+
+REGRAS DA AWS
+  - a versão PADRÃO não sai (DeleteConflict) — troque a padrão antes com
+    set-default-policy-version
+  - uma política guarda no máximo 5 versões; na sexta, o create-policy-version
+    recusa (LimitExceeded) e é este comando que abre espaço
+  - política com mais de uma versão não pode ser apagada: apague as versões
+    que não são a padrão, e aí o delete-policy passa
+  - o número de uma versão apagada não volta: depois de v1, v2, v3, apagar a
+    v2 e publicar de novo dá v4`,
   "iam.create-policy-version": `aws iam create-policy-version
 
 USO
