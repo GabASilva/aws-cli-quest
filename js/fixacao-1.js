@@ -972,4 +972,164 @@
       ["aws cloudtrail delete-trail --name trilha-lab"],
       (c, cmd, ok) => ok && ehCmd(cmd, "cloudtrail", "delete-trail") && !trilhaCt(c, "trilha-lab")),
   ]);
+
+  // ============================================================
+  // Leva 7 (25/09): EventBridge, Route 53 e CloudFront
+  // ============================================================
+  const regra = (c, n) => (((c.events || {}).regras) || {})[n];
+  const zonaDe = (c, nome) => Object.values(((c.route53 || {}).zonas) || {}).find((z) => z.nome === nome);
+  const checksDe = (c, alvo) => Object.values(((c.route53 || {}).checks) || {}).filter((h) => h.alvo === alvo);
+  const distsCf = (c) => Object.values(((c.cloudfront || {}).distribuicoes) || {});
+  const distDe = (c, origem) => distsCf(c).find((x) => x.origem === origem);
+
+  // ---------------- EventBridge ----------------
+  // cob-eb-1 (describe-rule) e cob-eb-2 (enable-rule) vinham depois do
+  // delete-rule. Agora ficam junto de quem cria e de quem desliga a regra.
+  mover(["cob-eb-1"], "eb-2");
+  mover(["cob-eb-2"], "eb-5");
+  at("cob-eb-1", [
+    d("fx-eb-lr1", "events", 2, 60, "Só as regras de backup",
+      "A conta vai acumular regra de tudo quanto é time. Liste só as que começam com <b>backup</b>.",
+      ["O `list-rules` aceita um prefixo de nome.", "A flag é `--name-prefix`."],
+      ["aws events list-rules --name-prefix backup"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "events", "list-rules") && String(cmd.flags["name-prefix"] || "") === "backup"),
+    d("fx-eb-dr1", "events", 2, 60, "A limpeza roda de quanto em quanto tempo?",
+      "Alguém jura que a limpeza roda de hora em hora. Confira a <b>limpeza-noturna</b> por dentro e veja o agendamento de verdade.",
+      ["Mesmo `describe-rule` da regra de backup."],
+      ["aws events describe-rule --name limpeza-noturna"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "events", "describe-rule") && String(cmd.flags.name || "") === "limpeza-noturna"),
+  ]);
+  at("eb-3", [
+    d("fx-eb-pt1", "events", 2, 80, "O backup também precisa de alvo",
+      "A regra <b>backup-semanal</b> existe mas não chama ninguém. Aponte ela pra função <b>arn:aws:lambda:us-east-1:123456789012:function:backup</b>, com o Id <b>1</b>.",
+      ["Mesmo `put-targets` da limpeza, outra regra e outra função."],
+      ["aws events put-targets --rule backup-semanal --targets '[{\"Id\":\"1\",\"Arn\":\"arn:aws:lambda:us-east-1:123456789012:function:backup\"}]'"],
+      (c) => ((regra(c, "backup-semanal") || {}).alvos || []).length > 0),
+  ]);
+  at("eb-4", [
+    d("fx-eb-lt1", "events", 2, 60, "O backup chama a função certa?",
+      "Confira os alvos da <b>backup-semanal</b> antes de ir embora na sexta.",
+      ["Mesmo `list-targets-by-rule`, outra regra."],
+      ["aws events list-targets-by-rule --rule backup-semanal"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "events", "list-targets-by-rule") && String(cmd.flags.rule || "") === "backup-semanal"),
+  ]);
+  at("cob-eb-2", [
+    d("fx-eb-en1", "events", 3, 70, "Acabaram as férias",
+      "O time voltou e a <b>limpeza-noturna</b> ainda está desabilitada desde as férias. Ligue ela de novo.",
+      ["Mesmo `enable-rule` da atividade anterior."],
+      ["aws events enable-rule --name limpeza-noturna"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "events", "enable-rule") && (regra(c, "limpeza-noturna") || {}).estado === "ENABLED"),
+    d("fx-eb-rt1", "events", 3, 80, "O backup muda de ferramenta",
+      "O backup semanal passou pro AWS Backup, e a regra não deve mais chamar a função. Tire o alvo <b>1</b> da <b>backup-semanal</b> — a regra fica, sem ninguém pra chamar.",
+      ["Tirar alvo é o `remove-targets`, com a regra e o Id do alvo.", "A flag do Id é `--ids`."],
+      ["aws events remove-targets --rule backup-semanal --ids 1"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "events", "remove-targets") && !!regra(c, "backup-semanal") && !((regra(c, "backup-semanal") || {}).alvos || []).length),
+  ]);
+  at("eb-6", [
+    d("fx-eb-del1", "events", 3, 80, "A regra do backup sai de vez",
+      "Sem alvo, a <b>backup-semanal</b> só ocupa espaço. Apague a regra.",
+      ["Sem alvo pendurado, o `delete-rule` passa direto."],
+      ["aws events delete-rule --name backup-semanal"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "events", "delete-rule") && !regra(c, "backup-semanal")),
+  ]);
+
+  // ---------------- Route 53 ----------------
+  at("r53-3", [
+    d("fx-r53-lz1", "route53", 2, 60, "Qual é o Id da zona?",
+      "Quase todo comando do Route 53 pede o Id da zona, não o nome. Liste as zonas e ache o Id da <b>climb-labs.com</b>.",
+      ["Mesmo comando do começo da trilha.", "O Id vem no formato /hostedzone/Z..."],
+      ["aws route53 list-hosted-zones"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "route53", "list-hosted-zones") && !!zonaDe(c, "climb-labs.com.")),
+  ]);
+  at("r53-4", [
+    d("fx-r53-lr1", "route53", 3, 70, "O www entrou na zona?",
+      "Antes de avisar o time, confira que o registro <b>A</b> do www está mesmo na zona.",
+      ["Mesmo `list-resource-record-sets`: agora a lista tem NS, SOA e o seu A."],
+      ["aws route53 list-resource-record-sets --hosted-zone-id <zone-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "route53", "list-resource-record-sets") && ((zonaDe(c, "climb-labs.com.") || {}).registros || []).some((r) => r.Type === "A")),
+  ]);
+  at("r53-7", [
+    d("fx-r53-gz1", "route53", 3, 70, "Só os nameservers, pro registrador",
+      "O registrador pede os quatro nameservers num formulário. Pegue só eles, sem o resto da resposta.",
+      ["Mesmo `get-hosted-zone`, com `--query`.", "O caminho é `DelegationSet.NameServers`."],
+      ["aws route53 get-hosted-zone --id <zone-id> --query DelegationSet.NameServers"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "route53", "get-hosted-zone") && /NameServers/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("r53-10", [
+    d("fx-r53-hc1", "route53", 3, 100, "A API também precisa de vigia",
+      "A API da loja fica em <b>api-climb.com.br</b> e responde saúde em <b>/saude</b>, só por HTTPS. Crie o health check dela (caller reference <b>climb-2</b>).",
+      ["Mesmo `create-health-check`, trocando o tipo, o domínio e o caminho.", "O `--caller-reference` precisa ser diferente do anterior."],
+      ["aws route53 create-health-check --caller-reference climb-2 --health-check-config Type=HTTPS,FullyQualifiedDomainName=api-climb.com.br,ResourcePath=/saude"],
+      (c) => checksDe(c, "api-climb.com.br").some((h) => h.tipo === "HTTPS")),
+    d("fx-r53-hcd1", "route53", 3, 80, "A API mudou de domínio",
+      "A API migrou pra outro domínio e o check antigo só gera alarme falso. Apague a verificação da <b>api-climb.com.br</b>.",
+      ["Mesmo `delete-health-check` de antes; o id veio na resposta da criação."],
+      ["aws route53 delete-health-check --health-check-id <hc-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "route53", "delete-health-check") && !checksDe(c, "api-climb.com.br").length),
+  ]);
+  at("r53-6", [
+    d("fx-r53-dz1", "route53", 3, 90, "O domínio de teste",
+      "Alguém criou a zona <b>teste-climb.com</b> pra testar e ela ficou lá — cada zona custa por mês. Crie (caller reference <b>climb-teste</b>) pra ver o cenário e apague.",
+      ["Criar a zona você já sabe.", "Zona só com NS e SOA sai direto no `delete-hosted-zone`."],
+      ["aws route53 create-hosted-zone --name teste-climb.com --caller-reference climb-teste",
+        "aws route53 delete-hosted-zone --id <zone-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "route53", "delete-hosted-zone") && !zonaDe(c, "teste-climb.com.")),
+  ]);
+
+  // ---------------- CloudFront ----------------
+  at("cf-3", [
+    d("fx-cf-ld1", "cloudfront", 2, 60, "Qual é o Id da distribuição?",
+      "Os comandos seguintes pedem o Id da distribuição. Liste as distribuições e ache o dela.",
+      ["Mesmo comando do começo da trilha.", "O Id começa com E, e o endereço termina em cloudfront.net."],
+      ["aws cloudfront list-distributions"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "list-distributions") && distsCf(c).length > 0),
+    d("fx-cf-gd1", "cloudfront", 2, 70, "Já terminou de espalhar?",
+      "Distribuição nova leva um tempo pra chegar em todas as bordas. Veja só o <b>Status</b> dela: <b>Deployed</b> é pronta.",
+      ["Mesmo `get-distribution`, com `--query`.", "O caminho é `Distribution.Status`."],
+      ["aws cloudfront get-distribution --id <dist-id> --query Distribution.Status"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "get-distribution") && /Status/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cf-4", [
+    d("fx-cf-inv1", "cloudfront", 3, 100, "Só a home e o CSS",
+      "Desta vez só mudaram a home e as folhas de estilo. Limpe <b>/index.html</b> e <b>/css/*</b> — limpar tudo sempre obriga a borda a buscar o site inteiro de novo.",
+      ["Mesmo `create-invalidation`, com mais de um caminho.", "Os caminhos vão separados por espaço no `--paths`."],
+      ["aws cloudfront create-invalidation --distribution-id <dist-id> --paths /index.html /css/*"],
+      (c) => distsCf(c).some((x) => (x.invalidacoes || []).length >= 2)),
+  ]);
+  at("cf-5", [
+    d("fx-cf-li1", "cloudfront", 3, 70, "Quantas limpezas este mês?",
+      "Os primeiros 1.000 caminhos invalidados por mês são grátis; depois, paga. Liste as invalidações e conte quantas o time já fez.",
+      ["Mesmo `list-invalidations` de antes."],
+      ["aws cloudfront list-invalidations --id <dist-id>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "list-invalidations") && distsCf(c).some((x) => (x.invalidacoes || []).length >= 2)),
+  ]);
+  at("cf-6", [
+    d("fx-cf-gi1", "cloudfront", 3, 70, "Só o status da limpeza",
+      "O script de deploy só quer saber se a última limpeza terminou. Consulte a invalidação trazendo só o <b>Status</b>.",
+      ["Mesmo `get-invalidation`, com `--query`.", "O caminho é `Invalidation.Status`."],
+      ["aws cloudfront get-invalidation --distribution-id <dist-id> --id <inv-id> --query Invalidation.Status"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "get-invalidation") && /Status/.test(String(cmd.flags.query || ""))),
+  ]);
+  at("cf-7", [
+    d("fx-cf-cp1", "cloudfront", 3, 70, "O time inventou alguma política?",
+      "Antes de criar uma política de cache própria, veja se alguém já criou. Liste só as <b>custom</b>.",
+      ["Mesmo `list-cache-policies`, outro `--type`.", "Vazio quer dizer: todo mundo está usando as gerenciadas pela AWS."],
+      ["aws cloudfront list-cache-policies --type custom"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "list-cache-policies") && String(cmd.flags.type || "") === "custom"),
+  ]);
+  at("cf-10", [
+    d("fx-cf-upd1", "cloudfront", 3, 110, "A CDN das imagens também sai",
+      "A CDN das imagens (<b>cdn-assets-climb.s3.amazonaws.com</b>) vai ser aposentada junto. Crie ela pra ver o cenário, pegue o ETag e <b>desligue</b>.",
+      ["Criar distribuição você já sabe.", "Desligar é o `update-distribution` com `{\"Enabled\":false}` e o ETag no `--if-match`."],
+      ["aws cloudfront create-distribution --origin-domain-name cdn-assets-climb.s3.amazonaws.com",
+        "aws cloudfront get-distribution-config --id <dist-id>",
+        "aws cloudfront update-distribution --id <dist-id> --if-match <etag> --distribution-config '{\"Enabled\":false}'"],
+      (c) => !!distDe(c, "cdn-assets-climb.s3.amazonaws.com") && (distDe(c, "cdn-assets-climb.s3.amazonaws.com") || {}).ativo === false),
+    d("fx-cf-del1", "cloudfront", 3, 100, "E agora apague a CDN das imagens",
+      "Desligada, ela pode sair. Pegue o ETag novo e apague a distribuição das imagens.",
+      ["O ETag mudou quando você desligou — leia de novo.", "Depois, o mesmo `delete-distribution` de antes."],
+      ["aws cloudfront get-distribution-config --id <dist-id>",
+        "aws cloudfront delete-distribution --id <dist-id> --if-match <etag>"],
+      (c, cmd, ok) => ok && ehCmd(cmd, "cloudfront", "delete-distribution") && !distDe(c, "cdn-assets-climb.s3.amazonaws.com")),
+  ]);
 })();

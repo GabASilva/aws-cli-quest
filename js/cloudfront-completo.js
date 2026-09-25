@@ -121,6 +121,12 @@
 
     "list-cache-policies": (conta, pos, flags) => {
       const tipo = flags.type ? String(flags.type) : "managed";
+      // --type custom = só as que VOCÊ criou (aqui, nenhuma). Antes devolvia as
+      // gerenciadas rotuladas de custom.
+      if (tipo === "custom") {
+        avisarClimb("Nenhuma política própria: o time está usando só as gerenciadas pela AWS — que é o recomendado até precisar de algo muito específico.");
+        return js({ CachePolicyList: { MaxItems: 100, Quantity: 0, Items: [] } });
+      }
       avisarClimb(
         "Política de cache decide DUAS coisas: por quanto tempo a borda guarda o objeto (TTL) e o que entra na " +
         "chave do cache (query string, cookie, cabeçalho). CachingOptimized é o padrão pra site estático; " +

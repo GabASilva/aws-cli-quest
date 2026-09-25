@@ -52,7 +52,9 @@
     "get-hosted-zone": (conta, pos, flags) => {
       const z = zonaDe(conta, flags, "GetHostedZone");
       const base = z.id.toLowerCase().slice(0, 6);
-      const ns = [
+      // Os nameservers são os MESMOS que o create-hosted-zone devolveu (z.ns);
+      // antes o get inventava outros, e o aluno via dois conjuntos pra mesma zona.
+      const ns = z.ns && z.ns.length ? z.ns : [
         `ns-${base.slice(0, 3)}.awsdns-01.com`, `ns-${base.slice(0, 3)}.awsdns-02.co.uk`,
         `ns-${base.slice(3, 6)}.awsdns-03.net`, `ns-${base.slice(3, 6)}.awsdns-04.org`,
       ];

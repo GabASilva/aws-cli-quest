@@ -423,9 +423,14 @@
       };
       return js({ RuleArn: `arn:aws:events:${REGIAO(conta)}:${CONTA_ID(conta)}:rule/${nome}` });
     },
-    "list-rules": (conta) => {
+    "list-rules": (conta, pos, flags) => {
       estado(conta);
-      const l = Object.values(conta.events.regras);
+      let l = Object.values(conta.events.regras);
+      if (flags && flags["name-prefix"] !== undefined) {
+        const p = String(flags["name-prefix"]);
+        l = l.filter((r) => r.nome.indexOf(p) === 0);
+        if (!l.length) return js({ Rules: [] });
+      }
       if (!l.length) { avisarClimb('Nenhuma regra ainda. Crie uma com: aws events put-rule --name limpeza-noturna --schedule-expression "rate(1 day)"'); return ""; }
       return js({ Rules: l.map((r) => ({
         Name: r.nome, Arn: `arn:aws:events:${REGIAO(conta)}:${CONTA_ID(conta)}:rule/${r.nome}`,
