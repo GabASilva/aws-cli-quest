@@ -174,6 +174,10 @@ function resolverPlaceholders(conta, linha) {
   // CodeBuild: o build mais recente e o último que FALHOU (FAILED)
   if (linha.includes("<build-id>") && conta.codebuild) { const _b = Object.keys(conta.codebuild.builds || {}); linha = linha.replace(/<build-id>/g, _b.length ? _b[_b.length - 1] : ""); }
   if (linha.includes("<build-falho>") && conta.codebuild) { const _f = Object.values(conta.codebuild.builds || {}).filter((b) => b.status === "FAILED"); linha = linha.replace(/<build-falho>/g, _f.length ? _f[_f.length - 1].id : ""); }
+  // CodeCommit: a ponta de uma branch (<commit-da-branch:portal-rh:main>) e o
+  // pull request aberto por último
+  if (linha.includes("<commit-da-branch:") && conta.codecommit) linha = linha.replace(/<commit-da-branch:([^:>]+):([^>]+)>/g, (m, r, b) => (((conta.codecommit.repos || {})[r] || {}).branches || {})[b] || "");
+  if (linha.includes("<pr-id>") && conta.codecommit) { const _p = Object.keys(conta.codecommit.prs || {}).sort((a, b) => Number(a) - Number(b)); linha = linha.replace(/<pr-id>/g, _p.length ? _p[_p.length - 1] : ""); }
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");

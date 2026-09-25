@@ -146,7 +146,13 @@ function arquivoLocal(p, conta) {
   // depois deste arquivo — por isso a checagem é em tempo de execução.
   if (conta && typeof noRelHome === "function") {
     let no = null;
-    try { no = noRelHome(conta, caminho); } catch (e) { no = null; }
+    // Como o CLI de verdade: relativo à pasta ATUAL (quem deu cd e criou o
+    // arquivo lá não achava). A home continua de reserva.
+    if (conta.cwd && typeof noEm === "function" && typeof resolver === "function") {
+      try { no = noEm(conta, resolver(caminho, conta.cwd)); } catch (e) { no = null; }
+      if (no && no.tipo !== "arquivo") no = null;
+    }
+    if (!no) try { no = noRelHome(conta, caminho); } catch (e) { no = null; }
     if (no && no.tipo === "arquivo") {
       const txt = String(no.conteudo || "");
       return { caminho, tamanho: txt.length, conteudo: txt };

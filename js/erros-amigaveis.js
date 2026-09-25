@@ -37,7 +37,9 @@ const REGRAS_ERRO = [
   [/CIDR inválido/i, "Faixa de IP inválida. Use algo como 0.0.0.0/0 (qualquer IP) ou 10.0.0.0/24."],
 
   // IAM
-  [/policy-arn|ARN .* not valid|is not valid/i, "O ARN da política parece errado. Ex.: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess."],
+  // Só erro que fala de ARN. O "is not valid" solto casava nome de bucket,
+  // expressão de agendamento e nome de repositório — e mandava conferir ARN.
+  [/policy-arn|ARN .* not valid/i, "O ARN da política parece errado. Ex.: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess."],
   [/EntityAlreadyExists/i, "Já existe um recurso IAM (usuário/grupo/role) com esse nome."],
   [/NoSuchEntity/i, "Esse recurso IAM (usuário/grupo/role) não existe. Confira o nome com 'list-users', 'list-groups' ou 'list-roles'."],
   [/MalformedPolicy|Policies must be valid JSON/i, "A política precisa ser um JSON válido. Use o arquivo pronto: file://politica-publica.json."],
@@ -45,7 +47,8 @@ const REGRAS_ERRO = [
   // Lambda
   [/Role ARN inválido|failed to satisfy constraint.*Role/i, "O ARN da role está errado. Ex.: arn:aws:iam::123456789012:role/papel-lambda."],
   [/(runtime|Runtimes aceitos)/i, "Esse runtime não é aceito. Exemplos: python3.12, nodejs20.x, java21."],
-  [/fileb:\/\//i, "Use fileb://<arquivo.zip> apontando pra um arquivo que existe. Veja com 'ls' (tem um app.zip pronto)."],
+  // Só o --zip-file do Lambda: o CodeCommit também usa fileb://, com outro arquivo
+  [/zip-file/i, "Use fileb://<arquivo.zip> apontando pra um arquivo que existe. Veja com 'ls' (tem um app.zip pronto)."],
   [/ResourceConflictException|Function already exist/i, "Já existe uma função Lambda com esse nome."],
   [/ResourceNotFoundException.*[Ff]unction|Function not found/i, "Essa função Lambda não existe. Veja as suas com 'aws lambda list-functions'."],
   [/--timeout/i, "O timeout precisa estar entre 1 e 900 segundos."],
