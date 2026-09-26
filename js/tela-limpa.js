@@ -58,6 +58,12 @@
         box-shadow: none !important;
       }
       .botao.tl-desistir:hover { color: var(--vermelho, #ff5c5c) !important; }
+      .tl-fora-ordem {
+        margin: .4rem 0 .7rem; padding: .45rem .7rem;
+        border-left: 3px solid var(--laranja, #ff9900);
+        background: var(--fundo-suave, rgba(255,153,0,.07));
+        color: var(--texto, inherit); font-size: .86rem; line-height: 1.45;
+      }
     `;
     document.head.appendChild(st);
   }
@@ -75,11 +81,12 @@
     const itens = [...lista.querySelectorAll(".item-desafio")];
     if (!itens.length) return;
 
-    // Só encolhemos o RABO de travadas. Assim o que já foi concluído e a
-    // atividade atual nunca somem — independente das classes que o app use
-    // pra marcá-las.
+    // Só encolhemos o RABO do que ainda não foi feito (desde 26/09 nada é
+    // travado — dá pra fazer em qualquer ordem —, então o corte é "o que está
+    // à frente", não "o que está trancado"). O que foi concluído, a
+    // atividade aberta e tudo antes dela nunca somem.
     let inicioDoRabo = itens.length;
-    while (inicioDoRabo > 0 && itens[inicioDoRabo - 1].classList.contains("travado")) inicioDoRabo--;
+    while (inicioDoRabo > 0 && !itens[inicioDoRabo - 1].classList.contains("feito") && !itens[inicioDoRabo - 1].classList.contains("ativo")) inicioDoRabo--;
 
     const rabo = itens.slice(inicioDoRabo);
     const escondidas = rabo.slice(QUANTAS_ADIANTAR);
@@ -91,7 +98,7 @@
     btn.type = "button";
     btn.className = "tl-mais";
     const n = escondidas.length;
-    btn.innerHTML = `<span class="tl-seta" aria-hidden="true">⌄</span>+${n} ${n === 1 ? "atividade desbloqueia" : "atividades desbloqueiam"} conforme você avança`;
+    btn.innerHTML = `<span class="tl-seta" aria-hidden="true">⌄</span>+${n} ${n === 1 ? "atividade" : "atividades"} à frente — abra pra escolher qualquer uma`;
     btn.setAttribute("aria-expanded", "false");
     // A .lista-desafios recebe role="list" (acessibilidade.js). Um filho sem
     // role="listitem" reprova o aria-required-children — era o que derrubava a
@@ -130,6 +137,35 @@
     revelar.classList.remove("perigo");
     revelar.classList.add("tl-desistir");
     revelar.textContent = "ver a resposta (zera o XP)";
+  }
+
+  // ---------- 2b. quem pulou a ordem fica sabendo do que depende ----------
+  // Toda atividade é livre, mas muitas usam o que as anteriores criaram (o
+  // build que a cb-5 consulta nasce na cb-4). Sem aviso, quem pula recebe
+  // "não existe" e acha que o simulador quebrou.
+  function avisoForaDeOrdem() {
+    const card = document.querySelector("#cardDesafio");
+    if (!card) return;
+    const velho = card.querySelector(".tl-fora-ordem");
+    if (velho) velho.remove();
+    let d = null;
+    try { d = DESAFIOS.find((x) => x.id === ui.desafioAtivo); } catch (e) { return; }
+    if (!d || typeof desafioNaSequencia !== "function" || desafioNaSequencia(d) || desafioConcluido(d.id)) return;
+    let texto;
+    if (d.tipo === "projeto") {
+      texto = "Você abriu o projeto antes de terminar a(s) trilha(s) " + (d.requisitos || []).join(", ").toUpperCase() + ". Pode tentar — os projetos juntam o que as trilhas ensinam.";
+    } else {
+      const trilha = desafiosDoServico(d.servico);
+      const i = trilha.findIndex((x) => x.id === d.id);
+      const puladas = trilha.slice(0, i).filter((x) => !desafioConcluido(x.id)).length;
+      texto = `Fora da ordem: ${puladas} ${puladas === 1 ? "atividade anterior" : "atividades anteriores"} desta trilha ainda não ${puladas === 1 ? "foi feita" : "foram feitas"}. Tudo bem praticar assim — mas se a AWS responder que algum recurso não existe, é porque ele nasce numa atividade anterior.`;
+    }
+    const aviso = document.createElement("p");
+    aviso.className = "tl-fora-ordem";
+    aviso.textContent = "↪ " + texto;
+    const alvo = card.querySelector("h2, h3");
+    if (alvo && alvo.parentNode) alvo.parentNode.insertBefore(aviso, alvo.nextSibling);
+    else card.prepend(aviso);
   }
 
   // ---------- embrulhos ----------
@@ -181,7 +217,7 @@
   function iniciar() {
     injetarEstilo();
     embrulhar("renderSidebar", enxugarTudo);
-    embrulhar("renderCard", function () { ajustarCard(); cardDeConclusao(); });
+    embrulhar("renderCard", function () { ajustarCard(); avisoForaDeOrdem(); cardDeConclusao(); });
     enxugarTudo();
     ajustarCard();
   }

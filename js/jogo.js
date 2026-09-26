@@ -331,9 +331,18 @@ function servicoCompleto(servicoId) {
   return desafiosDoServico(servicoId).every((d) => desafioConcluido(d.id));
 }
 
-// Um desafio está liberado se o anterior da mesma trilha foi concluído.
-// Projetos exigem as trilhas listadas em `requisitos` completas.
+// Desde 26/09/2026 toda atividade fica aberta: quem quer praticar um comando
+// específico, ou treinar antes de começar a trilha, escolhe a que quiser
+// (pedido do Gabriel, junto com o filtro de trilhas). A ORDEM continua como
+// sugestão — é o desafioNaSequencia abaixo, que o card usa pra avisar quem
+// pulou e a lista usa pra encolher o que está à frente.
 function desafioLiberado(desafio) {
+  return true;
+}
+
+// A ordem da trilha: o anterior foi feito? Projetos: as trilhas de
+// `requisitos` completas.
+function desafioNaSequencia(desafio) {
   if (desafio.tipo === "projeto") {
     return (desafio.requisitos || []).every((s) => servicoCompleto(s));
   }

@@ -81,7 +81,7 @@
     } catch (e) { /* cai no aviso abaixo */ }
 
     if (!alvo) {
-      diz("Nada pendente e liberado — você concluiu tudo que está aberto. 🎉", "aviso-climb");
+      diz("Nada pendente — você concluiu tudo. 🎉", "aviso-climb");
       rolar();
       return;
     }
@@ -121,7 +121,7 @@
     diz("");
     achados.slice(0, LIMITE).forEach((d) => diz(linhaDoDesafio(d)));
     diz("");
-    diz("✓ concluída · (vazio) liberada · · ainda travada", "aviso-climb");
+    diz("✓ concluída · (vazio) a fazer — dá pra abrir qualquer uma", "aviso-climb");
     diz("Abra com: climb ir <id>", "aviso-climb");
     rolar();
   }
