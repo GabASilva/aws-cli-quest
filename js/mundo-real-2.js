@@ -98,12 +98,12 @@
         "Repare que só dá pra subir de novo DEPOIS de derrubar — os recursos têm nome único na conta)</small>",
       dicas: [
         "Primeiro `delete-stack` na antiga: a stack sabe apagar o que ela criou, então libera os nomes.",
-        "Depois: validate-template → create-stack --stack-name <novo-nome> --template-body file://infra.yaml → describe-stack-resources",
+        "Depois: validate-template → create-stack --stack-name <novo-nome> --template-body file://infra.yaml --capabilities CAPABILITY_NAMED_IAM → describe-stack-resources (o validate-template avisa qual capacidade o template pede)",
       ],
       solucao: [
         "aws cloudformation delete-stack --stack-name app",
         "aws cloudformation validate-template --template-body file://infra.yaml",
-        "aws cloudformation create-stack --stack-name loja-infra --template-body file://infra.yaml",
+        "aws cloudformation create-stack --stack-name loja-infra --template-body file://infra.yaml --capabilities CAPABILITY_NAMED_IAM",
         "aws cloudformation describe-stack-resources --stack-name loja-infra",
       ],
       validar: (c, cmd, ok) => {

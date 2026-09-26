@@ -288,6 +288,9 @@
 
   // ---------- Registro no motor ----------
   if (typeof SERVICOS !== "undefined") SERVICOS.cloudformation = cmdCfn;
+  // o cloudformation-completo.js (parâmetros, rollback, update, change set,
+  // drift) reusa o parser e os provisionadores daqui — uma fonte só
+  globalThis.CFN_BASE = { parseTemplate, CFN_TEMPLATES, criarRecurso, apagarRecurso, cfn, stackArn };
   if (typeof ARQUIVOS_LOCAIS !== "undefined") {
     for (const nome of Object.keys(CFN_TEMPLATES)) ARQUIVOS_LOCAIS[nome] = CFN_TEMPLATES[nome].length;
   }
@@ -329,9 +332,9 @@
     {
       id: "cfn-5", servico: "cloudformation", nivel: 2, xp: 90,
       titulo: "Infra completa num arquivo só",
-      descricao: "O poder do IaC: um template, vários serviços. Use o <b>infra.yaml</b> (S3 + DynamoDB + IAM) pra criar um stack chamado <b>app</b>. Depois confira no <b>aws dynamodb list-tables</b> que a tabela nasceu.",
-      dicas: ["aws cloudformation create-stack --stack-name <nome> --template-body <file://arquivo.yaml>", "Um stack só cria os 3 recursos de uma vez."],
-      solucao: ["aws cloudformation create-stack --stack-name app --template-body file://infra.yaml"],
+      descricao: "O poder do IaC: um template, vários serviços. Use o <b>infra.yaml</b> (S3 + DynamoDB + IAM) pra criar um stack chamado <b>app</b>. Repare: ele cria um <b>usuário do IAM com nome próprio</b> (app-deploy), e a AWS exige que você declare isso com <code>--capabilities CAPABILITY_NAMED_IAM</code> — é a sua assinatura de \"sei que este template mexe em permissão\". Depois confira no <b>aws dynamodb list-tables</b> que a tabela nasceu.",
+      dicas: ["aws cloudformation create-stack --stack-name <nome> --template-body <file://arquivo.yaml> --capabilities <capacidade>", "Um stack só cria os 3 recursos de uma vez. Sem a capacidade, a AWS responde InsufficientCapabilitiesException."],
+      solucao: ["aws cloudformation create-stack --stack-name app --template-body file://infra.yaml --capabilities CAPABILITY_NAMED_IAM"],
       validar: (conta) => !!(conta.cloudformation && conta.cloudformation.stacks["app"]) && !!conta.dynamodb.tabelas["AppTarefas"] && !!conta.s3.buckets["app-uploads-cfn"] && !!conta.iam.usuarios["app-deploy"],
     },
     {
