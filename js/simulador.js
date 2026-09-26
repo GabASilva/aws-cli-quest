@@ -1369,33 +1369,91 @@ const SERVICOS = {
 };
 
 // ---------- --query (JMESPath enxuto) e --output ----------
-// Suporta o essencial pro curso: caminhos com ponto, [*] / [], índice [n]
-// e filtro [?Campo=='valor']. Acessar um campo numa lista mapeia sobre ela.
-function consultaJmes(valor, expr) {
-  for (const seg of String(expr).split(".")) {
+// Suporta o essencial pro curso: caminhos com ponto, índice [n] (e [-1]),
+// PROJEÇÕES [*], [] (esta achata um nível) e filtro [?Campo=='valor'] (ou
+// !=, com campo pontuado), e multisseleção .[CampoA,Campo.B] — a forma mais
+// usada no trabalho: Reservations[].Instances[].[InstanceId,State.Name].
+// Projeção como no JMESPath: o resto da expressão roda em CADA item e os
+// nulos saem. Antes o [] só "mantinha a lista", e duas listas aninhadas
+// (Reservations[].Instances[].InstanceId) davam [null].
+// Tolerância que fica de propósito: campo pedido numa lista mapeia sobre ela.
+// Corta em "." ou "," só fora de colchetes: antes o split cego desmanchava
+// a multisseleção e a consulta devolvia vazio sem erro nenhum.
+function dividirForaDeColchetes(expr, sep) {
+  const partes = [];
+  let prof = 0, atual = "";
+  for (const ch of String(expr)) {
+    if (ch === "[") prof++;
+    else if (ch === "]") prof--;
+    if (ch === sep && prof === 0) { partes.push(atual); atual = ""; continue; }
+    atual += ch;
+  }
+  partes.push(atual);
+  return partes;
+}
+
+// A expressão vira uma fila de passos: campo, índice, projeção, filtro, multi.
+function passosJmes(expr) {
+  const passos = [];
+  for (const seg of dividirForaDeColchetes(expr, ".")) {
+    const multi = /^\[(.+)\]$/.exec(seg);
+    if (multi && /^[A-Za-z_]/.test(multi[1])) {
+      passos.push({ t: "multi", subs: dividirForaDeColchetes(multi[1], ",").map((s) => s.trim()) });
+      continue;
+    }
     const m = /^([A-Za-z_]\w*)?(.*)$/.exec(seg);
-    const id = m[1];
-    let resto = m[2];
-    if (id) valor = acessar(valor, id);
+    if (m[1]) passos.push({ t: "campo", n: m[1] });
     let br;
     const reBr = /\[([^\]]*)\]/g;
-    while ((br = reBr.exec(resto))) {
-      const dentro = br[1];
-      if (dentro === "*" || dentro === "") {
-        // projeção: mantém a lista como está
-      } else if (/^\?/.test(dentro)) {
+    while ((br = reBr.exec(m[2]))) {
+      const dentro = br[1].trim();
+      if (dentro === "*") passos.push({ t: "todos" });
+      else if (dentro === "") passos.push({ t: "achatar" });
+      else if (/^-?\d+$/.test(dentro)) passos.push({ t: "indice", i: parseInt(dentro, 10) });
+      else if (/^\?/.test(dentro)) {
         // o valor pode chegar com ou sem aspas (o tokenizer já as remove)
-        const f = /^\?\s*([A-Za-z_]\w*)\s*==\s*(.+?)\s*$/.exec(dentro);
-        if (f && Array.isArray(valor)) {
-          const alvo = f[2].replace(/^'(.*)'$/, "$1").replace(/^"(.*)"$/, "$1");
-          valor = valor.filter((v) => v && String(v[f[1]]) === alvo);
-        }
-      } else if (/^\d+$/.test(dentro)) {
-        valor = Array.isArray(valor) ? valor[parseInt(dentro, 10)] : undefined;
+        const f = /^\?\s*([A-Za-z_][\w.]*)\s*(==|!=)\s*(.+?)\s*$/.exec(dentro);
+        if (f) passos.push({ t: "filtro", campo: f[1], op: f[2], alvo: f[3].replace(/^'(.*)'$/, "$1").replace(/^"(.*)"$/, "$1").replace(/^`(.*)`$/, "$1") });
       }
     }
   }
+  return passos;
+}
+
+// Um trecho SEM [] : campo, índice, multi e as projeções [*] e [?filtro]
+// (essas aninham: o resto do trecho roda em cada item e os nulos saem).
+function avaliarTrecho(valor, passos, i) {
+  for (; i < passos.length; i++) {
+    const p = passos[i];
+    if (p.t === "campo") valor = acessar(valor, p.n);
+    else if (p.t === "indice") valor = Array.isArray(valor) ? valor[p.i < 0 ? valor.length + p.i : p.i] : undefined;
+    else if (p.t === "multi") {
+      if (valor == null) return valor;
+      valor = p.subs.map((s) => { const r = consultaJmes(valor, s); return r === undefined ? null : r; });
+    } else {
+      if (!Array.isArray(valor)) return null;
+      let lista = valor;
+      if (p.t === "filtro") lista = lista.filter((v) => { if (!v) return false; const x = consultaJmes(v, p.campo); return p.op === "==" ? String(x) === p.alvo : String(x) !== p.alvo; });
+      return lista.map((v) => avaliarTrecho(v, passos, i + 1)).filter((v) => v !== null && v !== undefined);
+    }
+  }
   return valor;
+}
+
+// O [] pega TUDO o que está à esquerda, achata um nível e projeta o que vem
+// depois: a[].b[].c = achatar(achatar(a).b).c — por isso duas listas
+// aninhadas saem numa lista plana só (e o [*], que não achata, aninha).
+function consultaJmes(valor, expr) {
+  const passos = passosJmes(expr);
+  const trechos = [[]];
+  for (const p of passos) { if (p.t === "achatar") trechos.push([]); else trechos[trechos.length - 1].push(p); }
+  let atual = avaliarTrecho(valor, trechos[0], 0);
+  for (let k = 1; k < trechos.length; k++) {
+    if (!Array.isArray(atual)) return null;
+    atual = [].concat(...atual.map((v) => (Array.isArray(v) ? v : [v])))
+      .map((v) => avaliarTrecho(v, trechos[k], 0)).filter((v) => v !== null && v !== undefined);
+  }
+  return atual;
 }
 
 function acessar(valor, id) {

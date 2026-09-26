@@ -34,6 +34,7 @@
     diagnostico: [["ec2", /network|flow-log|security-group|route|vpc/]],
     autoscaling: [["autoscaling"], ["ec2", /launch-template/]],
     bedrock: [["bedrock"], ["bedrock-runtime"]],
+    codedeploy: [["deploy"]],
     // o EC2 também é o aws ec2, mas sem os assuntos que têm trilha própria
     ec2: [["ec2", null, /vpc|subnet|route|internet-gateway|network-acl|network-interface|flow-log|volume|snapshot|launch-template/]],
   };

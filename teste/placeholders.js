@@ -178,6 +178,9 @@ function resolverPlaceholders(conta, linha) {
   // pull request aberto por último
   if (linha.includes("<commit-da-branch:") && conta.codecommit) linha = linha.replace(/<commit-da-branch:([^:>]+):([^>]+)>/g, (m, r, b) => (((conta.codecommit.repos || {})[r] || {}).branches || {})[b] || "");
   if (linha.includes("<pr-id>") && conta.codecommit) { const _p = Object.keys(conta.codecommit.prs || {}).sort((a, b) => Number(a) - Number(b)); linha = linha.replace(/<pr-id>/g, _p.length ? _p[_p.length - 1] : ""); }
+  // CodeDeploy: o deploy criado por último e o último que falhou
+  if (linha.includes("<deploy-id>") && conta.codedeploy) { const _d = Object.keys(conta.codedeploy.deploys || {}); linha = linha.replace(/<deploy-id>/g, _d.length ? _d[_d.length - 1] : ""); }
+  if (linha.includes("<deploy-falho>") && conta.codedeploy) { const _f = Object.values(conta.codedeploy.deploys || {}).filter((x) => x.status === "Failed"); linha = linha.replace(/<deploy-falho>/g, _f.length ? _f[_f.length - 1].id : ""); }
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");
