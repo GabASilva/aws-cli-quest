@@ -187,6 +187,9 @@ function resolverPlaceholders(conta, linha) {
   if (linha.includes("<token-aprovacao>") && conta.codepipeline) { let _t = ""; for (const x of Object.values(conta.codepipeline.execucoes || {})) for (const g of x.estagios) for (const a of g.acoes) if (a.tipo === "Approval" && a.status === "InProgress" && x.status === "InProgress") _t = a.token; linha = linha.replace(/<token-aprovacao>/g, _t); }
   // CloudFormation: a detecção de drift mais recente
   if (linha.includes("<drift-id>") && conta.cloudformation) { const _d = Object.keys(conta.cloudformation.deteccoes || {}); linha = linha.replace(/<drift-id>/g, _d.length ? _d[_d.length - 1] : ""); }
+  // CodeConnections: o ARN de uma conexão ou de um host pelo nome
+  if (linha.includes("<conexao:") && conta.codeconnections) linha = linha.replace(/<conexao:([^>]+)>/g, (m, n) => ((conta.codeconnections.conexoes || {})[n] || {}).arn || "");
+  if (linha.includes("<host:") && conta.codeconnections) linha = linha.replace(/<host:([^>]+)>/g, (m, n) => ((conta.codeconnections.hosts || {})[n] || {}).arn || "");
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");

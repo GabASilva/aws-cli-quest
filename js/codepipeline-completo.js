@@ -34,7 +34,9 @@
   const uuid = () => `${hexAleatorio(8)}-${hexAleatorio(4)}-${hexAleatorio(4)}-${hexAleatorio(4)}-${hexAleatorio(12)}`;
   const erro = (op, tipo, msg) => new ErroCli(`An error occurred (${tipo}) when calling the ${op} operation: ${msg}`);
   const NAO_ACHEI = "The pipeline was specified in an invalid format or cannot be found.";
-  const PROVEDORES = { Source: ["CodeCommit", "S3"], Build: ["CodeBuild"], Deploy: ["CodeDeploy"], Approval: ["Manual"] };
+  // CodeStarSourceConnection = GitHub/GitLab/Bitbucket por conexão
+  // (codeconnections-completo.js registra o CLIMB_FONTE_EXTERNA que resolve)
+  const PROVEDORES = { Source: ["CodeCommit", "S3", "CodeStarSourceConnection"], Build: ["CodeBuild"], Deploy: ["CodeDeploy"], Approval: ["Manual"] };
 
   function st(conta) {
     conta.codepipeline = conta.codepipeline || { esteiras: {}, execucoes: {}, apagadas: [] };
@@ -80,7 +82,7 @@
       for (const a of s.actions) {
         const t = a.actionTypeId || {};
         if (!a.name || !t.category || !t.provider) throw erro(op, "InvalidActionDeclarationException", `The action declaration was specified in an invalid format.\nCada action precisa de name e de actionTypeId (category, owner, provider, version). Estágio: ${s.name}`);
-        if (!PROVEDORES[t.category] || PROVEDORES[t.category].indexOf(t.provider) < 0) throw erro(op, "InvalidActionDeclarationException", `The action declaration was specified in an invalid format.\n${t.category}/${t.provider}: o simulador entende Source/CodeCommit, Build/CodeBuild, Approval/Manual e Deploy/CodeDeploy.`);
+        if (!PROVEDORES[t.category] || PROVEDORES[t.category].indexOf(t.provider) < 0) throw erro(op, "InvalidActionDeclarationException", `The action declaration was specified in an invalid format.\n${t.category}/${t.provider}: o simulador entende Source/CodeCommit, Source/CodeStarSourceConnection (GitHub, GitLab, Bitbucket), Build/CodeBuild, Approval/Manual e Deploy/CodeDeploy.`);
         if ((t.category === "Source") !== (i === 0)) throw erro(op, "InvalidStageDeclarationException", "The stage declaration was specified in an invalid format.\nAção de origem (Source) só no PRIMEIRO estágio — e o primeiro estágio só tem ações de origem.");
         a.runOrder = a.runOrder || 1;
         a.inputArtifacts = a.inputArtifacts || [];
@@ -153,6 +155,14 @@
   // resolve o que dá pra resolver numa consulta
   function resolverAcao(conta, e, x, a) {
     if (a.status !== "InProgress") return;
+    if (a.tipo === "Source" && a.provedor === "CodeStarSourceConnection") {
+      a.fim = agora();
+      const f = typeof CLIMB_FONTE_EXTERNA === "function" ? CLIMB_FONTE_EXTERNA(conta, a.config) : { erro: "Connection not found" };
+      if (f.erro) { a.status = "Failed"; a.erro = { code: "JobFailed", message: f.erro }; return; }
+      x.revisao = f.revisao; x.resumoRevisao = f.mensagem; x.buildspec = f.buildspec;
+      a.status = "Succeeded"; a.resumo = f.mensagem; a.externo = f.revisao;
+      return;
+    }
     if (a.tipo === "Source") {
       const r = ((conta.codecommit || {}).repos || {})[a.config.RepositoryName];
       const ponta = r && r.branches[a.config.BranchName];
