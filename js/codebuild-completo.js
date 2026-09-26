@@ -90,7 +90,20 @@
     const anteriores = Object.values(st(conta).builds).filter((x) => x.projeto === b.projeto && x.id !== b.id && x.status !== "IN_PROGRESS").length;
     let t = b.inicio;
     const fase = (tipo, status, ctx) => { const dur = tipo === "BUILD" ? 42 : tipo === "PROVISIONING" ? 14 : tipo === "COMPLETED" ? undefined : 1; const f = { phaseType: tipo, phaseStatus: status, startTime: t }; if (dur !== undefined) { f.durationInSeconds = dur; t += dur; f.endTime = t; } if (ctx) f.contexts = [ctx]; return f; };
-    if (/app-instavel/.test(origem) && anteriores === 0) {
+    // build disparado pela esteira (codepipeline-completo.js): o resultado vem
+    // do buildspec.yml do commit que a esteira trouxe, não do nome do repositório
+    if (b.quebra === "sem-buildspec") {
+      b.status = "FAILED";
+      b.fases = ["SUBMITTED", "QUEUED", "PROVISIONING"].map((x) => fase(x, "SUCCEEDED"))
+        .concat([fase("DOWNLOAD_SOURCE", "FAILED", { statusCode: "YAML_FILE_ERROR", message: "YAML_FILE_ERROR: stat /codebuild/output/src148872536/src/buildspec.yml: no such file or directory" })])
+        .concat([fase("FINALIZING", "SUCCEEDED"), { phaseType: "COMPLETED", startTime: t }]);
+    } else if (b.quebra === "exit") {
+      b.status = "FAILED";
+      b.fases = ["SUBMITTED", "QUEUED", "PROVISIONING", "DOWNLOAD_SOURCE", "INSTALL", "PRE_BUILD"].map((x) => fase(x, "SUCCEEDED"))
+        .concat([fase("BUILD", "FAILED", { statusCode: "COMMAND_EXECUTION_ERROR", message: "Error while executing command: exit 1. Reason: exit status 1" })])
+        .concat(["POST_BUILD", "UPLOAD_ARTIFACTS", "FINALIZING"].map((x) => fase(x, "SUCCEEDED")))
+        .concat([{ phaseType: "COMPLETED", startTime: t }]);
+    } else if (/app-instavel/.test(origem) && anteriores === 0) {
       b.status = "FAULT";
       b.fases = ["SUBMITTED", "QUEUED", "PROVISIONING"].map((x) => fase(x, "SUCCEEDED"))
         .concat([fase("DOWNLOAD_SOURCE", "FAILED", { statusCode: "CLIENT_ERROR", message: "RequestError: send request failed caused by: Get \"https://github.com/climb-labs/app-instavel\": dial tcp: i/o timeout" })])

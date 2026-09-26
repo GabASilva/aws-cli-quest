@@ -181,6 +181,10 @@ function resolverPlaceholders(conta, linha) {
   // CodeDeploy: o deploy criado por último e o último que falhou
   if (linha.includes("<deploy-id>") && conta.codedeploy) { const _d = Object.keys(conta.codedeploy.deploys || {}); linha = linha.replace(/<deploy-id>/g, _d.length ? _d[_d.length - 1] : ""); }
   if (linha.includes("<deploy-falho>") && conta.codedeploy) { const _f = Object.values(conta.codedeploy.deploys || {}).filter((x) => x.status === "Failed"); linha = linha.replace(/<deploy-falho>/g, _f.length ? _f[_f.length - 1].id : ""); }
+  // CodePipeline: a execução mais nova, a última que falhou e o token da aprovação pendente
+  if (linha.includes("<exec-id>") && conta.codepipeline) { const _e = Object.values(conta.codepipeline.execucoes || {}).sort((a, b) => a.inicio - b.inicio); linha = linha.replace(/<exec-id>/g, _e.length ? _e[_e.length - 1].id : ""); }
+  if (linha.includes("<exec-falha>") && conta.codepipeline) { const _f = Object.values(conta.codepipeline.execucoes || {}).filter((x) => x.status === "Failed"); linha = linha.replace(/<exec-falha>/g, _f.length ? _f[_f.length - 1].id : ""); }
+  if (linha.includes("<token-aprovacao>") && conta.codepipeline) { let _t = ""; for (const x of Object.values(conta.codepipeline.execucoes || {})) for (const g of x.estagios) for (const a of g.acoes) if (a.tipo === "Approval" && a.status === "InProgress" && x.status === "InProgress") _t = a.token; linha = linha.replace(/<token-aprovacao>/g, _t); }
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");

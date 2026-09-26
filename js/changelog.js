@@ -24,6 +24,14 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-26",
+      data: "26 set 2026",
+      titulo: "🛤️ A esteira de CI/CD completa: CodePipeline",
+      itens: [
+        "<b>🛤️ Trilha nova: CodePipeline</b> — o fecho do grupo <b>Entrega de software (CI/CD)</b>: 35 atividades e um projeto. A esteira liga as trilhas que você já fez: pega o commit do <b>CodeCommit</b>, dispara um build de verdade no <b>CodeBuild</b> e entrega com o <b>CodeDeploy</b> nas máquinas por tag. No caminho: • a planta da esteira num arquivo JSON, como no trabalho (<code>cat</code> antes de criar); • <b>aprovação manual</b> — aprovar, rejeitar e pedir de novo com <code>retry-stage-execution</code>; • um commit que <b>quebra o build</b>, a caça ao motivo até a fase que falhou, e a lição que pega muita gente: <b>retry não pega commit novo</b>; • <b>congelamento de fim de ano</b>, fechando a porta do estágio de deploy; • parar execução com motivo registrado e apagar esteira que aponta pra repositório que não existe mais.",
+      ],
+    },
+    {
       versao: "2026-09-25",
       data: "25 set 2026",
       titulo: "🧹 O curso inteiro ganhou reforço — e cinco atividades que ensinavam errado foram corrigidas",
