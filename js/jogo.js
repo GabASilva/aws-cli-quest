@@ -331,12 +331,15 @@ function servicoCompleto(servicoId) {
   return desafiosDoServico(servicoId).every((d) => desafioConcluido(d.id));
 }
 
-// Desde 26/09/2026 toda atividade fica aberta: quem quer praticar um comando
-// específico, ou treinar antes de começar a trilha, escolhe a que quiser
-// (pedido do Gabriel, junto com o filtro de trilhas). A ORDEM continua como
-// sugestão — é o desafioNaSequencia abaixo, que o card usa pra avisar quem
-// pulou e a lista usa pra encolher o que está à frente.
+// Desde 26/09/2026 toda atividade comum fica aberta: quem quer praticar um
+// comando específico, ou treinar antes de começar a trilha, escolhe a que
+// quiser (pedido do Gabriel, junto com o filtro de trilhas). A ORDEM continua
+// como sugestão — é o desafioNaSequencia abaixo, que o card usa pra avisar
+// quem pulou e a lista usa pra encolher o que está à frente.
+// PROJETO continua travado até as trilhas de `requisitos` estarem completas:
+// é uma sequência de etapas que dependem umas das outras (pedido do Gabriel).
 function desafioLiberado(desafio) {
+  if (desafio.tipo === "projeto") return desafioNaSequencia(desafio);
   return true;
 }
 
@@ -344,7 +347,9 @@ function desafioLiberado(desafio) {
 // `requisitos` completas.
 function desafioNaSequencia(desafio) {
   if (desafio.tipo === "projeto") {
-    return (desafio.requisitos || []).every((s) => servicoCompleto(s));
+    if (desafio.requisitos && desafio.requisitos.length) return desafio.requisitos.every((s) => servicoCompleto(s));
+    // projeto no fim da própria trilha (cb-proj, ccm-proj...): as atividades dela
+    return desafiosDoServico(desafio.servico).filter((d) => d.tipo !== "projeto").every((d) => desafioConcluido(d.id));
   }
   const trilha = desafiosDoServico(desafio.servico);
   const i = trilha.findIndex((d) => d.id === desafio.id);

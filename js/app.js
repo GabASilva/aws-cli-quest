@@ -86,7 +86,9 @@ function renderSidebar() {
           <span class="item-titulo">${d.titulo}</span>
           <span class="item-meta">${NOMES_NIVEL[d.nivel]} · ${d.xp} XP</span>`;
         if (!liberado && d.tipo === "projeto") {
-          item.title = "Complete a(s) trilha(s): " + (d.requisitos || []).join(", ").toUpperCase();
+          item.title = (d.requisitos && d.requisitos.length)
+            ? "Complete a(s) trilha(s): " + d.requisitos.join(", ").toUpperCase()
+            : "Abre quando as outras atividades desta trilha estiverem feitas — as etapas do projeto usam o que elas ensinam.";
         }
         item.addEventListener("click", () => selecionarDesafio(d.id));
         lista.appendChild(item);
