@@ -35,7 +35,7 @@
     { id: "custos", nome: "Custos e governança", emoji: "💰",
       servicos: ["budgets", "ce", "organizations", "support"] },
     { id: "cicd", nome: "Entrega de software (CI/CD)", emoji: "🚚",
-      servicos: ["codecommit", "codebuild", "codedeploy", "codepipeline", "codeconnections"] },
+      servicos: ["codecommit", "codebuild", "codedeploy", "codedeploy-bg", "codepipeline", "codeconnections"] },
     { id: "operacoes", nome: "Operações", emoji: "🛠️",
       servicos: ["cloudwatch", "ssm", "cloudformation"] },
     { id: "praticar", nome: "Praticar e desafiar", emoji: "🎯",

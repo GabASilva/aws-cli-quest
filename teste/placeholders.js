@@ -190,6 +190,10 @@ function resolverPlaceholders(conta, linha) {
   // CodeConnections: o ARN de uma conexão ou de um host pelo nome
   if (linha.includes("<conexao:") && conta.codeconnections) linha = linha.replace(/<conexao:([^>]+)>/g, (m, n) => ((conta.codeconnections.conexoes || {})[n] || {}).arn || "");
   if (linha.includes("<host:") && conta.codeconnections) linha = linha.replace(/<host:([^>]+)>/g, (m, n) => ((conta.codeconnections.hosts || {})[n] || {}).arn || "");
+  // ELB pelo nome: <tg:nome> (target group), <lb-vitrine> e <listener-vitrine> (o alb-vitrine)
+  if (linha.includes("<tg:") && conta.elb) linha = linha.replace(/<tg:([^>]+)>/g, (m, n) => ((conta.elb.tgs || {})[n] || {}).arn || "");
+  if (linha.includes("<lb-vitrine>") && conta.elb) linha = linha.replace(/<lb-vitrine>/g, ((conta.elb.lbs || {})["alb-vitrine"] || {}).arn || "");
+  if (linha.includes("<listener-vitrine>") && conta.elb) linha = linha.replace(/<listener-vitrine>/g, (Object.values(conta.elb.listeners || {}).find((l) => l.lb === "alb-vitrine") || {}).arn || "");
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");
