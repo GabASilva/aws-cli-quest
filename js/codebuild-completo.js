@@ -144,6 +144,10 @@
       timeout: over.timeout || p.timeout,
       fases: [{ phaseType: "SUBMITTED", phaseStatus: "SUCCEEDED", startTime: inicio, endTime: inicio + 0.4, durationInSeconds: 0 }, { phaseType: "QUEUED", startTime: inicio + 0.4 }],
     };
+    // histórico com teto: a conta sincroniza com o servidor (corpo de até
+    // 100 KB) e cada build guarda as fases. Sai o mais velho já terminado.
+    const ids = Object.keys(s.builds);
+    for (let i = 0; ids.length - i > 40 && i < ids.length; i++) if (s.builds[ids[i]].completo) delete s.builds[ids[i]];
     return s.builds[id];
   }
 

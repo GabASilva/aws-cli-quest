@@ -149,6 +149,7 @@
       // rollback automático: reimplanta a última revisão que deu certo
       if (g && g.rollback.enabled && g.rollback.events.indexOf("DEPLOYMENT_FAILURE") >= 0 && g.ultimoOk) {
         const bom = st(conta).deploys[g.ultimoOk];
+        if (!bom) { d.status = "Failed"; return; }
         const r = novoDeploy(conta, app, g, { revisao: bom.revisao, config: d.config, criador: "codeDeployRollback", descricao: "" });
         r.rollback = { rollbackTriggeringDeploymentId: d.id };
         d.rollback = { rollbackDeploymentId: r.id, rollbackMessage: `Automatic rollback triggered: deployment ${d.id} failed. The last successful revision is being redeployed in ${r.id}.` };
@@ -158,6 +159,18 @@
       if (g) g.ultimoOk = d.id;
     }
   }
+  // histórico com teto: a conta sincroniza com o servidor (corpo de até
+  // 100 KB) e cada deploy guarda as etapas de cada máquina. Sai o mais velho
+  // já terminado. Exposto pro codedeploy-bluegreen.js usar o mesmo.
+  function aparar(s) {
+    const ids = Object.keys(s.deploys);
+    // o último deploy bom de cada grupo fica: é o que o rollback reimplanta
+    const preso = {};
+    for (const a of Object.values(s.apps || {})) for (const g of Object.values(a.grupos || {})) { if (g.ultimoOk) preso[g.ultimoOk] = true; if (g.ultimo) preso[g.ultimo] = true; }
+    const vivo = (x) => preso[x.id] || ["Created", "Queued", "InProgress", "Ready"].indexOf(x.status) >= 0;
+    for (let i = 0; ids.length - i > 40 && i < ids.length; i++) if (!vivo(s.deploys[ids[i]])) delete s.deploys[ids[i]];
+  }
+  globalThis.CLIMB_APARAR_DEPLOYS = aparar;
   function novoDeploy(conta, app, g, o) {
     const s = st(conta);
     const d = {
@@ -166,6 +179,7 @@
       frota: frota(conta, g), alvos: {}, rollbackCfg: JSON.parse(JSON.stringify(g.rollback)),
     };
     s.deploys[d.id] = d;
+    aparar(s);
     g.ultimo = d.id;
     if (!d.frota.length) {
       d.status = "Failed"; d.fim = d.criado;

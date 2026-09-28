@@ -109,6 +109,10 @@
       estagios: e.planta.stages.map((g) => ({ nome: g.name, status: null, acoes: g.actions.map((a) => ({ nome: a.name, tipo: a.actionTypeId.category, provedor: a.actionTypeId.provider, config: a.configuration, status: null })) })),
     };
     s.execucoes[x.id] = x;
+    // histórico com teto: a conta sincroniza com o servidor (corpo de até
+    // 100 KB). Sai a execução mais velha que já terminou.
+    const ids = Object.keys(s.execucoes);
+    for (let i = 0; ids.length - i > 25 && i < ids.length; i++) if (["InProgress", "Stopping"].indexOf(s.execucoes[ids[i]].status) < 0) delete s.execucoes[ids[i]];
     entrar(conta, e, x);
     return x;
   }

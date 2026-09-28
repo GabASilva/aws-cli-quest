@@ -85,7 +85,7 @@ function sincronizarNuvem() {
   sincronizacaoAgendada = true;
   setTimeout(() => {
     sincronizacaoAgendada = false;
-    apiSalvarProgresso({
+    const pacote = {
       xp: jogo.xp,
       melhorStreak: jogo.melhorStreak,
       progresso: {
@@ -101,7 +101,13 @@ function sincronizarNuvem() {
         trilhasOcultas: jogo.trilhasOcultas,
         conta: jogo.conta,
       },
-    });
+    };
+    // O servidor recusa corpo acima de 100.000 caracteres. A conta simulada é
+    // o que cresce (histórico de builds, deploys, eventos...); passou do
+    // limite, o progresso sobe SEM ela — XP e atividades feitas nunca podem
+    // travar por causa do sandbox. O servidor mantém a última conta que tinha.
+    if (JSON.stringify(pacote).length > 95000) delete pacote.progresso.conta;
+    apiSalvarProgresso(pacote);
   }, 600);
 }
 

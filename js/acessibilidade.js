@@ -250,7 +250,9 @@
         it.setAttribute("aria-setsize", String(itens.length));
         if (it.classList.contains("travado") && !it.getAttribute("aria-describedby")) {
           const titulo = (it.querySelector(".item-titulo") || {}).textContent || "";
-          it.setAttribute("aria-label", titulo.trim() + " — bloqueada; conclua a atividade anterior para liberar");
+          // só projeto trava (desde 26/09); o motivo certo está no title
+          // que o app.js põe no item
+          it.setAttribute("aria-label", titulo.trim() + " — bloqueado; " + (it.title || "conclua as atividades da trilha para liberar"));
         }
       });
     });

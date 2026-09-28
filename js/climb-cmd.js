@@ -121,7 +121,7 @@
     diz("");
     achados.slice(0, LIMITE).forEach((d) => diz(linhaDoDesafio(d)));
     diz("");
-    diz("✓ concluída · (vazio) a fazer — dá pra abrir qualquer uma", "aviso-climb");
+    diz("✓ concluída · (vazio) a fazer — dá pra abrir qualquer uma · · projeto ainda travado", "aviso-climb");
     diz("Abra com: climb ir <id>", "aviso-climb");
     rolar();
   }
@@ -142,8 +142,11 @@
       return;
     }
     if (!desafioLiberado(d)) {
-      diz(`"${d.titulo}" ainda está travada.`, "erro");
-      diz("Ela abre quando você concluir as anteriores da trilha " + nomeDoServico(d.servico) + ".", "aviso-climb");
+      // só projeto trava (desde 26/09): ele pede as trilhas antes
+      diz(`"${d.titulo}" ainda está travado.`, "erro");
+      diz(d.requisitos && d.requisitos.length
+        ? "O projeto abre quando você concluir a(s) trilha(s): " + d.requisitos.map(nomeDoServico).join(", ") + "."
+        : "O projeto abre quando você concluir as outras atividades da trilha " + nomeDoServico(d.servico) + ".", "aviso-climb");
       rolar();
       return;
     }

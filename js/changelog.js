@@ -24,6 +24,15 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-28",
+      data: "28 set 2026",
+      titulo: "💾 Progresso na nuvem mais firme",
+      itens: [
+        "<b>💾 Seu progresso não para mais de subir pra nuvem.</b> Quem já tinha feito muitas trilhas acumulava um histórico grande na conta simulada (builds, deploys, eventos de stack), e quando ele passava do limite o envio inteiro era recusado — sem aviso, e junto iam o XP e as atividades concluídas. Agora o XP e as atividades sobem sempre; se a conta simulada estiver grande demais, a nuvem mantém a última cópia dela, e os históricos têm tamanho máximo. Também deixaram de sumir da nuvem os serviços mais novos (CodeDeploy, CodePipeline, CodeConnections), que ficavam de fora de um limite antigo.",
+        "<b>🔧 Ajustes no deploy blue/green:</b> parar um deploy sem <code>--auto-rollback-enabled</code> agora deixa o tráfego onde estava (como na AWS) — antes ele voltava sozinho; o <code>lambda update-alias</code> aceita <code>--routing-config</code> pra fazer ou desfazer a divisão de tráfego à mão; e o Lambda recusa um segundo deploy no mesmo grupo enquanto o primeiro ainda roda.",
+      ],
+    },
+    {
       versao: "2026-09-26",
       data: "26 set 2026",
       titulo: "🛤️ A esteira de CI/CD completa — e o CloudFormation do trabalho de verdade",

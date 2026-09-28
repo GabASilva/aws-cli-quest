@@ -532,7 +532,9 @@ function sanearProgresso(p) {
   }
   // `conta` é o estado da AWS simulada do próprio usuário — guarda como veio
   // (já limitado pelo teto de 100KB do corpo). Só barra chaves perigosas no topo.
-  if (p.conta && typeof p.conta === "object") out.conta = mapaSeguro(p.conta, 50, (v) => v);
+  // 100 chaves: cada serviço do simulador é uma chave, e em 26/09 já eram 53 —
+  // com 50, os últimos (codedeploy, codepipeline...) sumiam da nuvem calados.
+  if (p.conta && typeof p.conta === "object") out.conta = mapaSeguro(p.conta, 100, (v) => v);
   return out;
 }
 
@@ -775,6 +777,9 @@ async function tratarApi(req, res, rota) {
     // progresso é RECONSTRUÍDO só com os campos conhecidos e saneados — nunca
     // guardamos o objeto cru do cliente (corta mass-assignment, lixo e a licença).
     const limpo = sanearProgresso(corpo.progresso);
+    // o cliente manda o progresso SEM a conta simulada quando ela passa do
+    // tamanho do corpo (jogo.js): aí fica a última conta que já estava salva
+    if (limpo && !limpo.conta && u.progresso && u.progresso.conta) limpo.conta = u.progresso.conta;
     if (limpo) u.progresso = limpo;
     // antifraude: compara o XP ganho com as atividades concluídas (depois de sanear)
     const totalAtiv = u.progresso && u.progresso.concluidos ? Object.keys(u.progresso.concluidos).length : 0;

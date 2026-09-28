@@ -53,6 +53,32 @@
   // LAMBDA: get-alias (com o RoutingConfig do canary)
   // ============================================================
   if (SERVICOS.lambda) {
+    // update-alias com --routing-config: é como se desfaz à mão uma divisão
+    // de canary (AdditionalVersionWeights={}) ou se faz uma na mão
+    const baseUpdateAlias = SERVICOS.lambda["update-alias"];
+    if (baseUpdateAlias) SERVICOS.lambda["update-alias"] = (conta, pos, flags) => {
+      const f2 = Object.assign({}, flags);
+      const rc = flags["routing-config"];
+      delete f2["routing-config"];
+      const r = baseUpdateAlias(conta, pos, f2);
+      if (rc === undefined) return r;
+      const f = conta.lambda.funcoes[String(flags["function-name"])];
+      const a = f.aliases[String(flags.name)];
+      let pesos = {};
+      const t = String(rc).trim();
+      if (t.charAt(0) === "{") { try { pesos = (JSON.parse(t).AdditionalVersionWeights) || {}; } catch (e) { throw new ErroCli("Error parsing parameter '--routing-config': Invalid JSON"); } }
+      else { const m = /AdditionalVersionWeights=\{([^}]*)\}/.exec(t); if (!m) throw new ErroCli("Error parsing parameter '--routing-config': forma AdditionalVersionWeights={2=0.1} (ou {} pra tirar a divisão)"); for (const par of m[1].split(",").filter(Boolean)) { const [v, w] = par.split("="); pesos[v.trim()] = Number(w); } }
+      for (const [v, w] of Object.entries(pesos)) {
+        if (!(f.versoes || []).some((x) => x.versao === v)) throw erro("UpdateAlias", "ResourceNotFoundException", `Function not found: versão ${v} não existe.`);
+        if (v === a.versao) throw erro("UpdateAlias", "InvalidParameterValueException", "Invalid function version in routing config: it must differ from the alias FunctionVersion.");
+        if (!(w > 0 && w < 1)) throw erro("UpdateAlias", "InvalidParameterValueException", "The routing weight must be between 0.0 and 1.0.");
+      }
+      if (Object.keys(pesos).length) a.pesos = pesos; else delete a.pesos;
+      avisarClimb(Object.keys(pesos).length ? "Divisão de tráfego feita à mão no alias." : `Divisão desfeita: todas as chamadas do ${a.nome} vão pra versão ${a.versao}.`);
+      const o = JSON.parse(r);
+      if (a.pesos) o.RoutingConfig = { AdditionalVersionWeights: a.pesos };
+      return js(o);
+    };
     SERVICOS.lambda["get-alias"] = (conta, pos, flags) => {
       const nomeF = String(exigirFlag(flags, "function-name"));
       const f = ((conta.lambda || {}).funcoes || {})[nomeF];
@@ -246,6 +272,7 @@
       const a = f && (f.aliases || {})[p.Alias];
       d.lambda = { funcao: p.Name, alias: p.Alias, atual: String(p.CurrentVersion), alvo: String(p.TargetVersion) };
       d.frota = [`${p.Name}:${p.Alias}`];
+      if (Object.values(s.deploys).some((x) => x.plat === "Lambda" && x.grupo === g.nome && x.app === app.nome && ["Created", "InProgress"].indexOf(x.status) >= 0)) throw erro(op, "DeploymentLimitExceededException", "The number of allowed deployments was exceeded.\nJá existe um deploy em andamento neste grupo — espere terminar ou pare com stop-deployment.");
       if (!f || !a) { d.status = "Failed"; d.fim = d.criado; d.erro = { code: "INVALID_LAMBDA_FUNCTION", message: `The Lambda function ${p.Name} or its alias ${p.Alias} could not be found.` }; }
       else if (a.versao !== d.lambda.atual) { d.status = "Failed"; d.fim = d.criado; d.erro = { code: "INVALID_LAMBDA_CONFIGURATION", message: `The alias ${p.Alias} points to version ${a.versao}, not to the CurrentVersion ${d.lambda.atual} in the AppSpec file.` }; }
       else if (!(f.versoes || []).some((v) => v.versao === d.lambda.alvo)) { d.status = "Failed"; d.fim = d.criado; d.erro = { code: "INVALID_LAMBDA_CONFIGURATION", message: `The TargetVersion ${d.lambda.alvo} of function ${p.Name} does not exist. Publish it first.` }; }
@@ -264,6 +291,7 @@
       else if (Object.values(s.deploys).some((x) => x.plat === "ECS" && x.grupo === g.nome && ["Created", "InProgress", "Ready"].indexOf(x.status) >= 0)) throw erro(op, "DeploymentLimitExceededException", `The number of allowed deployments was exceeded.\nJá existe um deploy em andamento neste grupo — espere terminar ou pare com stop-deployment.`);
     }
     s.deploys[d.id] = d;
+    if (typeof CLIMB_APARAR_DEPLOYS === "function") CLIMB_APARAR_DEPLOYS(s);
     g.ultimo = d.id;
     avisarClimb(d.status === "Failed" ? "Deploy criado — e já falhou. Veja o motivo no errorInformation do get-deployment."
       : plat === "Lambda" ? `Deploy criado. O CodeDeploy vai mover o alias ${d.lambda.alias} da versão ${d.lambda.atual} pra ${d.lambda.alvo} seguindo ${d.config}. Acompanhe com get-deployment (e veja o alias com lambda get-alias).`
@@ -398,12 +426,20 @@
     if (["Created", "InProgress", "Ready"].indexOf(d.status) < 0) throw erro("StopDeployment", "DeploymentAlreadyCompletedException", `The deployment is already complete: ${d.id} (status ${d.status}).`);
     const volta = flags["auto-rollback-enabled"] === true || flags["auto-rollback-enabled"] === "true";
     d.status = "Stopped"; d.fim = agora();
-    if (d.plat === "Lambda") { const a = aliasDe(conta, d); if (a) { a.versao = d.lambda.atual; delete a.pesos; } d.lambda.peso = 0; }
-    else { d.ecs.peso = 0; d.ecs.verdeNoAr = false; }
-    if (volta) d.rollback = { rollbackMessage: `Stopped by user with automatic rollback: traffic returned to ${d.plat === "Lambda" ? "version " + d.lambda.atual : d.ecs.azul}.` };
-    avisarClimb(d.plat === "Lambda"
-      ? `Parado. O alias ${d.lambda.alias} voltou inteiro pra versão ${d.lambda.atual} — os ${Math.round(100)}% das chamadas estão de novo na versão que funcionava.`
-      : `Parado. O tráfego nunca saiu (ou voltou) pro ${d.ecs.azul}, e as tarefas novas foram removidas.`);
+    // Só o --auto-rollback-enabled devolve o tráfego; sem ele, fica onde parou
+    // (numa divisão de canary, inclusive) e voltar é trabalho seu.
+    if (volta) {
+      if (d.plat === "Lambda") { const a = aliasDe(conta, d); if (a) { a.versao = d.lambda.atual; delete a.pesos; } d.lambda.peso = 0; }
+      else { d.ecs.peso = 0; d.ecs.verdeNoAr = false; }
+      d.rollback = { rollbackMessage: `Stopped by user with automatic rollback: traffic returned to ${d.plat === "Lambda" ? "version " + d.lambda.atual : d.ecs.azul}.` };
+    }
+    avisarClimb(!volta
+      ? (d.plat === "Lambda"
+        ? `Parado SEM rollback: o alias ${d.lambda.alias} ficou como estava (${Math.round((d.lambda.peso || 0) * 100)}% na versão ${d.lambda.alvo}). Pra devolver o tráfego, pare com --auto-rollback-enabled ou tire a divisão à mão: lambda update-alias --function-name ${d.lambda.funcao} --name ${d.lambda.alias} --function-version ${d.lambda.atual} --routing-config AdditionalVersionWeights={}`
+        : `Parado SEM rollback: o tráfego ficou onde estava. Pra garantir a volta pro ${d.ecs.azul}, use --auto-rollback-enabled.`)
+      : d.plat === "Lambda"
+        ? `Parado com rollback. O alias ${d.lambda.alias} voltou inteiro pra versão ${d.lambda.atual} — todas as chamadas estão de novo na versão que funcionava.`
+        : `Parado com rollback. O tráfego voltou (ou nunca saiu) pro ${d.ecs.azul}, e as tarefas novas foram removidas.`);
     return js({ status: "Succeeded", statusMessage: "No more commands will be scheduled for execution in the deployment instances" });
   };
 
@@ -447,6 +483,7 @@
     add("deploy.create-application", "LAMBDA E ECS\n    --compute-platform Lambda | ECS: aí o deploy não copia pacote — ele troca\n    o tráfego (alias do Lambda, target group do ECS).");
     add("deploy.create-deployment-group", "LAMBDA\n    --deployment-config-name CodeDeployDefault.LambdaCanary10Percent5Minutes\n    --deployment-style deploymentType=BLUE_GREEN,deploymentOption=WITH_TRAFFIC_CONTROL\n\nECS (blue/green)\n    --ecs-services serviceName=<serviço>,clusterName=<cluster>\n    --load-balancer-info '{\"targetGroupPairInfoList\":[{\"targetGroups\":[{\"name\":\"<azul>\"},{\"name\":\"<verde>\"}],\"prodTrafficRoute\":{\"listenerArns\":[\"<listener>\"]}}]}'\n    --blue-green-deployment-configuration '{\"deploymentReadyOption\":{\"actionOnTimeout\":\"STOP_DEPLOYMENT\",\"waitTimeInMinutes\":60}}'");
     add("deploy.create-deployment", "LAMBDA E ECS\n    --revision file://<revisao>.json — revisionType AppSpecContent, com o appspec:\n    Lambda: Name, Alias, CurrentVersion, TargetVersion\n    ECS: TaskDefinition (ARN da revisão nova) e LoadBalancerInfo");
+    add("lambda.update-alias", "DIVISÃO DE TRÁFEGO (canary à mão)\n    --routing-config AdditionalVersionWeights={2=0.1}   10% pra versão 2\n    --routing-config AdditionalVersionWeights={}        tira a divisão");
     add("deploy.stop-deployment", "--auto-rollback-enabled: além de parar, devolve o tráfego pra versão que\nestava no ar (alias do Lambda / target group azul do ECS).");
   }
   if (typeof PORQUE !== "undefined") Object.assign(PORQUE, {
