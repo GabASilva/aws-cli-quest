@@ -114,8 +114,8 @@ function renderCard() {
   if (!d) {
     alvo.innerHTML = `<div class="card-vazio">
       <h2>👈 Escolha um desafio na lista</h2>
-      <p>Comece pela trilha do <strong>S3</strong> se for sua primeira vez. Cada desafio concluído libera o próximo —
-      e completar as trilhas libera os <strong>Projetos</strong>, onde você monta sistemas completos só com o CLI.</p>
+      <p>Comece pela trilha do <strong>S3</strong> se for sua primeira vez — ou vá direto no comando que você quer praticar: qualquer atividade abre na hora.
+      Completar uma trilha libera o <strong>Projeto</strong> dela, onde você monta um sistema completo só com o CLI.</p>
       <p>No terminal abaixo, <code>aws help</code> mostra os serviços, <code>ls</code> mostra seus arquivos locais.</p>
     </div>`;
     return;
