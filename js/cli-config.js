@@ -36,6 +36,15 @@
 
   function cli(conta) {
     if (!conta.cli) conta.cli = { perfis: { default: { region: conta.regiao || "us-east-1", output: "json", quest: true } }, ordem: ["default"], sso: {}, login: {} };
+    // o `aws configure` interativo da trilha Primeiros passos (setup-lab.js)
+    // grava em conta.setup: é o MESMO perfil default, então vale aqui também
+    const st = conta.setup, def = conta.cli.perfis.default;
+    if (st && st.configurado && def && def.quest && st.setupAplicado !== st.regiao + "|" + st.output) {
+      if (st.regiao) def.region = st.regiao;
+      if (st.output) def.output = st.output;
+      st.setupAplicado = st.regiao + "|" + st.output;
+      escreverArquivos(conta);
+    }
     return conta.cli;
   }
   // a credencial do perfil default é a do lab (usuário "estudante"), sempre válida
