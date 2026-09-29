@@ -17,6 +17,7 @@ const crypto = require("crypto");
 const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
+const pagGuias = require("./lib/paginas-guias.js"); // /instalar-aws-cli, /comandos-aws-cli, /erros-aws-cli
 const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades nas páginas públicas
 const semGabarito = require("./lib/sem-gabarito.js"); // o cliente não recebe dica nem solução do que é pago
 const licencaServidor = require("./lib/licenca-servidor.js"); // quem pode ver o quê, decidido aqui
@@ -1532,7 +1533,7 @@ function servirLicaoPublica(req, res, rota) {
   const base = hostBasePublico(req);
   if (rota === "/aprender" || rota === "/aprender/") {
     servirHtml(res, pagLicoes.paginaIndice(LICOES_PUB, {
-      base, gratis: GRATIS_PUB,
+      base, gratis: GRATIS_PUB, guias: pagGuias.secaoGuiasDoIndice(base),
       comandosComPagina: CONTEUDO_PUB ? conteudoApp.comandosComPagina(CONTEUDO_PUB) : {},
     }));
     return true;
@@ -1613,6 +1614,7 @@ function servirSitemap(res) {
     { loc: `${base}/privacidade.html`, freq: "yearly", pri: "0.3" },
   ];
   if (SIMULADO_PUB) urls.push({ loc: base + ROTA_SIMULADO, freq: "monthly", pri: "0.9" });
+  for (const r of pagGuias.ROTAS_GUIAS) urls.push({ loc: base + r, freq: "monthly", pri: "0.9" });
   if (LICOES_PUB) {
     for (const u of pagLicoes.urlsLicoes(LICOES_PUB, base)) {
       urls.push({ loc: u, freq: "monthly", pri: u.endsWith("/aprender") ? "0.9" : "0.7" });
@@ -2006,6 +2008,10 @@ http
       }
       if (rota === "/aprender" || rota.startsWith("/aprender/")) {
         if (servirLicaoPublica(req, res, rota)) return;
+      }
+      if (pagGuias.ROTAS_GUIAS.includes(rota)) {
+        const html = pagGuias.paginaGuia(rota.slice(1), { base: hostBasePublico(), conteudo: CONTEUDO_PUB });
+        if (html) return servirHtml(res, html);
       }
       servirEstatico(req, res, rota);
     } catch (e) {
