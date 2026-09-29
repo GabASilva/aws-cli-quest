@@ -215,9 +215,23 @@
     return { chave, trocou, passos, faltou, refez, criados: passos ? novidades(antes, fotografia(conta)) : [] };
   }
 
-  // guarda só as MAX_CONTAS usadas por último (a empresa e a atual sempre ficam)
+  // Ambiente sem atividade (o sandbox.js): só troca o ponteiro, sem preparo.
+  function entrarAmbiente(chave) {
+    const j = garantir();
+    if (!j) return null;
+    const trocou = j.ambiente !== chave;
+    if (!j.contas[chave]) j.contas[chave] = novaConta(chave);
+    j.ambiente = chave;
+    j.conta = j.contas[chave];
+    j.conta.__usado = Date.now();
+    podar(j);
+    return { chave, trocou };
+  }
+
+  // guarda só as MAX_CONTAS usadas por último (empresa, sandbox e a atual
+  // sempre ficam: as duas primeiras não se reconstroem a partir de nada)
   function podar(j) {
-    const outras = Object.keys(j.contas).filter((k) => k !== "empresa" && k !== j.ambiente);
+    const outras = Object.keys(j.contas).filter((k) => k !== "empresa" && k !== "sandbox" && k !== j.ambiente);
     if (outras.length <= MAX_CONTAS) return;
     outras.sort((a, b) => ((j.contas[a] || {}).__usado || 0) - ((j.contas[b] || {}).__usado || 0));
     for (const k of outras.slice(0, outras.length - MAX_CONTAS)) delete j.contas[k];
@@ -241,11 +255,12 @@
   }
   function nomeDoAmbiente(chave) {
     if (chave === "empresa") return "conta da empresa (Projetos, Mundo real e Diagnóstico)";
+    if (chave === "sandbox") return "Sandbox livre";
     const m = (typeof SERVICOS_META !== "undefined" ? SERVICOS_META : []).find((s) => s.id === chave);
     return "trilha " + (m ? m.nome : chave);
   }
 
-  const API = { garantir, entrar, marcarFeita, limparAtual, nomeDoAmbiente, chaveDe, DEPENDENCIAS, COMPARTILHADAS };
+  const API = { garantir, entrar, entrarAmbiente, marcarFeita, limparAtual, nomeDoAmbiente, chaveDe, DEPENDENCIAS, COMPARTILHADAS };
   if (typeof globalThis !== "undefined") globalThis.CLIMB_AMBIENTES = API;
 
   // ============================================================
