@@ -68,7 +68,7 @@ console.log("\n=== EXECUÇÃO SEQUENCIAL (auto-pass + validadores quebrados) ===
 const conta = criarContaAws();
 let ultimoCmd = null;
 // Cópia da mesma função do teste/fumaca.js — mexeu num, mexa no outro.
-const resolver = (linha) => resolverPlaceholders(conta, linha); // teste/placeholders.js
+const resolver = (linha) => resolverPlaceholders(conta, linha); // js/placeholders.js
 const autopass = [];
 for (const d of DESAFIOS) {
   if (d.tipo === "projeto") continue;

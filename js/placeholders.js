@@ -3,8 +3,10 @@
 // Os ids reais são sorteados na criação, então a solução guarda um marcador e
 // o harness troca pelo id que existe na conta NAQUELE momento.
 //
-// Fonte ÚNICA: teste/fumaca.js e teste/analise.js injetam este arquivo no
-// mesmo eval dos módulos do jogo. Até 25/09/2026 eram duas cópias à mão, e
+// Fonte ÚNICA: teste/fumaca.js, teste/analise.js e teste/isolamento.js
+// injetam este arquivo no mesmo eval dos módulos do jogo — e desde 29/09/2026
+// o navegador também carrega, porque o ambientes.js prepara a conta de uma
+// trilha rodando as soluções das atividades anteriores. Até 25/09/2026 eram duas cópias à mão, e
 // cada placeholder novo tinha de ser escrito duas vezes.
 //
 // Placeholder novo entra AQUI. Ele resolve pro ÚLTIMO recurso criado daquele

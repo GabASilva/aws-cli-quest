@@ -99,14 +99,12 @@ function sincronizarNuvem() {
         atividadeDiaria: jogo.atividadeDiaria,
         streakDias: jogo.streakDias,
         trilhasOcultas: jogo.trilhasOcultas,
-        conta: jogo.conta,
       },
     };
-    // O servidor recusa corpo acima de 100.000 caracteres. A conta simulada é
-    // o que cresce (histórico de builds, deploys, eventos...); passou do
-    // limite, o progresso sobe SEM ela — XP e atividades feitas nunca podem
-    // travar por causa do sandbox. O servidor mantém a última conta que tinha.
-    if (JSON.stringify(pacote).length > 95000) delete pacote.progresso.conta;
+    // A conta simulada NÃO sobe mais (desde 29/09/2026): cada trilha tem a sua
+    // e todas são reconstruíveis a partir do progresso (ambientes.js). Antes
+    // ela subia inteira, crescia até passar do limite de 100.000 caracteres
+    // do servidor e travava a sincronização de XP em silêncio.
     apiSalvarProgresso(pacote);
   }, 600);
 }
@@ -122,6 +120,15 @@ function salvarJogo() {
 
 // Aplica um progresso vindo do servidor por cima do estado atual.
 function aplicarProgressoNuvem(perfil, progresso) {
+  // Os ambientes (contas por trilha) só existem neste navegador: a nuvem não
+  // os tem. Sem trazer do slot local, cada recarga de quem está logado os
+  // perderia — e junto os arquivos do terminal.
+  let cache = null;
+  try {
+    const bruto = localStorage.getItem(chaveLocal());
+    const s = bruto ? JSON.parse(bruto) : null;
+    if (s && s.contas) cache = { contas: s.contas, ambiente: s.ambiente, local: s.local };
+  } catch (e) { /* sem cache: os ambientes se refazem ao abrir as atividades */ }
   jogo = estadoInicial();
   if (perfil) {
     jogo.nomeJogador = perfil.usuario;
@@ -139,7 +146,11 @@ function aplicarProgressoNuvem(perfil, progresso) {
     jogo.atividadeDiaria = progresso.atividadeDiaria || {};
     jogo.streakDias = progresso.streakDias || { atual: 0, melhor: 0, ultimo: "" };
     if (Array.isArray(progresso.trilhasOcultas)) jogo.trilhasOcultas = progresso.trilhasOcultas;
-    if (progresso.conta) jogo.conta = progresso.conta;
+    if (progresso.conta) jogo.conta = progresso.conta; // formato antigo: vira a "empresa"
+  }
+  if (cache) {
+    Object.assign(jogo, cache);
+    jogo.conta = cache.contas[cache.ambiente] || jogo.conta;
   }
   jogo.conta = normalizarConta(jogo.conta); // migra contas antigas (campos novos)
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
@@ -234,6 +245,8 @@ function entrarComConta(perfil, progressoNuvem) {
   const fundiu = tinhaLocal && tinhaNuvem;
 
   const merged = mesclarEstados(local, progressoNuvem);
+  // os ambientes jogados deslogado continuam (são deste navegador)
+  const ambientes = jogo.contas ? { contas: jogo.contas, ambiente: jogo.ambiente, local: jogo.local } : null;
   jogo = estadoInicial();
   jogo.nomeJogador = perfil ? perfil.usuario : jogo.nomeJogador;
   jogo.xp = merged.xp;
@@ -248,6 +261,10 @@ function entrarComConta(perfil, progressoNuvem) {
   jogo.streakDias = merged.streakDias || { atual: 0, melhor: 0, ultimo: "" };
   if (Array.isArray(merged.trilhasOcultas)) jogo.trilhasOcultas = merged.trilhasOcultas;
   jogo.conta = normalizarConta(merged.conta); // migra contas antigas (campos novos)
+  if (ambientes) {
+    Object.assign(jogo, ambientes);
+    jogo.conta = ambientes.contas[ambientes.ambiente] || jogo.conta;
+  }
 
   try { localStorage.setItem(chaveLocal(), JSON.stringify(jogo)); } catch (e) { /* ok */ }
   // some com o slot anônimo: o que foi jogado deslogado agora é da conta,

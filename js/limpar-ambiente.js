@@ -40,7 +40,7 @@
     const linhas = [];
     let total = 0;
     for (const [svc, v] of Object.entries(conta || {})) {
-      if (LOCAIS.indexOf(svc) >= 0 || !v || typeof v !== "object" || Array.isArray(v)) continue;
+      if (LOCAIS.indexOf(svc) >= 0 || svc.indexOf("__") === 0 || !v || typeof v !== "object" || Array.isArray(v)) continue;
       let n = 0;
       for (const [k, col] of Object.entries(v)) {
         if (!col || typeof col !== "object" || Array.isArray(col)) continue;
@@ -60,13 +60,25 @@
     return partes.join(", ") + (resto ? ` e mais ${resto} em outros serviços` : "");
   }
 
+  // Com conta por trilha (ambientes.js), limpar é zerar SÓ a da trilha aberta —
+  // as outras continuam. Sem ele (testes antigos), a conta única, como antes.
+  const AMB = () => (typeof globalThis !== "undefined" && globalThis.CLIMB_AMBIENTES) || null;
+  function onde() {
+    const A = AMB();
+    return A && typeof jogo !== "undefined" && jogo && jogo.ambiente ? "o ambiente da " + A.nomeDoAmbiente(jogo.ambiente) : "a conta simulada";
+  }
+
   function limpar() {
     if (typeof jogo === "undefined" || !jogo) return null;
     const velha = jogo.conta || {};
     const antes = inventario(velha);
-    const nova = criarContaAws();
-    for (const k of LOCAIS) if (velha[k] !== undefined) nova[k] = velha[k];
-    jogo.conta = nova;
+    const A = AMB();
+    if (A) A.limparAtual();
+    else {
+      const nova = criarContaAws();
+      for (const k of LOCAIS) if (velha[k] !== undefined) nova[k] = velha[k];
+      jogo.conta = nova;
+    }
     if (typeof salvarJogo === "function") salvarJogo();
     try {
       if (typeof renderCard === "function") renderCard();
@@ -76,8 +88,9 @@
   }
 
   function avisoFeito(antes) {
-    return `🧹 Ambiente limpo: ${antes.total} ${antes.total === 1 ? "recurso apagado" : "recursos apagados"}. ` +
-      "Seu XP, as atividades concluídas, os arquivos do terminal e os perfis em ~/.aws continuam onde estavam.";
+    return `🧹 Limpei ${onde()}: ${antes.total} ${antes.total === 1 ? "recurso apagado" : "recursos apagados"}. ` +
+      "Seu XP, as atividades concluídas, os arquivos do terminal e os perfis em ~/.aws continuam onde estavam." +
+      (AMB() ? " Ao abrir uma atividade desta trilha, o que ela precisa é preparado de novo." : "");
   }
 
   // ---------- botão ----------
@@ -88,10 +101,10 @@
     b.addEventListener("click", () => {
       const inv = inventario(jogo && jogo.conta);
       if (!inv.total) {
-        if (typeof imprimir === "function") { imprimir("🧹 Nada pra limpar: a conta simulada já está vazia.", "aviso-climb"); if (typeof rolarTerminal === "function") rolarTerminal(); }
+        if (typeof imprimir === "function") { imprimir(`🧹 Nada pra limpar: ${onde()} já está vazio.`, "aviso-climb"); if (typeof rolarTerminal === "function") rolarTerminal(); }
         return;
       }
-      if (!confirm(`Limpar o ambiente AWS simulado?\n\nVai apagar ${inv.total} recursos: ${resumo(inv, 5)}.\n\nSeu XP e as atividades concluídas NÃO são afetados.`)) return;
+      if (!confirm(`Limpar ${onde()}?\n\nVai apagar ${inv.total} recursos: ${resumo(inv, 5)}.\n\nSeu XP e as atividades concluídas NÃO são afetados.`)) return;
       const antes = limpar();
       if (antes && typeof imprimir === "function") { imprimir(avisoFeito(antes), "aviso-climb"); if (typeof rolarTerminal === "function") rolarTerminal(); }
     });
@@ -102,5 +115,5 @@
   }
 
   // pro `climb limpar` (climb-cmd.js) e pros testes
-  if (typeof window !== "undefined") window.CLIMB_AMBIENTE = { inventario, resumo, limpar, avisoFeito };
+  if (typeof window !== "undefined") window.CLIMB_AMBIENTE = { inventario, resumo, limpar, avisoFeito, onde };
 })();

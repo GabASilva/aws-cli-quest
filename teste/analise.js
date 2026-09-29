@@ -50,5 +50,5 @@ const arquivos = ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.
 const codigo = BASE_CADEIA + arquivos.map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8")).join("\n");
 const corpo = fs.readFileSync(path.join(__dirname, "analise-corpo.js"), "utf8");
 // Placeholders das soluções: arquivo único, o mesmo que o fumaca.js usa.
-const PLACEHOLDERS = fs.readFileSync(path.join(__dirname, "placeholders.js"), "utf8").replace(/^"use strict";/, "");
+const PLACEHOLDERS = fs.readFileSync(path.join(raiz, "js", "placeholders.js"), "utf8").replace(/^"use strict";/, "");
 eval(codigo + "\n" + PLACEHOLDERS + "\n;(function(){\n" + corpo + "\n})();");

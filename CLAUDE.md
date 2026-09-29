@@ -16,6 +16,11 @@
 - Testes obrigatórios: `node teste/fumaca.js` (executa a solução de todos os
   desafios "aws" e valida) e `node teste/analise.js` (coerência didática:
   auto-pass, ordem, XP, ids). **Os dois verdes antes de commitar.**
+- `node teste/isolamento.js` também: abre CADA atividade sozinha, numa conta
+  limpa, com o preparo do `js/ambientes.js` (conta por trilha). Atividade que
+  usa recurso de OUTRA trilha falha aqui — declare em `DEPENDENCIAS` do
+  ambientes.js (id da atividade ou `trilha@ate-id`). `ISOLAR=<id>` mostra a
+  saída de cada linha daquela atividade.
 - Todo comando novo em `SERVICOS` PRECISA de manual em `manuais.js` (o fumaça
   falha sem). O tokenizer remove aspas; validadores de `--query` recebem o valor
   sem aspas.
@@ -109,14 +114,16 @@ faixa (ex.: dyn-2 120xp) — é proposital, comemore o marco.
 - `solucao` precisa RODAR verde no fumaça (conta compartilhada entre todos os
   desafios do teste: cuidado com nome já usado e com ordem de dependências).
   Placeholders suportados: `<id-da-instância>`, `<vpc-id>`, `<igw-id>` e os
-  demais de `teste/placeholders.js` — arquivo ÚNICO que o fumaça e o análise
-  usam. Placeholder novo entra lá, uma vez só.
+  demais de `js/placeholders.js` — arquivo ÚNICO que os testes E o navegador
+  usam (o preparo automático resolve os placeholders das atividades
+  anteriores). Placeholder novo entra lá, uma vez só.
 
 ### Depois de criar
 
 1. `node --check` em cada arquivo tocado.
-2. `node teste/fumaca.js` E `node teste/analise.js` verdes (auto-pass = 0,
-   sem id duplicado, sem "solução falhou").
+2. `node teste/fumaca.js`, `node teste/analise.js` E `node teste/isolamento.js`
+   verdes (auto-pass = 0, sem id duplicado, sem "solução falhou", toda
+   atividade funcionando aberta fora de ordem).
 3. Desafios shell/Linux (solução não começa com "aws") não rodam no fumaça —
    teste no preview manualmente.
 4. **Serviço novo? Escreva a lição** (`LICOES` + `PORQUE` em `licoes.js`) —

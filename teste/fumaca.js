@@ -80,7 +80,7 @@ const teste = `
   }
 
   // ids reais são aleatórios — resolve os placeholders das soluções.
-  const resolver = (linha) => resolverPlaceholders(conta, linha); // teste/placeholders.js
+  const resolver = (linha) => resolverPlaceholders(conta, linha); // js/placeholders.js
 
   for (const d of DESAFIOS) {
     // Laboratório de diagnóstico: o ambiente quebrado é montado aqui (no app
@@ -196,5 +196,5 @@ const teste = `
 `;
 
 // Os placeholders moram num arquivo só, compartilhado com o analise.js.
-const PLACEHOLDERS = fs.readFileSync(path.join(__dirname, "placeholders.js"), "utf8").replace(/^"use strict";/, "");
+const PLACEHOLDERS = fs.readFileSync(path.join(raiz, "js", "placeholders.js"), "utf8").replace(/^"use strict";/, "");
 eval(codigo + "\n" + PLACEHOLDERS + teste);

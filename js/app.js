@@ -359,8 +359,13 @@ function celebrar(d) {
   renderCard();
 
   // sugere o próximo desafio da trilha
+  // A próxima DEPOIS desta (e só então as puladas lá atrás): com atividade
+  // livre, voltar pro começo da trilha jogava a pessoa pra trás — e refazia o
+  // ambiente preparado até ali (ambientes.js).
   const trilha = desafiosDoServico(d.servico);
-  const proximo = trilha.find((x) => !desafioConcluido(x.id) && desafioLiberado(x));
+  const aqui = trilha.indexOf(d);
+  const pendente = (x) => !desafioConcluido(x.id) && desafioLiberado(x);
+  const proximo = trilha.slice(aqui + 1).find(pendente) || trilha.find(pendente);
   if (proximo) {
     selecionarDesafio(proximo.id);
   } else if (d.servico !== "projetos" && servicoCompleto(d.servico)) {

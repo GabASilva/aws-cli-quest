@@ -166,8 +166,9 @@
     if (!A || typeof jogo === "undefined") { diz("climb limpar: indisponível agora.", "erro"); rolar(); return; }
     const inv = A.inventario(jogo.conta);
     if (!/--confirmar|--sim|(^|\s)-y(\s|$)/.test(resto || "")) {
-      if (!inv.total) { diz("🧹 A conta simulada já está vazia — nada pra limpar.", "aviso-climb"); rolar(); return; }
-      diz(`Na sua conta simulada existem ${inv.total} recursos:`);
+      const onde = A.onde ? A.onde() : "a conta simulada";
+      if (!inv.total) { diz(`🧹 Nada pra limpar: ${onde} já está vazio.`, "aviso-climb"); rolar(); return; }
+      diz(`${onde.charAt(0).toUpperCase() + onde.slice(1)} tem ${inv.total} ${inv.total === 1 ? "recurso" : "recursos"}:`);
       for (const l of inv.linhas.slice(0, 12)) diz(`  ${String(l.n).padStart(4)}  ${l.nome}`);
       if (inv.linhas.length > 12) diz(`        … e mais ${inv.linhas.length - 12} serviços`);
       diz("");
@@ -177,7 +178,7 @@
       return;
     }
     const antes = A.limpar();
-    diz(antes && antes.total ? A.avisoFeito(antes) : "🧹 A conta simulada já estava vazia.", "aviso-climb");
+    diz(antes && antes.total ? A.avisoFeito(antes) : "🧹 Já estava vazio.", "aviso-climb");
     rolar();
   }
 
