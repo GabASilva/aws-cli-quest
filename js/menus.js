@@ -36,7 +36,7 @@
     {
       id: "mnVoce", rotulo: "👤 Você",
       itens: ["#btnPerfil", "#btnConquistas", "#btnSeguranca", "#btnPlano",
-              "#btnAssinarCustom", "#btnTema", "#btnResetar"],
+              "#btnAssinarCustom", "#btnTema", "#btnLimparAmbiente", "#btnResetar"],
     },
   ];
   const LINKS_RODAPE = ["#btnComoJogar", "#btnNovidades"];

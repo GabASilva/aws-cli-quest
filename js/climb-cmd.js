@@ -61,8 +61,9 @@
     diz("climb — atalhos do próprio CLImb (a lista à esquerda faz o mesmo)");
     diz("");
     diz("  climb proxima            abre a próxima atividade não concluída");
-    diz("  climb buscar <termo>     procura entre as 630 atividades");
+    diz(`  climb buscar <termo>     procura entre as ${typeof DESAFIOS !== "undefined" ? DESAFIOS.length : ""} atividades`);
     diz("  climb ir <id>            abre uma atividade pelo id (ex.: s3-7)");
+    diz("  climb limpar             mostra o que existe na conta simulada e como limpar");
     diz("  climb --help             esta ajuda");
     diz("");
     diz("O id de cada atividade aparece na busca. Comandos da AWS são os de verdade:", "aviso-climb");
@@ -157,6 +158,29 @@
     rolar();
   }
 
+  // ---------- limpar o ambiente (limpar-ambiente.js) ----------
+  // Dois passos de propósito: o primeiro só mostra o inventário, o segundo
+  // (com --confirmar) apaga. Nada de confirm() no meio do terminal.
+  function limparAmbiente(resto) {
+    const A = window.CLIMB_AMBIENTE;
+    if (!A || typeof jogo === "undefined") { diz("climb limpar: indisponível agora.", "erro"); rolar(); return; }
+    const inv = A.inventario(jogo.conta);
+    if (!/--confirmar|--sim|(^|\s)-y(\s|$)/.test(resto || "")) {
+      if (!inv.total) { diz("🧹 A conta simulada já está vazia — nada pra limpar.", "aviso-climb"); rolar(); return; }
+      diz(`Na sua conta simulada existem ${inv.total} recursos:`);
+      for (const l of inv.linhas.slice(0, 12)) diz(`  ${String(l.n).padStart(4)}  ${l.nome}`);
+      if (inv.linhas.length > 12) diz(`        … e mais ${inv.linhas.length - 12} serviços`);
+      diz("");
+      diz("Pra apagar TUDO isso (XP, atividades, arquivos locais e ~/.aws ficam):", "aviso-climb");
+      diz("  climb limpar --confirmar", "aviso-climb");
+      rolar();
+      return;
+    }
+    const antes = A.limpar();
+    diz(antes && antes.total ? A.avisoFeito(antes) : "🧹 A conta simulada já estava vazia.", "aviso-climb");
+    rolar();
+  }
+
   // ---------- despacho ----------
   function tratar(linha) {
     const bruto = String(linha).trim();
@@ -170,6 +194,7 @@
     if (sub === "proxima" || sub === "next") return proxima();
     if (sub === "buscar" || sub === "busca" || sub === "procurar") return buscar(resto);
     if (sub === "ir" || sub === "abrir") return ir(resto);
+    if (sub === "limpar" || sub === "faxina") return limparAmbiente(resto);
 
     diz(`climb: subcomando desconhecido "${partes[1]}".`, "erro");
     diz("Veja os disponíveis com: climb --help", "aviso-climb");
