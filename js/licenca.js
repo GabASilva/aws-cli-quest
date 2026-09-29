@@ -19,7 +19,7 @@
 // "formatos" (JSON e YAML) entra aqui porque é Fundamentos e pré-requisito:
 // as 42 atividades com JSON na linha de comando e as 49 com file:// dependem
 // dela. Cobrar por ela seria cobrar pra entender o que já está sendo pedido.
-const SERVICOS_GRATIS = ["setup", "linux", "formatos", "s3", "ec2", "iam"];
+const SERVICOS_GRATIS = ["setup", "linux", "formatos", "s3", "ec2", "iam", "cli-config"];
 
 // As N PRIMEIRAS de CADA trilha são abertas (decisão do Gabriel, 2026-09-01).
 // Antes, quem não era Pro via 47 das 53 trilhas como um muro: não dava pra
