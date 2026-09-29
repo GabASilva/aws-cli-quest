@@ -1496,6 +1496,9 @@ try {
   // O conteúdo do app (manuais + atividades) entra nas páginas de /aprender:
   // sem ele elas saem com ~240 palavras, que é raso demais pro Google indexar.
   CONTEUDO_PUB = conteudoApp.carregar(RAIZ);
+  // As lições que as trilhas novas trazem no próprio arquivo (*-completo.js)
+  // entram aqui; as de licoes.js têm prioridade se o id repetir.
+  for (const [id, l] of Object.entries(CONTEUDO_PUB.licoes || {})) if (!LICOES_PUB[id]) LICOES_PUB[id] = l;
   console.log(`Lições públicas: ${Object.keys(LICOES_PUB).length} páginas em /aprender` +
     ` (grátis: ${GRATIS_PUB.servicos.length} trilhas + ${GRATIS_PUB.porTrilha} por trilha)` +
     `, com ${Object.keys(CONTEUDO_PUB.manuais).length} manuais e ${CONTEUDO_PUB.desafios.length} atividades`);
