@@ -24,6 +24,14 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-09-29",
+      data: "29 set 2026",
+      titulo: "🔑 Configurar a CLI de verdade: perfis, chaves, role e SSO",
+      itens: [
+        "<b>🔑 Trilha nova: Configurar a CLI</b> (em Fundamentos, depois do IAM). É a dúvida número um de quem começa — e agora o <code>aws configure</code> responde de verdade:<br>• <code>configure list</code>, <code>list-profiles</code>, <code>set</code> e <code>get</code>, gravando nos arquivos <code>~/.aws/config</code> e <code>~/.aws/credentials</code> que você lê com <code>cat</code>;<br>• <code>--profile</code> em qualquer comando, com os erros reais: <i>could not be found</i>, <i>Unable to locate credentials</i>, <i>You must specify a region</i> e o <i>security token is invalid</i> depois de rotacionar a chave;<br>• <code>sts assume-role</code> e o perfil com <code>role_arn</code> que assume a role sozinho;<br>• <code>aws sso login</code>/<code>logout</code> e o <code>aws login</code> novo, com o navegador simulado.",
+      ],
+    },
+    {
       versao: "2026-09-28",
       data: "28 set 2026",
       titulo: "💾 Progresso na nuvem mais firme",

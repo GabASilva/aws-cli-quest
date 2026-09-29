@@ -194,6 +194,15 @@ function resolverPlaceholders(conta, linha) {
   if (linha.includes("<tg:") && conta.elb) linha = linha.replace(/<tg:([^>]+)>/g, (m, n) => ((conta.elb.tgs || {})[n] || {}).arn || "");
   if (linha.includes("<lb-vitrine>") && conta.elb) linha = linha.replace(/<lb-vitrine>/g, ((conta.elb.lbs || {})["alb-vitrine"] || {}).arn || "");
   if (linha.includes("<listener-vitrine>") && conta.elb) linha = linha.replace(/<listener-vitrine>/g, (Object.values(conta.elb.listeners || {}).find((l) => l.lb === "alb-vitrine") || {}).arn || "");
+  // Configurar a CLI: a chave de acesso mais nova ATIVA do usuário, o segredo
+  // dela, a mais antiga, e o ARN de uma role pelo nome.
+  linha = linha.replace(/<(chave-de|segredo-de|chave-antiga):([^>]+)>/g, (m, tipo, u) => {
+    const ks = ((((conta.iam || {}).usuarios || {})[u] || {}).chaves || []);
+    const ativas = ks.filter((k) => k.status === "Active");
+    const k = tipo === "chave-antiga" ? ks[0] : ativas[ativas.length - 1];
+    return k ? (tipo === "segredo-de" ? k.segredo : k.id) : m;
+  });
+  linha = linha.replace(/<role-arn:([^>]+)>/g, (m, n) => `arn:aws:iam::${conta.contaId}:role/${n}`);
   // KMS: o KeyId por trás de um alias (<chave-do-alias:alias/chave-loja>) — as
   // operações de gestão da chave não aceitam alias, só o KeyId
   if (linha.includes("<chave-do-alias:") && conta.kms) linha = linha.replace(/<chave-do-alias:([^>]+)>/g, (m, a) => (conta.kms.aliases || {})[a] || "");
