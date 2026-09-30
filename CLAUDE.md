@@ -21,6 +21,9 @@
   usa recurso de OUTRA trilha falha aqui — declare em `DEPENDENCIAS` do
   ambientes.js (id da atividade ou `trilha@ate-id`). `ISOLAR=<id>` mostra a
   saída de cada linha daquela atividade.
+- Mexeu em turma, licença, checkout ou plano Escola? `node teste/escola.js`
+  (sobe o servidor com banco temporário e testa professor, preço escola,
+  vagas pagas, painel e tarefas de ponta a ponta).
 - Todo comando novo em `SERVICOS` PRECISA de manual em `manuais.js` (o fumaça
   falha sem). O tokenizer remove aspas; validadores de `--query` recebem o valor
   sem aspas.

@@ -52,6 +52,7 @@
   <button data-aba="resumo" class="ativa">📊 Resumo</button>
   <button data-aba="usuarios">👤 Usuários</button>
   <button data-aba="codigos">🎟️ Códigos</button>
+  <button data-aba="escola">🎓 Escola</button>
   <button data-aba="eventos">📅 Eventos</button>
   <button data-aba="alertas">🚨 Alertas</button>
   <button data-aba="auditoria">🛡️ Auditoria</button>
@@ -92,6 +93,7 @@ function render() {
   if (abaAtual === "resumo") return verResumo();
   if (abaAtual === "usuarios") return verUsuarios();
   if (abaAtual === "codigos") return verCodigos();
+  if (abaAtual === "escola") return verEscola();
   if (abaAtual === "eventos") return verEventos();
   if (abaAtual === "alertas") return verAlertas();
   if (abaAtual === "auditoria") return verAuditoria();
@@ -188,6 +190,46 @@ async function gerarCodigo() {
   const dias = document.getElementById("cDias").value;
   try { const r = await api("codigo", "POST", { tier, qtd, dias: dias || undefined }); document.getElementById("cGerados").innerHTML = "<p>Gerados:</p>" + r.gerados.map(c => `<div><code>${esc(c)}</code></div>`).join(""); verCodigos(); }
   catch (e) { alert("Erro: " + e.message); }
+}
+
+// ----- Plano Escola: pedidos de professor e pacotes de vagas -----
+async function verEscola() {
+  try {
+    const r = await api("professores");
+    const pend = r.professores.filter(p => p.status === "pendente");
+    const outros = r.professores.filter(p => p.status !== "pendente");
+    const linkDe = p => p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer">página</a>` : "sem link";
+    const lPend = pend.map(p => `<tr>
+        <td><b>${esc(p.usuario)}</b><br><span class="nota">conta: ${esc(p.email || "sem e-mail")}${p.emailVerificado ? " ✓" : ""}</span></td>
+        <td>${esc(p.instituicao)}<br><span class="nota">${esc(p.emailInst)} · ${linkDe(p)}</span></td>
+        <td style="font-size:.74rem">${dt(p.pedidoEm)}</td>
+        <td><button class="btn mini" onclick="decidirProf('${esc(p.usuario)}',true)">Aprovar</button>
+            <button class="btn mini perigo" onclick="decidirProf('${esc(p.usuario)}',false)">Recusar</button></td></tr>`).join("");
+    const lOut = outros.map(p => {
+      const turmas = (p.turmas || []).map(t => `<div style="font-size:.78rem"><code>${esc(t.codigo)}</code> ${esc(t.nome)} · ${t.membros} membro(s)
+          ${t.vagas ? ` · vagas <b>${t.vagas.usadas}/${t.vagas.total}</b> até ${dia(t.vagas.expiraEm)}` : ""}
+          ${p.status === "aprovado" ? `<button class="btn mini sec" onclick="lancarVagas('${esc(t.codigo)}',${t.vagas ? t.vagas.total : 0})">${t.vagas ? "Mudar vagas" : "Lançar vagas"}</button>` : ""}</div>`).join("");
+      return `<tr><td><b>${esc(p.usuario)}</b></td><td>${esc(p.instituicao)}<br><span class="nota">${esc(p.emailInst)}</span></td>
+        <td><span class="tag ${p.status === "aprovado" ? "pro" : "free"}">${esc(p.status)}</span>${p.expiraEm ? `<br><span class="nota">até ${dia(p.expiraEm)}</span>` : ""}</td>
+        <td>${turmas || '<span class="nota">nenhuma turma ainda</span>'}${p.status !== "aprovado" ? `<button class="btn mini" onclick="decidirProf('${esc(p.usuario)}',true)">Aprovar</button>` : `<button class="btn mini sec" onclick="decidirProf('${esc(p.usuario)}',true)">Renovar</button>`}</td></tr>`;
+    }).join("");
+    el.innerHTML = `
+      <div class="bloco"><h3>⏳ Pedidos de professor (${pend.length})</h3>
+        <p class="nota">Confira o e-mail da escola e a página. Aprovado: Pro grátis por 1 ano, painel da turma e preço escola (R$ 49,90) pros alunos dele.</p>
+        <table><thead><tr><th>Conta</th><th>Escola</th><th>Pedido</th><th></th></tr></thead><tbody>${lPend || '<tr><td colspan=4 class=vazio>nenhum pedido esperando</td></tr>'}</tbody></table></div>
+      <div class="bloco"><h3>🎓 Professores</h3>
+        <p class="nota">Pacote de vagas = a ESCOLA pagou por N alunos. Lance só depois de receber. Quem já está na turma ganha a vaga na hora; quem entrar depois ganha enquanto houver vaga.</p>
+        <table><thead><tr><th>Conta</th><th>Escola</th><th>Situação</th><th>Turmas</th></tr></thead><tbody>${lOut || '<tr><td colspan=4 class=vazio>nenhum ainda</td></tr>'}</tbody></table></div>`;
+  } catch (e) { el.innerHTML = `<p class="erro">${esc(e.message)}</p>`; }
+}
+function decidirProf(u, aprovar) {
+  if (aprovar) { const d = prompt(`Aprovar ${u} como professor por quantos dias?`, "365"); if (d === null) return; acao(() => api("professor/decidir", "POST", { usuario: u, aprovar: true, dias: Number(d) || 365 }), "Aprovado. Ele recebe um e-mail (se tiver e-mail na conta)."); }
+  else { const m = prompt(`Motivo da recusa de ${u} (ele vê isso):`, "Não consegui confirmar o vínculo com a escola."); if (m === null) return; acao(() => api("professor/decidir", "POST", { usuario: u, aprovar: false, motivo: m })); }
+}
+function lancarVagas(codigo, atual) {
+  const t = prompt(`Quantas vagas a escola pagou pra turma ${codigo}?`, atual || "40"); if (t === null) return;
+  const d = prompt("Por quantos dias?", "365"); if (d === null) return;
+  acao(async () => { const r = await api("sala/vagas", "POST", { codigo, total: Number(t), dias: Number(d) }); alert(`${r.vagas.total} vagas até ${dia(r.vagas.expiraEm)} — ${r.novas} aluno(s) ganharam o Pro agora.`); });
 }
 
 async function verEventos() {

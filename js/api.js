@@ -226,3 +226,23 @@ async function apiSalaSair(codigo) {
 async function apiSalaApagar(codigo) {
   return apiFetch("/api/salas/apagar", { method: "POST", body: JSON.stringify({ codigo }) });
 }
+
+// ---------- Plano Escola (professor + turma) ----------
+async function apiProfessorStatus() {
+  return apiFetch("/api/professor"); // { professor: {status, instituicao, expiraEm, motivo} | null, aprovado }
+}
+async function apiProfessorPedir(instituicao, emailInst, link) {
+  return apiFetch("/api/professor/pedir", { method: "POST", body: JSON.stringify({ instituicao, emailInst, link }) });
+}
+async function apiSalaPainel(codigo) {
+  return apiFetch("/api/salas/painel?codigo=" + encodeURIComponent(codigo)); // { alunos, totaisTrilha, tarefas }
+}
+async function apiSalaTarefa(codigo, servico, prazo) {
+  return apiFetch("/api/salas/tarefa", { method: "POST", body: JSON.stringify({ codigo, servico, prazo }) });
+}
+async function apiSalaTarefaApagar(codigo, id) {
+  return apiFetch("/api/salas/tarefa/apagar", { method: "POST", body: JSON.stringify({ codigo, id }) });
+}
+async function apiSalaLiberarVaga(codigo, aluno) {
+  return apiFetch("/api/salas/vaga/liberar", { method: "POST", body: JSON.stringify({ codigo, aluno }) });
+}

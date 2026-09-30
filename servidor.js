@@ -410,7 +410,7 @@ function concederLicenca(u, tier, opts) {
 // ---------- Salas / Turmas (multiplayer assíncrono) ----------
 const MAX_SALAS_USUARIO = 20; // em quantas turmas um usuário pode estar
 const MAX_MEMBROS_SALA = 300; // teto de membros por turma
-const NOME_SALA_OK = /^[\wÀ-ÿ0-9 .,!?@#&+-]{1,40}$/; // nome amigável, sem HTML
+const NOME_SALA_OK = /^[\wÀ-ÿ0-9ºª .,!?@#&+-]{1,40}$/; // nome amigável, sem HTML ("2º ano B" é nome de turma de escola)
 const ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem O/0/I/1 (ambíguos)
 // Algumas operações de competição podem exigir e-mail confirmado — ligado por env
 // (deixe desligado até verificar um domínio no Resend, senão ninguém entra).
@@ -436,10 +436,90 @@ function salaPublica(sala, euNome) {
     .map((n) => Object.assign(perfilPublico(n), { ehVoce: n === euNome }))
     .sort((a, b) => b.xp - a.xp)
     .slice(0, 100);
+  const escola = salaDeEscola(sala);
+  const v = sala.vagas;
   return {
     codigo: sala.codigo, nome: sala.nome, dono: sala.dono, ehDono: sala.dono === euNome,
     criadoEm: sala.criadoEm, total: sala.membros.length, ranking,
+    // plano Escola (30/09/2026): turma de professor aprovado
+    escola, tarefas: escola ? (sala.tarefas || []) : [],
+    precoEscola: escola ? PRECO_ESCOLA_ALUNO : null,
+    vagas: escola && v && v.expiraEm > Date.now() ? { total: v.total, usadas: (v.usadas || []).length, expiraEm: v.expiraEm } : null,
   };
+}
+
+// ---------- Plano Escola (30/09/2026) ----------
+// B: professor com e-mail da escola pede, o Gabriel aprova no painel, ele ganha
+//    o Pro por 1 ano e o painel da turma. Alunos ficam na camada grátis.
+// A: o aluno de turma de professor compra o Pro por PRECO_ESCOLA_ALUNO (o
+//    pagamento continua no CPF do Gabriel — pessoa física pagando pessoa
+//    física); OU a escola paga um pacote de vagas (sala.vagas), que o admin
+//    lança depois de receber, e o link da turma vira Pro enquanto houver vaga.
+// Simulação de preço e o porquê do CPF: memória plano-escola.
+const PRECO_ESCOLA_ALUNO = 49.9;
+const DIAS_PROFESSOR = 365;
+const MAX_TAREFAS_SALA = 10;
+function professorAprovado(nome) {
+  const p = bd.usuarios[nome] && bd.usuarios[nome].professor;
+  return !!(p && p.status === "aprovado" && (!p.expiraEm || p.expiraEm > Date.now()));
+}
+function salaDeEscola(sala) { return !!(sala && professorAprovado(sala.dono)); }
+// O Pro que o pacote da escola deu fica marcado com a turma, pra poder ser
+// devolvido quando o professor libera a vaga (aluno saiu da escola).
+function ocuparVaga(sala, nome) {
+  const v = sala.vagas;
+  const u = bd.usuarios[nome];
+  if (!v || !u || nome === sala.dono || !(v.expiraEm > Date.now())) return false;
+  v.usadas = v.usadas || [];
+  if (v.usadas.includes(nome)) return true;
+  if (licencaPublica(u).pro) return false; // já é Pro: não gasta vaga da escola
+  if (v.usadas.length >= v.total) return false;
+  v.usadas.push(nome);
+  u.licenca = { tier: "escola", expiraEm: v.expiraEm, emitidaPor: "vaga:" + sala.codigo, escola: true, desde: Date.now() };
+  return true;
+}
+function liberarVaga(sala, nome) {
+  const v = sala.vagas;
+  if (!v || !(v.usadas || []).includes(nome)) return false;
+  v.usadas = v.usadas.filter((n) => n !== nome);
+  const u = bd.usuarios[nome];
+  if (u && u.licenca && u.licenca.emitidaPor === "vaga:" + sala.codigo) delete u.licenca;
+  return true;
+}
+// id da atividade -> trilha, e total por trilha (do conteúdo que o servidor já lê pra /aprender)
+let _mapaTrilhas = null;
+function mapaTrilhas() {
+  if (_mapaTrilhas) return _mapaTrilhas;
+  const porId = {}, total = {};
+  for (const d of ((typeof CONTEUDO_PUB !== "undefined" && CONTEUDO_PUB && CONTEUDO_PUB.desafios) || [])) {
+    porId[d.id] = d.servico;
+    total[d.servico] = (total[d.servico] || 0) + 1;
+  }
+  _mapaTrilhas = { porId, total };
+  return _mapaTrilhas;
+}
+// O que o professor vê de cada aluno. O XP é calculado no navegador (ver
+// turmas-e-ranking): o painel mostra "concluiu" e "revelou a resposta", nunca
+// uma nota que valha como prova.
+function painelDaSala(sala) {
+  const m = mapaTrilhas();
+  const alunos = sala.membros.filter((n) => n !== sala.dono && bd.usuarios[n]).map((n) => {
+    const u = bd.usuarios[n];
+    const p = u.progresso || {};
+    const concluidos = Object.keys(p.concluidos || {});
+    const porTrilha = {};
+    for (const id of concluidos) { const t = m.porId[id]; if (t) porTrilha[t] = (porTrilha[t] || 0) + 1; }
+    const dias = Object.keys(p.atividadeDiaria || {}).sort();
+    return {
+      usuario: n, xp: u.xp || 0, feitas: concluidos.length,
+      reveladas: Object.keys(p.revelados || {}).length,
+      ultimoDia: dias.length ? dias[dias.length - 1] : null,
+      ultimoAcesso: u.ultimoAcesso || null,
+      pro: licencaPublica(u).pro, vaga: !!(sala.vagas && (sala.vagas.usadas || []).includes(n)),
+      porTrilha,
+    };
+  }).sort((a, b) => b.xp - a.xp);
+  return { alunos, totaisTrilha: m.total, tarefas: sala.tarefas || [] };
 }
 
 // ---------- Sanidade do progresso (anti-tampering do ranking) ----------
@@ -862,8 +942,9 @@ async function tratarApi(req, res, rota) {
     if (sala.membros.length >= MAX_MEMBROS_SALA) return responderJson(res, 400, { erro: "Essa turma já está cheia." });
     if (salasDoUsuario(nome).length >= MAX_SALAS_USUARIO) return responderJson(res, 400, { erro: `Você já está em ${MAX_SALAS_USUARIO} turmas (o máximo).` });
     sala.membros.push(nome);
+    const ganhouVaga = salaDeEscola(sala) && ocuparVaga(sala, nome);
     salvarBd();
-    return responderJson(res, 200, { sala: salaPublica(sala, nome) });
+    return responderJson(res, 200, { sala: salaPublica(sala, nome), ganhouVaga, licenca: licencaPublica(u) });
   }
 
   // POST /api/salas/sair { codigo }  (autenticado) — sair; se o dono sair, passa o posto ou apaga
@@ -874,6 +955,7 @@ async function tratarApi(req, res, rota) {
     const sala = bd.salas[String(corpo.codigo || "").trim().toUpperCase()];
     if (!sala) return responderJson(res, 404, { erro: "Turma não encontrada." });
     sala.membros = sala.membros.filter((m) => m !== nome);
+    liberarVaga(sala, nome); // a vaga paga pela escola é da turma, não do aluno
     if (!sala.membros.length) delete bd.salas[sala.codigo];
     else if (sala.dono === nome) sala.dono = sala.membros[0]; // passa o posto pro próximo
     salvarBd();
@@ -891,6 +973,77 @@ async function tratarApi(req, res, rota) {
     delete bd.salas[sala.codigo];
     salvarBd();
     return responderJson(res, 200, { ok: true });
+  }
+
+  // ---------- Plano Escola ----------
+  // GET /api/professor — situação do pedido de professor de quem está logado
+  if (rota === "/api/professor" && req.method === "GET") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const p = bd.usuarios[nome].professor || null;
+    return responderJson(res, 200, { professor: p ? { status: p.status, instituicao: p.instituicao, expiraEm: p.expiraEm || null, motivo: p.motivo || "" } : null, aprovado: professorAprovado(nome) });
+  }
+
+  // POST /api/professor/pedir { instituicao, emailInst, link }
+  if (rota === "/api/professor/pedir" && req.method === "POST") {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login pra pedir a conta de professor." });
+    if (!dentroDoLimite("professor:" + nome, 5, 86400000)) return responderJson(res, 429, { erro: "Você já pediu várias vezes hoje. Aguarde a análise." });
+    const corpo = await lerCorpo(req);
+    const instituicao = String(corpo.instituicao || "").trim().slice(0, 120);
+    const emailInst = String(corpo.emailInst || "").trim().toLowerCase().slice(0, 120);
+    const link = String(corpo.link || "").trim().slice(0, 300);
+    if (instituicao.length < 3) return responderJson(res, 400, { erro: "Diga o nome da escola ou instituição." });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailInst)) return responderJson(res, 400, { erro: "Informe o seu e-mail da escola." });
+    if (link && !/^https?:\/\/[^\s]+$/i.test(link)) return responderJson(res, 400, { erro: "O link precisa começar com http:// ou https://" });
+    const u = bd.usuarios[nome];
+    if (professorAprovado(nome)) return responderJson(res, 200, { ok: true, jaAprovado: true });
+    u.professor = { status: "pendente", instituicao, emailInst, link, pedidoEm: Date.now() };
+    // cai nos alertas do painel (e no e-mail do ALERTA_EMAIL): é o aviso pro Gabriel aprovar
+    registrarAlerta("professor", { usuario: nome, detalhe: `Pedido de professor: ${nome} — ${instituicao} (${emailInst})${link ? " " + link : ""}` });
+    salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+
+  // Rotas do professor sobre a própria turma
+  if (rota.startsWith("/api/salas/") && ["/api/salas/painel", "/api/salas/tarefa", "/api/salas/tarefa/apagar", "/api/salas/vaga/liberar"].includes(rota)) {
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    if (!nome) return responderJson(res, 401, { erro: "Faça login primeiro." });
+    const corpo = req.method === "POST" ? await lerCorpo(req) : {};
+    const codigo = String(corpo.codigo || new URL(req.url, "http://x").searchParams.get("codigo") || "").trim().toUpperCase();
+    const sala = bd.salas[codigo];
+    if (!sala) return responderJson(res, 404, { erro: "Turma não encontrada." });
+    if (sala.dono !== nome) return responderJson(res, 403, { erro: "Só o professor dono da turma faz isso." });
+    if (!salaDeEscola(sala)) return responderJson(res, 403, { erro: "Painel e tarefas são das turmas de professor aprovado. Peça a conta de professor em Turmas." });
+
+    if (rota === "/api/salas/painel" && req.method === "GET") return responderJson(res, 200, painelDaSala(sala));
+
+    if (rota === "/api/salas/tarefa" && req.method === "POST") {
+      const servico = String(corpo.servico || "").trim();
+      const prazo = Number(corpo.prazo) || 0;
+      if (!mapaTrilhas().total[servico]) return responderJson(res, 400, { erro: "Escolha uma trilha que exista." });
+      if (prazo && prazo < Date.now() - 86400000) return responderJson(res, 400, { erro: "O prazo já passou." });
+      sala.tarefas = (sala.tarefas || []).filter((t) => t.servico !== servico);
+      if (sala.tarefas.length >= MAX_TAREFAS_SALA) return responderJson(res, 400, { erro: `No máximo ${MAX_TAREFAS_SALA} tarefas por turma.` });
+      sala.tarefas.push({ id: crypto.randomBytes(4).toString("hex"), servico, prazo: prazo || null, criadaEm: Date.now() });
+      salvarBd();
+      return responderJson(res, 200, { sala: salaPublica(sala, nome) });
+    }
+    if (rota === "/api/salas/tarefa/apagar" && req.method === "POST") {
+      sala.tarefas = (sala.tarefas || []).filter((t) => t.id !== String(corpo.id || ""));
+      salvarBd();
+      return responderJson(res, 200, { sala: salaPublica(sala, nome) });
+    }
+    if (rota === "/api/salas/vaga/liberar" && req.method === "POST") {
+      const aluno = String(corpo.aluno || "").trim();
+      if (!liberarVaga(sala, aluno)) return responderJson(res, 400, { erro: "Esse aluno não está ocupando vaga da escola." });
+      // quem está na turma sem vaga (e sem Pro) ganha a que abriu, na ordem de entrada
+      const proximo = sala.membros.find((m) => m !== aluno && m !== sala.dono && bd.usuarios[m] &&
+        !(sala.vagas.usadas || []).includes(m) && !licencaPublica(bd.usuarios[m]).pro);
+      if (proximo) ocuparVaga(sala, proximo);
+      salvarBd();
+      return responderJson(res, 200, { ok: true, painel: painelDaSala(sala), sala: salaPublica(sala, nome) });
+    }
   }
 
   // GET /api/config  (público — o que o front precisa saber pra montar a UI)
@@ -938,6 +1091,7 @@ async function tratarApi(req, res, rota) {
   if (rota === "/api/planos" && req.method === "GET") {
     return responderJson(res, 200, {
       precos: PRECOS,
+      precoEscolaAluno: PRECO_ESCOLA_ALUNO,
       checkoutAtivo: !!process.env.MP_TOKEN,
       custom: { min: 1, max: 24, faixas: FAIXAS_CUSTOM },
     });
@@ -975,8 +1129,15 @@ async function tratarApi(req, res, rota) {
       unitPrice = PRECOS[tier];
       titulo = TITULO_PLANO[tier];
       externalRef = nome + "|" + tier;
+    } else if (tier === "escola") {
+      // preço escola: só pra quem é ALUNO de turma de professor aprovado
+      const turma = salasDoUsuario(nome).find((s) => salaDeEscola(s) && s.dono !== nome);
+      if (!turma) return responderJson(res, 403, { erro: "O preço escola é pra quem está numa turma de professor. Entre com o código que o professor passou." });
+      unitPrice = PRECO_ESCOLA_ALUNO;
+      titulo = "CLImb Pro — Escola (1 ano) — turma " + turma.codigo;
+      externalRef = nome + "|escola|" + turma.codigo;
     } else {
-      return responderJson(res, 400, { erro: "Plano inválido. O vitalício e o escola não são vendidos por aqui." });
+      return responderJson(res, 400, { erro: "Plano inválido. O vitalício não é vendido por aqui." });
     }
     if (!process.env.MP_TOKEN) {
       return responderJson(res, 503, { erro: "Checkout automático ainda não está ativo. Use um código de ativação.", fallback: "codigo" });
@@ -1215,6 +1376,9 @@ async function tratarApi(req, res, rota) {
               salvarBd();
             } else if (PRECOS[tier]) {
               concederLicenca(bd.usuarios[usuario], tier, { por: "mercadopago:" + pagamentoId });
+              salvarBd();
+            } else if (tier === "escola") {
+              concederLicenca(bd.usuarios[usuario], "escola", { dias: 365, escola: true, por: "mercadopago:" + pagamentoId + ":turma:" + (partes[2] || "") });
               salvarBd();
             }
           }
@@ -1926,6 +2090,53 @@ async function tratarAdmin(req, res, rota) {
   // ----- Alertas antifraude -----
   if (sub === "alertas" && req.method === "GET") return responderJson(res, 200, { alertas: (bd.alertas || []).slice(-200).reverse() });
   if (sub === "alertas/limpar" && req.method === "POST") { bd.alertas = []; registrarLogAdmin("limpar-alertas", "", ip); salvarBd(); return responderJson(res, 200, { ok: true }); }
+
+  // ----- Plano Escola: professores e pacotes de vagas -----
+  if (sub === "professores" && req.method === "GET") {
+    const lista = Object.entries(bd.usuarios).filter(([, u]) => u.professor).map(([n, u]) => ({
+      usuario: n, email: u.email || null, emailVerificado: !!u.emailVerificado,
+      status: u.professor.status, instituicao: u.professor.instituicao, emailInst: u.professor.emailInst,
+      link: u.professor.link || "", pedidoEm: u.professor.pedidoEm || null, expiraEm: u.professor.expiraEm || null,
+      turmas: salasDoUsuario(n).filter((s) => s.dono === n).map((s) => ({ codigo: s.codigo, nome: s.nome, membros: s.membros.length, vagas: s.vagas ? { total: s.vagas.total, usadas: (s.vagas.usadas || []).length, expiraEm: s.vagas.expiraEm } : null })),
+    })).sort((a, b) => (a.status === "pendente" ? -1 : 1) - (b.status === "pendente" ? -1 : 1) || (b.pedidoEm || 0) - (a.pedidoEm || 0));
+    return responderJson(res, 200, { professores: lista });
+  }
+  if (sub === "professor/decidir" && req.method === "POST") {
+    const u = achaUsuario(corpo.usuario); if (!u || !u.professor) return responderJson(res, 404, { erro: "Pedido não encontrado." });
+    if (corpo.aprovar) {
+      const dias = Math.max(30, Math.min(730, parseInt(corpo.dias, 10) || DIAS_PROFESSOR));
+      u.professor.status = "aprovado";
+      u.professor.aprovadoEm = Date.now();
+      u.professor.expiraEm = Date.now() + dias * 86400000;
+      delete u.professor.motivo;
+      // o Pro do professor: nunca rebaixa um vitalício
+      if (!(u.licenca && u.licenca.tier === "vitalicio")) concederLicenca(u, "anual", { dias, por: "professor" });
+      if (u.email) enviarEmail(u.email, "Sua conta de professor no CLImb foi aprovada",
+        `<p>Pronto: sua conta de professor está ativa por ${dias} dias.</p><p>Em <b>Turmas</b>, crie a turma e passe o código para os alunos. Você acompanha o progresso de cada um no painel, e pode marcar trilhas com prazo.</p>`);
+    } else {
+      u.professor.status = "recusado";
+      u.professor.motivo = String(corpo.motivo || "").slice(0, 300);
+    }
+    registrarLogAdmin("professor", `${corpo.usuario} → ${u.professor.status}`, ip); salvarBd();
+    return responderJson(res, 200, { ok: true, status: u.professor.status });
+  }
+  // pacote de vagas pago pela escola (o Gabriel lança depois de receber)
+  if (sub === "sala/vagas" && req.method === "POST") {
+    const sala = bd.salas && bd.salas[String(corpo.codigo || "").toUpperCase()];
+    if (!sala) return responderJson(res, 404, { erro: "Turma não encontrada." });
+    if (!salaDeEscola(sala)) return responderJson(res, 400, { erro: "O dono dessa turma não é professor aprovado." });
+    const total = Math.max(1, Math.min(MAX_MEMBROS_SALA, parseInt(corpo.total, 10) || 0));
+    const dias = Math.max(30, Math.min(730, parseInt(corpo.dias, 10) || 365));
+    const usadas = (sala.vagas && sala.vagas.usadas) || [];
+    sala.vagas = { total: Math.max(total, usadas.length), usadas, expiraEm: Date.now() + dias * 86400000, criadaEm: Date.now() };
+    // quem já estava na turma ganha a vaga agora, na ordem de entrada
+    let novas = 0;
+    for (const m of sala.membros) { const tinha = usadas.includes(m); if (ocuparVaga(sala, m) && !tinha) novas++; }
+    // vagas já ocupadas acompanham a nova validade
+    for (const m of sala.vagas.usadas) { const u = bd.usuarios[m]; if (u && u.licenca && u.licenca.emitidaPor === "vaga:" + sala.codigo) u.licenca.expiraEm = sala.vagas.expiraEm; }
+    registrarLogAdmin("vagas", `${sala.codigo}: ${sala.vagas.total} vagas, ${dias} dias (${novas} ocupadas agora)`, ip); salvarBd();
+    return responderJson(res, 200, { ok: true, vagas: { total: sala.vagas.total, usadas: sala.vagas.usadas.length, expiraEm: sala.vagas.expiraEm }, novas });
+  }
 
   // ----- Turmas (moderação) -----
   if (sub === "salas" && req.method === "GET") {

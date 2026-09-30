@@ -1663,3 +1663,22 @@ summary:focus-visible,
   border-radius: 8px;
 }
 @media (max-width: 600px) { .sim-rev-arte { font-size: 0.64rem; } }
+
+/* ---------- Plano Escola (multiplayer.js) ---------- */
+.esc-prof { background: var(--painel-2); border: 1px dashed var(--borda); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; font-size: 0.88rem; line-height: 1.5; }
+.esc-prof.ok { border-style: solid; border-color: var(--verde); }
+.esc-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.esc-form.linha { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 6px 0 8px; }
+.esc-form input, .esc-form select { background: var(--fundo); color: var(--texto); border: 1px solid var(--borda); border-radius: 6px; padding: 7px 9px; font: inherit; font-size: 0.86rem; }
+.esc-form small, .esc-nada, .esc-privacidade { color: var(--texto-fraco); font-size: 0.8rem; }
+.esc-turma { border-color: var(--laranja); }
+.esc-tag { background: rgba(62,207,111,0.15); color: var(--verde); }
+.esc-tarefas { font-size: 0.86rem; margin: 4px 0 6px; }
+.esc-tarefas ul { margin: 4px 0 0; padding-left: 18px; }
+.esc-oferta { background: var(--fundo); border: 1px solid var(--borda); border-radius: 8px; padding: 8px 10px; margin: 6px 0; font-size: 0.86rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.esc-vagas { font-size: 0.84rem; margin: 2px 0 6px; }
+.esc-largo { width: min(980px, 96vw); }
+.esc-painel-titulo { margin: 6px 0 2px; font-size: 1rem; }
+.esc-tabela { overflow-x: auto; max-width: 100%; }
+.esc-tabela th { text-align: left; font-size: 0.74rem; color: var(--texto-fraco); padding: 4px 6px; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+.esc-tabela td { white-space: nowrap; }
