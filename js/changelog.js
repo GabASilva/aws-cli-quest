@@ -29,6 +29,7 @@
       titulo: "🎓 CLImb na escola: conta de professor e turma escola",
       itens: [
         "<b>🎓 É professor? Agora o CLImb é de graça pra você.</b> Em <b>👥 Turmas</b>, peça a conta de professor com o e-mail da sua escola. Aprovada, você ganha o Pro por um ano e as suas turmas viram <b>turma escola</b>:<br>• <b>painel da turma</b> com o progresso de cada aluno — atividades feitas, respostas reveladas, quando estudou por último — e planilha pra baixar;<br>• <b>tarefas com prazo</b>: marque uma trilha, e cada aluno vê quanto já fez dela;<br>• a escola pode pagar um <b>pacote de vagas</b>, e quem entra pelo código da turma já vira Pro.",
+        "<b>💬 Agora dá pra falar comigo de dentro do app.</b> O botão <b>Ajuda</b>, no rodapé, tem as perguntas mais comuns (pagamento, código de ativação, atividade que não completa, escola) e um formulário que chega direto no meu e-mail — respondo no seu. E no card de cada atividade tem <b>⚠️ Reportar problema nesta atividade</b>: a mensagem já vai com a atividade e o que você digitou, pra eu achar e corrigir mais rápido.",
         "<b>💸 Aluno de turma escola paga menos:</b> o Pro sai por <b>R$ 49,90 por ano</b> (no individual são R$ 149,90). O botão aparece dentro da turma. Nas turmas escola, o professor vê o seu progresso — o aviso fica na própria turma.",
       ],
     },

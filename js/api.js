@@ -227,6 +227,11 @@ async function apiSalaApagar(codigo) {
   return apiFetch("/api/salas/apagar", { method: "POST", body: JSON.stringify({ codigo }) });
 }
 
+// ---------- Suporte ----------
+async function apiSuporte(tipo, mensagem, email, contexto) {
+  return apiFetch("/api/suporte", { method: "POST", body: JSON.stringify({ tipo, mensagem, email, contexto }) });
+}
+
 // ---------- Plano Escola (professor + turma) ----------
 async function apiProfessorStatus() {
   return apiFetch("/api/professor"); // { professor: {status, instituicao, expiraEm, motivo} | null, aprovado }

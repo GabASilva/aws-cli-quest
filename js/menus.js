@@ -39,7 +39,7 @@
               "#btnAssinarCustom", "#btnTema", "#btnLimparAmbiente", "#btnResetar"],
     },
   ];
-  const LINKS_RODAPE = ["#btnComoJogar", "#btnNovidades"];
+  const LINKS_RODAPE = ["#btnComoJogar", "#btnNovidades", "#btnAjuda"];
 
   let montado = false;
   let abertoAgora = null;

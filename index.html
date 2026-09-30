@@ -90,6 +90,7 @@
 
   <footer>
     <span>💡 Manuais: <strong>aws help</strong> · <strong>aws s3 help</strong> — arquivos locais: <strong>ls</strong> — atalhos: <strong>climb --help</strong></span>
+    <button class="botao secundario" id="btnAjuda" title="Perguntas frequentes e fale comigo">💬 Ajuda</button>
     <button class="botao secundario" id="btnLimparAmbiente" title="Apaga os recursos da conta AWS simulada. XP e atividades ficam.">🧹 Limpar ambiente</button>
     <button class="botao perigo" id="btnResetar">Resetar progresso</button>
   </footer>
@@ -328,6 +329,8 @@
   <!-- sandbox: embrulha renderSidebar/renderCard DEPOIS de grupos, filtro e
        busca, pra o item dele entrar por último e ficar em primeiro -->
   <script defer src="js/sandbox.js"></script>
+  <!-- ajuda/suporte: formulário + FAQ; o #btnAjuda já está no rodapé do HTML -->
+  <script defer src="js/suporte.js"></script>
   <!-- métrica: não faz nada enquanto o secret GA_ID não estiver definido -->
   <script defer src="js/analytics.js"></script>
   <script defer src="js/mobile-nav.js"></script>

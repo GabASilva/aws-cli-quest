@@ -53,6 +53,7 @@
   <button data-aba="usuarios">👤 Usuários</button>
   <button data-aba="codigos">🎟️ Códigos</button>
   <button data-aba="escola">🎓 Escola</button>
+  <button data-aba="suporte">💬 Suporte</button>
   <button data-aba="eventos">📅 Eventos</button>
   <button data-aba="alertas">🚨 Alertas</button>
   <button data-aba="auditoria">🛡️ Auditoria</button>
@@ -94,6 +95,7 @@ function render() {
   if (abaAtual === "usuarios") return verUsuarios();
   if (abaAtual === "codigos") return verCodigos();
   if (abaAtual === "escola") return verEscola();
+  if (abaAtual === "suporte") return verSuporte();
   if (abaAtual === "eventos") return verEventos();
   if (abaAtual === "alertas") return verAlertas();
   if (abaAtual === "auditoria") return verAuditoria();
@@ -113,6 +115,7 @@ async function verResumo() {
         ${card(r.pro, "contas Pro")}
         ${card(r.turmas, "turmas")}
         ${card(r.alertas, "alertas")}
+        ${card(r.suporteAbertos || 0, "suporte aberto")}
         ${card(r.eventosAtivos, "eventos ativos")}
       </div>
       <div class="bloco">
@@ -191,6 +194,46 @@ async function gerarCodigo() {
   try { const r = await api("codigo", "POST", { tier, qtd, dias: dias || undefined }); document.getElementById("cGerados").innerHTML = "<p>Gerados:</p>" + r.gerados.map(c => `<div><code>${esc(c)}</code></div>`).join(""); verCodigos(); }
   catch (e) { alert("Erro: " + e.message); }
 }
+
+// ----- Suporte: mensagens do "💬 Ajuda" -----
+// Cada mensagem também chega por e-mail (SUPORTE_EMAIL / ALERTA_EMAIL /
+// contato@climb.dev.br) — responder o e-mail direto funciona. Aqui fica o
+// histórico, o contexto (atividade e comandos) e a resposta pelo painel.
+let supFiltro = "aberto";
+async function verSuporte() {
+  try {
+    const r = await api("suporte");
+    const lista = r.mensagens.filter(m => supFiltro === "todas" || m.status === supFiltro);
+    const cont = s => r.mensagens.filter(m => m.status === s).length;
+    const cards = lista.map(m => {
+      const c = m.contexto || {};
+      return `<div class="bloco">
+        <div class="linha" style="justify-content:space-between">
+          <span><span class="tag ${m.status === "aberto" ? "pro" : "free"}">${esc(m.status)}</span> <b>${esc(r.tipos[m.tipo] || m.tipo)}</b> · ${esc(m.usuario || "sem conta")} · ${esc(m.email)} · plano ${esc(m.plano)}</span>
+          <span class="nota">${dt(m.criadoEm)} · <code>${esc(m.id)}</code></span>
+        </div>
+        <p style="white-space:pre-wrap;margin:8px 0">${esc(m.mensagem)}</p>
+        ${c.atividade ? `<p class="nota">Atividade: <b>${esc(c.atividade)}</b> · trilha ${esc(c.trilha)} · ambiente ${esc(c.ambiente)}</p>` : ""}
+        ${(c.comandos || []).length ? `<pre style="font-size:.74rem;white-space:pre-wrap;background:#0d1117;padding:6px;border-radius:6px">${esc(c.comandos.join("\n"))}</pre>` : ""}
+        ${c.navegador ? `<p class="nota">${esc(c.navegador)}</p>` : ""}
+        ${m.resposta ? `<p class="nota">Respondido em ${dt(m.respondidoEm)}:</p><p style="white-space:pre-wrap;border-left:3px solid var(--vd);padding-left:8px">${esc(m.resposta)}</p>` : ""}
+        <div class="linha">
+          <button class="btn mini" onclick="responderSup('${esc(m.id)}')">Responder por e-mail</button>
+          <button class="btn mini sec" onclick="statusSup('${esc(m.id)}','${m.status === "aberto" ? "fechado" : "aberto"}')">${m.status === "aberto" ? "Fechar" : "Reabrir"}</button>
+        </div></div>`;
+    }).join("");
+    const filtro = f => `<button class="btn mini ${supFiltro === f ? "" : "sec"}" onclick="supFiltro='${f}';render()">${f}${f !== "todas" ? " (" + cont(f) + ")" : ""}</button>`;
+    el.innerHTML = `<div class="linha">${filtro("aberto")}${filtro("respondido")}${filtro("fechado")}${filtro("todas")}
+      <span class="nota">Toda mensagem também chega por e-mail — responder de lá funciona igual.</span></div>
+      ${cards || '<div class="bloco"><p class="vazio">nenhuma mensagem aqui 🎉</p></div>'}`;
+  } catch (e) { el.innerHTML = `<p class="erro">${esc(e.message)}</p>`; }
+}
+function responderSup(id) {
+  const t = prompt("Resposta (vai por e-mail, com a mensagem original citada):", "Oi! ");
+  if (!t) return;
+  acao(() => api("suporte/responder", "POST", { id, resposta: t }), "Resposta enviada.");
+}
+function statusSup(id, status) { acao(() => api("suporte/status", "POST", { id, status })); }
 
 // ----- Plano Escola: pedidos de professor e pacotes de vagas -----
 async function verEscola() {

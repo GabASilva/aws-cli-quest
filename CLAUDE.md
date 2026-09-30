@@ -21,9 +21,12 @@
   usa recurso de OUTRA trilha falha aqui — declare em `DEPENDENCIAS` do
   ambientes.js (id da atividade ou `trilha@ate-id`). `ISOLAR=<id>` mostra a
   saída de cada linha daquela atividade.
-- Mexeu em turma, licença, checkout ou plano Escola? `node teste/escola.js`
+- Mexeu em turma, licença, checkout, plano Escola ou suporte? `node teste/escola.js`
   (sobe o servidor com banco temporário e testa professor, preço escola,
-  vagas pagas, painel e tarefas de ponta a ponta).
+  vagas pagas, painel, tarefas e o "💬 Ajuda" de ponta a ponta).
+- Suporte: mensagem do usuário vai pro e-mail do Gabriel em HTML — todo texto
+  dele passa por `escHtml` (servidor.js). "Fale com o responsável" sem link é
+  proibido: use `data-abrir-suporte="<tipo>"` (suporte.js abre o formulário).
 - Todo comando novo em `SERVICOS` PRECISA de manual em `manuais.js` (o fumaça
   falha sem). O tokenizer remove aspas; validadores de `--query` recebem o valor
   sem aspas.

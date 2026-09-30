@@ -251,7 +251,7 @@ function podeAcessar(d) {
         <div id="planoCustom" class="plano-custom"></div>
         <p id="planosCheckoutOff" class="plano-off" style="display:none">
           💳 O pagamento automático está sendo ativado. Por enquanto, garanta seu acesso com um
-          <strong>código de ativação</strong> (fale com o responsável pelo app).
+          <strong>código de ativação</strong> (<button type="button" class="sala-link" data-abrir-suporte="pagamento">fale comigo</button>).
         </p>
         <div class="resgatar-bloco">
           <label>Tem um código de ativação?</label>
@@ -261,7 +261,7 @@ function podeAcessar(d) {
           </div>
           <p class="codigo-erro" id="codigoErro"></p>
         </div>
-        <p class="conta-aviso">Planos <strong>escola</strong> (preço por aluno) e <strong>vitalício</strong>: fale com o responsável pelo app.</p>
+        <p class="conta-aviso">Sua <strong>escola</strong> quer pagar as vagas da turma, ou você quer o <strong>vitalício</strong>? <button type="button" class="sala-link" data-abrir-suporte="escola">Fale comigo</button>. Professor pede a conta grátis em 👥 Turmas.</p>
         <div class="modal-acoes"><button class="botao secundario" data-fechar-planos>Fechar</button></div>
       </div>`;
     document.body.appendChild(modal);

@@ -91,6 +91,27 @@ async function rodar() {
   r = await req("/api/salas/sair", { token: a2, corpo: { codigo: cod } });
   ok(!(await req("/api/eu", { token: a2 })).licenca.pro, "aluno_dois saiu da turma e a vaga voltou pra escola");
 
+  console.log("Suporte (💬 Ajuda)");
+  r = await req("/api/suporte", { corpo: { tipo: "duvida", mensagem: "oi", email: "x@y.com" } });
+  ok(r.status === 400, "mensagem curta demais é recusada");
+  r = await req("/api/suporte", { corpo: { tipo: "duvida", mensagem: "Como faço pra usar na minha turma?" } });
+  ok(r.status === 400, "sem conta e sem e-mail é recusado (não teria como responder)");
+  r = await req("/api/suporte", { corpo: { tipo: "pagamento", mensagem: "Paguei no Pix e o Pro não liberou <script>x</script>", email: "Aluno@Exemplo.com" } });
+  ok(r.ok && /^sup-/.test(r.id), "anônimo com e-mail manda (protocolo " + r.id + ")");
+  r = await req("/api/suporte", { token: a1, corpo: { tipo: "atividade", mensagem: "A s3-7 não completa com o comando certo", email: "aluno1@escola.edu.br", contexto: { atividade: "s3-7 — Sincronize um site inteiro", trilha: "s3", comandos: ["aws s3 sync ./site s3://meu-primeiro-bucket"] } } });
+  const idSup = r.id;
+  ok(r.ok, "logado manda com contexto da atividade");
+  r = await req("/api/admin/suporte", { admin: true });
+  const msg = (r.mensagens || []).find((m) => m.id === idSup);
+  ok(msg && msg.usuario === "aluno_um" && msg.contexto.comandos.length === 1 && msg.status === "aberto", "admin vê a mensagem, o usuário e os comandos");
+  ok((r.mensagens || []).some((m) => m.email === "aluno@exemplo.com" && m.mensagem.includes("<script>")), "guarda o texto como veio (o escape é na hora de mostrar/mandar)");
+  r = await req("/api/admin/suporte/responder", { admin: true, corpo: { id: idSup, resposta: "Corrigido, obrigado!" } });
+  ok(r.ok, "admin respondeu");
+  r = await req("/api/admin/suporte", { admin: true });
+  ok(r.mensagens.find((m) => m.id === idSup).status === "respondido", "status virou respondido");
+  r = await req("/api/admin/resumo", { admin: true });
+  ok(r.suporteAbertos === 1, "resumo conta 1 mensagem ainda aberta");
+
   console.log("Recusa e revogação");
   r = await req("/api/admin/professores", { admin: true });
   ok(r.professores.length === 1 && r.professores[0].turmas[0].vagas.total === 1, "admin vê professor, turma e vagas");

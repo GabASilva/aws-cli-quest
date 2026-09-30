@@ -53,7 +53,9 @@ function carregarBd() {
 
 // ---------- E-mail (Resend) ----------
 const EMAIL_VALIDO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-async function enviarEmail(para, assunto, html) {
+// `responderPara` (opcional): o "Responder" do cliente de e-mail vai direto pra
+// essa pessoa — é o que faz o aviso de suporte virar conversa sem painel.
+async function enviarEmail(para, assunto, html, responderPara) {
   if (!process.env.RESEND_KEY) {
     console.log(`[e-mail DEV → ${para}] ${assunto} :: ${html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}`);
     return;
@@ -62,12 +64,12 @@ async function enviarEmail(para, assunto, html) {
     await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: "Bearer " + process.env.RESEND_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         from: process.env.RESEND_FROM || "CLImb <onboarding@resend.dev>",
         to: para,
         subject: assunto,
         html,
-      }),
+      }, responderPara ? { reply_to: responderPara } : {})),
     });
   } catch (e) {
     console.error("falha ao enviar e-mail:", e.message);
@@ -456,6 +458,11 @@ function salaPublica(sala, euNome) {
 //    física); OU a escola paga um pacote de vagas (sala.vagas), que o admin
 //    lança depois de receber, e o link da turma vira Pro enquanto houver vaga.
 // Simulação de preço e o porquê do CPF: memória plano-escola.
+// Suporte: o que o usuário escreve vai pro e-mail do Gabriel em HTML — escapa tudo.
+const TIPOS_SUPORTE = { duvida: "Dúvida", problema: "Problema", atividade: "Problema numa atividade", pagamento: "Pagamento", escola: "Escola" };
+function escHtml(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 const PRECO_ESCOLA_ALUNO = 49.9;
 const DIAS_PROFESSOR = 365;
 const MAX_TAREFAS_SALA = 10;
@@ -1003,6 +1010,44 @@ async function tratarApi(req, res, rota) {
     registrarAlerta("professor", { usuario: nome, detalhe: `Pedido de professor: ${nome} — ${instituicao} (${emailInst})${link ? " " + link : ""}` });
     salvarBd();
     return responderJson(res, 200, { ok: true });
+  }
+
+  // ---------- Suporte (30/09/2026) ----------
+  // POST /api/suporte { tipo, mensagem, email, contexto } — com ou sem login.
+  // Antes disto o único canal era um e-mail escondido na página de privacidade,
+  // e o app dizia "fale com o responsável" sem dizer como.
+  if (rota === "/api/suporte" && req.method === "POST") {
+    if (!dentroDoLimite("suporte:" + ipDe(req), 6, 3600000)) return responderJson(res, 429, { erro: "Você mandou várias mensagens agora há pouco. Espere um pouco — a anterior já chegou." });
+    const nome = usuarioDoToken(tokenDoCabecalho(req));
+    const corpo = await lerCorpo(req);
+    const tipo = TIPOS_SUPORTE[corpo.tipo] ? corpo.tipo : "duvida";
+    const mensagem = String(corpo.mensagem || "").trim().slice(0, 3000);
+    const u = nome ? bd.usuarios[nome] : null;
+    const email = String(corpo.email || (u && u.email) || "").trim().toLowerCase().slice(0, 120);
+    if (mensagem.length < 10) return responderJson(res, 400, { erro: "Conte um pouco mais (pelo menos uma frase) pra eu conseguir ajudar." });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return responderJson(res, 400, { erro: "Informe um e-mail pra eu responder." });
+    const ctx = corpo.contexto && typeof corpo.contexto === "object" ? corpo.contexto : {};
+    const contexto = {
+      atividade: String(ctx.atividade || "").slice(0, 60), trilha: String(ctx.trilha || "").slice(0, 40),
+      ambiente: String(ctx.ambiente || "").slice(0, 40), pagina: String(ctx.pagina || "").slice(0, 120),
+      navegador: String(ctx.navegador || "").slice(0, 200),
+      comandos: Array.isArray(ctx.comandos) ? ctx.comandos.slice(-10).map((c) => String(c).slice(0, 300)) : [],
+    };
+    const id = "sup-" + crypto.randomBytes(4).toString("hex");
+    bd.suporte = (bd.suporte || []).filter((s) => Date.now() - s.criadoEm < 365 * 86400000); // guarda 1 ano (privacidade.html)
+    bd.suporte.push({ id, tipo, mensagem, email, usuario: nome || null, plano: u ? licencaPublica(u).tier : "anônimo", contexto, criadoEm: Date.now(), status: "aberto" });
+    if (bd.suporte.length > 1000) bd.suporte = bd.suporte.slice(-1000);
+    salvarBd();
+    const h = escHtml;
+    const destino = process.env.SUPORTE_EMAIL || process.env.ALERTA_EMAIL || "contato@climb.dev.br";
+    enviarEmail(destino, `[CLImb ${TIPOS_SUPORTE[tipo]}] ${nome || email} — ${id}`,
+      `<p><b>${h(TIPOS_SUPORTE[tipo])}</b> de <b>${h(nome || "sem conta")}</b> (${h(email)}) · plano ${h(u ? licencaPublica(u).tier : "anônimo")}</p>` +
+      `<blockquote style="white-space:pre-wrap;border-left:3px solid #f90;padding-left:10px">${h(mensagem)}</blockquote>` +
+      (contexto.atividade ? `<p>Atividade: <b>${h(contexto.atividade)}</b> (trilha ${h(contexto.trilha)}, ambiente ${h(contexto.ambiente)})</p>` : "") +
+      (contexto.comandos.length ? `<p>Últimos comandos:</p><pre>${h(contexto.comandos.join("\n"))}</pre>` : "") +
+      `<p style="color:#888">${h(contexto.navegador)} · ${h(contexto.pagina)}</p><p>Responder este e-mail responde direto pra pessoa.</p>`,
+      email);
+    return responderJson(res, 200, { ok: true, id });
   }
 
   // Rotas do professor sobre a própria turma
@@ -1966,6 +2011,7 @@ async function tratarAdmin(req, res, rota) {
       ativos24h: ativo(dia), ativos7d: ativo(7 * dia), ativos30d: ativo(30 * dia),
       pro: proPagantes, turmas: Object.keys(bd.salas || {}).length,
       alertas: (bd.alertas || []).length, eventosAtivos: eventosAtivos().length,
+      suporteAbertos: (bd.suporte || []).filter((s) => s.status === "aberto").length,
       uptimeMin: Math.round((agora - _metricas.bootEm) / 60000),
       reqDesdeBoot: _metricas.reqTotal, reqMediaDia: reqMedia,
       reqPorDia: dias.map((d) => ({ dia: d, req: porDia[d].req || 0 })),
@@ -2090,6 +2136,26 @@ async function tratarAdmin(req, res, rota) {
   // ----- Alertas antifraude -----
   if (sub === "alertas" && req.method === "GET") return responderJson(res, 200, { alertas: (bd.alertas || []).slice(-200).reverse() });
   if (sub === "alertas/limpar" && req.method === "POST") { bd.alertas = []; registrarLogAdmin("limpar-alertas", "", ip); salvarBd(); return responderJson(res, 200, { ok: true }); }
+
+  // ----- Suporte -----
+  if (sub === "suporte" && req.method === "GET") return responderJson(res, 200, { mensagens: (bd.suporte || []).slice(-300).reverse(), tipos: TIPOS_SUPORTE });
+  if (sub === "suporte/responder" && req.method === "POST") {
+    const m = (bd.suporte || []).find((s) => s.id === corpo.id); if (!m) return responderJson(res, 404, { erro: "Mensagem não encontrada." });
+    const resposta = String(corpo.resposta || "").trim().slice(0, 5000);
+    if (resposta.length < 2) return responderJson(res, 400, { erro: "Escreva a resposta." });
+    enviarEmail(m.email, "Re: sua mensagem ao CLImb (" + m.id + ")",
+      `<div style="white-space:pre-wrap">${escHtml(resposta)}</div><hr><p style="color:#888">Você escreveu:</p><blockquote style="white-space:pre-wrap;color:#666">${escHtml(m.mensagem)}</blockquote>`,
+      process.env.SUPORTE_EMAIL || "contato@climb.dev.br");
+    m.status = "respondido"; m.respondidoEm = Date.now(); m.resposta = resposta;
+    registrarLogAdmin("suporte-resposta", m.id, ip); salvarBd();
+    return responderJson(res, 200, { ok: true });
+  }
+  if (sub === "suporte/status" && req.method === "POST") {
+    const m = (bd.suporte || []).find((s) => s.id === corpo.id); if (!m) return responderJson(res, 404, { erro: "Mensagem não encontrada." });
+    m.status = corpo.status === "aberto" ? "aberto" : "fechado";
+    salvarBd();
+    return responderJson(res, 200, { ok: true, status: m.status });
+  }
 
   // ----- Plano Escola: professores e pacotes de vagas -----
   if (sub === "professores" && req.method === "GET") {
