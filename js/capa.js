@@ -21,6 +21,12 @@
 // ============================================================
 var CAPA_ESTILO = `
       body.capa-aberta { overflow: hidden; }
+      /* Antes do estilo.css chegar, o app por trás (invisível, mas ocupando
+         lugar) fica sem estilo e mais largo que a tela; o celular então
+         diminuía o zoom pra caber tudo, e a capa aparecia cortada. Com a capa
+         aberta, a página não passa da largura da tela. */
+      html:has(> body.capa-aberta), body.capa-aberta { overflow: hidden; max-width: 100%; }
+      body.capa-aberta > header, body.capa-aberta > main, body.capa-aberta > footer { max-width: 100vw; overflow: hidden; }
       /* O app se monta POR TRÁS da capa. Coberto, mas pintado: o navegador
          não sabe que está escondido, então o terminal e a lateral viravam o
          "maior elemento" (LCP no fim da carga, ~6 s, em vez do título da capa
@@ -31,7 +37,15 @@ var CAPA_ESTILO = `
       #capa {
         position: fixed; inset: 0; z-index: 100000;
         background: var(--fundo, #10151f);
+        /* a capa pinta ANTES do estilo.css chegar (o servidor põe as folhas
+           depois dela): fonte e cor dela não podem depender de lá */
+        font-family: "Segoe UI", system-ui, sans-serif; color: var(--texto, #dce3ee);
+        line-height: 1.5; -webkit-text-size-adjust: 100%;
         overflow-y: auto; overscroll-behavior: contain;
+        /* o brilho decorativo (46rem, saindo pela esquerda) alargava a página
+           no celular enquanto o estilo.css não chegava (é ele que corta o
+           transbordo lateral do app) */
+        overflow-x: hidden;
       }
       /* Sem animação de ENTRADA de propósito. Ela começava em opacity 0, e o
          que é pintado transparente não conta como LCP: o título da capa nunca
@@ -70,6 +84,11 @@ var CAPA_ESTILO = `
         color: var(--texto-fraco, #8b99b0); font-size: clamp(1rem, 2.3vw, 1.12rem);
         line-height: 1.6; margin: 0 0 1.8rem; max-width: 34rem;
       }
+      #capa button { font-family: inherit; }
+      /* o estilo.css aplica border-box a tudo; sem isto, antes de ele chegar,
+         o padding somava na largura (no celular o texto transbordava) e tudo
+         pulava ~30px quando ele chegava */
+      #capa, #capa *, #capa *::before, #capa *::after { box-sizing: border-box; }
       #capa .capa-acoes { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; }
       #capa .capa-cta {
         background: var(--laranja, #ff9900); color: #10151f; border: 0;
@@ -102,10 +121,10 @@ var CAPA_ESTILO = `
       #capa .capa-bola { width: .7rem; height: .7rem; border-radius: 50%; }
       #capa .capa-term-titulo {
         flex: 1; text-align: center; font-size: .75rem;
-        color: var(--texto-fraco, #8b99b0); font-family: var(--fonte-mono, monospace);
+        color: var(--texto-fraco, #8b99b0); font-family: var(--fonte-mono, "Cascadia Code", Consolas, monospace);
       }
       #capa .capa-term-corpo {
-        font-family: var(--fonte-mono, monospace); font-size: .84rem; line-height: 1.75;
+        font-family: var(--fonte-mono, "Cascadia Code", Consolas, monospace); font-size: .84rem; line-height: 1.75;
         padding: 1rem 1.1rem; min-height: 13rem; white-space: pre-wrap; word-break: break-word;
       }
       #capa .capa-term-corpo .p { color: var(--laranja, #ff9900); }
@@ -132,11 +151,11 @@ var CAPA_ESTILO = `
       }
       #capa .capa-passos li::before {
         content: counter(passo); position: absolute; top: .7rem; left: 0;
-        font-family: var(--fonte-mono, monospace); font-weight: 700; color: var(--laranja, #ff9900);
+        font-family: var(--fonte-mono, "Cascadia Code", Consolas, monospace); font-weight: 700; color: var(--laranja, #ff9900);
       }
       #capa .capa-passos b { display: block; color: var(--texto, #dce3ee); font-size: 1rem; margin-bottom: .3rem; }
       #capa .capa-passos code {
-        font-family: var(--fonte-mono, monospace); font-size: .85em; color: var(--laranja, #ff9900);
+        font-family: var(--fonte-mono, "Cascadia Code", Consolas, monospace); font-size: .85em; color: var(--laranja, #ff9900);
       }
       #capa .capa-rodape a { color: var(--texto-fraco, #8b99b0); text-underline-offset: 3px; }
       #capa .capa-rodape a:hover { color: var(--texto, #dce3ee); }

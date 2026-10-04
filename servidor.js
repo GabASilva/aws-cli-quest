@@ -1961,10 +1961,19 @@ function servirEstatico(req, res, rota) {
       // capa, se a pessoa já tem progresso/conta e só não tinha o cookie.
       const capa = !temCookie(req, "climb_capa") && capaPronta();
       chaveCache = capa ? "index.html+capa" : "index.html";
-      corpo = Buffer.from(
-        String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSAO}"`)
-          .replace("<body>", `<body ${contagem}${capa ? ' class="capa-aberta"' : ""}>` + (capa || ""))
-      );
+      let html = String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSAO}"`);
+      // Com a capa: as folhas de estilo saem do <head> e vão pra DEPOIS dela.
+      // Folha no <head> trava a pintura da página inteira; no meio do <body>,
+      // só do que vem depois. A capa tem o estilo dela embutido (com cores de
+      // reserva) e pinta na hora; o app, escondido atrás dela, espera o CSS
+      // como sempre. Medido em 04/10: com as folhas no <head> a capa entrava no
+      // HTML aos 0,27 s mas só PINTAVA aos 4,7 s (o estilo.css dividindo banda
+      // com os scripts).
+      let folhas = "";
+      if (capa) {
+        html = html.replace(/[ \t]*<link rel="stylesheet" href="css\/[^"]+">\r?\n?/g, (m) => { folhas += m.trim() + "\n"; return ""; });
+      }
+      corpo = Buffer.from(html.replace("<body>", `<body ${contagem}${capa ? ' class="capa-aberta"' : ""}>` + (capa ? capa + "\n" + folhas : "")));
       cache = "no-store"; // o HTML é sempre buscado fresco
     } else if (temVersao && PROD) {
       // URL versionada (imutável): pode cachear pra sempre, com segurança
