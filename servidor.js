@@ -2289,6 +2289,14 @@ http
       if (rota.startsWith("/u/")) return servirPerfilPublico(req, res, rota);
       if (rota === "/js/gabarito.js") return servirGabaritoAberto(req, res);
       if (rota === "/sitemap.xml") return servirSitemap(res);
+      // Navegador e Googlebot pedem /favicon.ico por conta própria, mesmo com o
+      // <link rel="icon"> apontando pro SVG: o Search Console contava esses 404
+      // no rastreamento (último em 27/09/2026). Redireciona pro ícone de verdade.
+      if (rota === "/favicon.ico") {
+        res.writeHead(301, { Location: "/img/favicon.svg", "Cache-Control": "public, max-age=86400", ...HEADERS_SEG });
+        res.end();
+        return;
+      }
       if (rota === ROTA_SIMULADO && SIMULADO_PUB) {
         return servirHtml(res, pagSimulado.paginaSimulado(SIMULADO_PUB, { base: hostBasePublico() }));
       }
