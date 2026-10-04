@@ -1852,8 +1852,13 @@ function urlsDoSitemap(base) {
 function servirSitemap(res) {
   const base = hostBasePublico();
   const urls = urlsDoSitemap(base);
+  // <lastmod> = dia em que o HTML daquela página mudou (lib/indexnow.js guarda
+  // isso no volume). Sem registro (dev, primeira subida), fica sem lastmod.
+  const mod = indexnow.lastmods(process.env.DADOS_DIR);
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    urls.map((u) => `  <url>\n    <loc>${pagLicoes.esc(u.loc)}</loc>\n    <changefreq>${u.freq}</changefreq>\n    <priority>${u.pri}</priority>\n  </url>`).join("\n") +
+    urls.map((u) => `  <url>\n    <loc>${pagLicoes.esc(u.loc)}</loc>\n` +
+      (mod[u.loc] ? `    <lastmod>${mod[u.loc]}</lastmod>\n` : "") +
+      `    <changefreq>${u.freq}</changefreq>\n    <priority>${u.pri}</priority>\n  </url>`).join("\n") +
     `\n</urlset>\n`;
   const corpo = Buffer.from(xml, "utf8");
   res.writeHead(200, {
