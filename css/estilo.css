@@ -1744,3 +1744,10 @@ body[data-destaque="acoes"] .sala-aviso,
 body[data-destaque="acoes"] .pf-nota.alerta { color: var(--texto); }
 body[data-destaque="acoes"] .faixa-selo { background: var(--painel-2); color: var(--texto-fraco); }
 body[data-destaque="acoes"] #faixaTreino { border-left-color: var(--borda); }
+
+/* ícones desenhados (opção de HUD, js/icones.js): do tamanho do emoji que
+   substituem, na cor do texto. O espaço depois do emoji vira a margem. */
+svg.ico {
+  width: 1.1em; height: 1.1em; flex: 0 0 1.1em;
+  vertical-align: -0.2em; margin-right: 0.38em;
+}
