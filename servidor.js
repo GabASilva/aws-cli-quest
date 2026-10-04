@@ -18,6 +18,7 @@ const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
 const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
 const pagGuias = require("./lib/paginas-guias.js"); // /instalar-aws-cli, /comandos-aws-cli, /erros-aws-cli
+const pagEscolas = require("./lib/pagina-escolas.js"); // /escolas — vitrine do plano Escola
 const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades nas páginas públicas
 const semGabarito = require("./lib/sem-gabarito.js"); // o cliente não recebe dica nem solução do que é pago
 const licencaServidor = require("./lib/licenca-servidor.js"); // quem pode ver o quê, decidido aqui
@@ -1824,6 +1825,7 @@ function servirSitemap(res) {
   ];
   if (SIMULADO_PUB) urls.push({ loc: base + ROTA_SIMULADO, freq: "monthly", pri: "0.9" });
   for (const r of pagGuias.ROTAS_GUIAS) urls.push({ loc: base + r, freq: "monthly", pri: "0.9" });
+  urls.push({ loc: base + pagEscolas.ROTA_ESCOLAS, freq: "monthly", pri: "0.8" });
   if (LICOES_PUB) {
     for (const u of pagLicoes.urlsLicoes(LICOES_PUB, base)) {
       urls.push({ loc: u, freq: "monthly", pri: u.endsWith("/aprender") ? "0.9" : "0.7" });
@@ -2285,6 +2287,12 @@ http
       }
       if (rota === "/aprender" || rota.startsWith("/aprender/")) {
         if (servirLicaoPublica(req, res, rota)) return;
+      }
+      if (rota === pagEscolas.ROTA_ESCOLAS && CONTEUDO_PUB) {
+        return servirHtml(res, pagEscolas.paginaEscolas({
+          base: hostBasePublico(), conteudo: CONTEUDO_PUB, gratis: GRATIS_PUB,
+          precos: PRECOS, precoEscola: PRECO_ESCOLA_ALUNO,
+        }));
       }
       if (pagGuias.ROTAS_GUIAS.includes(rota)) {
         const html = pagGuias.paginaGuia(rota.slice(1), { base: hostBasePublico(), conteudo: CONTEUDO_PUB });

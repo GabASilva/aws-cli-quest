@@ -171,7 +171,30 @@
     try { linkNoCard(); } catch (_) {}
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ligar);
-  else ligar();
+  // Links de entrada vindos das páginas públicas (/escolas): ?abrir=turmas abre
+  // 👥 Turmas (onde se pede a conta de professor) e ?abrir=ajuda-<tipo> abre
+  // este formulário já no tipo. Espera o app montar e a sessão voltar da nuvem
+  // — o Turmas aberto antes do login mostraria "entre na sua conta" a quem já
+  // está logado. Depois tira o parâmetro da URL, pra recarregar não reabrir.
+  function linkDeEntrada() {
+    let alvo = "";
+    try { alvo = new URLSearchParams(location.search).get("abrir") || ""; } catch (_) { return; }
+    if (!/^(turmas|ajuda(-[a-z]+)?)$/.test(alvo)) return;
+    let temSessao = false;
+    try { temSessao = !!localStorage.getItem("awsCliQuest.token"); } catch (_) {}
+    const inicio = Date.now();
+    const tentar = () => {
+      const montou = document.body.classList.contains("app-pronto");
+      const sessaoPronta = !temSessao || (typeof api !== "undefined" && api.usuario);
+      if (!(montou && sessaoPronta) && Date.now() - inicio < 5000) { setTimeout(tentar, 150); return; }
+      try { history.replaceState(null, "", location.pathname + location.hash); } catch (_) {}
+      if (alvo === "turmas" && typeof window.abrirTurmas === "function") window.abrirTurmas();
+      else if (alvo.startsWith("ajuda")) abrir(alvo.slice(6));
+    };
+    tentar();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { ligar(); linkDeEntrada(); });
+  else { ligar(); linkDeEntrada(); }
   window.abrirSuporte = abrir;
 })();
