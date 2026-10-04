@@ -13,70 +13,13 @@
 // ADITIVO: não toca app.js/jogo.js. Some sozinho pra quem já tem progresso ou
 // já está logado — quem volta nunca mais vê.
 // ============================================================
-(function () {
-  if (typeof window === "undefined" || typeof document === "undefined") return;
-
-  const CHAVE = "awsCliQuest.capa.v1";
-  const CHAVE_TOKEN = "awsCliQuest.token";
-
-  function jaDispensou() {
-    try { return localStorage.getItem(CHAVE) === "1"; } catch (e) { return false; }
-  }
-  function marcarDispensada() {
-    try { localStorage.setItem(CHAVE, "1"); } catch (e) { /* modo anônimo: tudo bem */ }
-  }
-  function estaLogado() {
-    try { return !!localStorage.getItem(CHAVE_TOKEN); } catch (e) { return false; }
-  }
-  // A capa roda ANTES do app (é o 2º script da lista, logo depois do
-  // pronto.js), então o `jogo` ainda não existe: o progresso de quem não tem
-  // conta é lido direto do save local (awsCliQuest.v1, o mesmo do jogo.js).
-  function temProgresso() {
-    try {
-      if (typeof jogo !== "undefined" && jogo) return Object.keys(jogo.concluidos || {}).length > 0;
-      const salvo = JSON.parse(localStorage.getItem("awsCliQuest.v1") || "null");
-      return !!(salvo && salvo.concluidos && Object.keys(salvo.concluidos).length);
-    } catch (e) { return false; }
-  }
-
-  // Pronto pra receber o clique = todos os scripts rodaram e o app.js montou.
-  // Antes disso, "Começar agora" espera em vez de falhar calado: a capa agora
-  // aparece cedo (antes dos ~110 arquivos do app), e em rede lenta dá pra
-  // clicar antes de selecionarDesafio existir.
-  let appCarregado = document.readyState === "complete";
-  if (!appCarregado) document.addEventListener("DOMContentLoaded", () => setTimeout(() => { appCarregado = true; }, 60));
-  function quandoApp(fn) {
-    if (appCarregado) return fn();
-    const t = setInterval(() => { if (appCarregado) { clearInterval(t); fn(); } }, 100);
-  }
-
-  // Só mostra pra quem é REALMENTE novo: sem progresso, sem sessão, sem ter
-  // dispensado antes.
-  function deveMostrar() {
-    return !jaDispensou() && !estaLogado() && !temProgresso();
-  }
-
-  // Primeira atividade ainda não concluída, na ordem das trilhas. Com fallback:
-  // se SERVICOS_TRILHA não existir, cai pro primeiro DESAFIOS pendente.
-  function primeiroDesafio() {
-    try {
-      if (typeof SERVICOS_TRILHA !== "undefined" && typeof desafiosDoServico === "function") {
-        for (const s of SERVICOS_TRILHA) {
-          const alvo = (desafiosDoServico(s) || []).find((d) => !desafioConcluido(d.id));
-          if (alvo) return alvo;
-        }
-      }
-      if (typeof DESAFIOS !== "undefined") return DESAFIOS.find((d) => !desafioConcluido(d.id)) || null;
-    } catch (e) { /* qualquer coisa: segue sem seleção */ }
-    return null;
-  }
-
-  // ---------- estilo ----------
-  function injetarEstilo() {
-    if (document.getElementById("capaEstilo")) return;
-    const st = document.createElement("style");
-    st.id = "capaEstilo";
-    st.textContent = `
+// ============================================================
+// FORA do IIFE de propósito: o servidor lê estas duas coisas (sandbox sem
+// window, onde o IIFE abaixo sai na hora) e entrega a capa JÁ PRONTA no
+// index.html pra quem chega novo — ver capaPronta() no servidor.js. Uma fonte
+// só: a capa do servidor e a montada aqui no navegador são a mesma.
+// ============================================================
+var CAPA_ESTILO = `
       body.capa-aberta { overflow: hidden; }
       /* O app se monta POR TRÁS da capa. Coberto, mas pintado: o navegador
          não sabe que está escondido, então o terminal e a lateral viravam o
@@ -211,6 +154,137 @@
         #capa .capa-cursor { animation: none; }
       }
     `;
+
+function capaMarcacao(nAtividades, nTrilhas) {
+  return `
+      <div class="capa-brilho" aria-hidden="true"></div>
+      <div class="capa-conteudo">
+        <div class="capa-marca">⚡ CLImb <small>climb.dev.br</small></div>
+
+        <div class="capa-topo">
+          <div>
+            <h1>Aprenda AWS CLI<em>digitando de verdade.</em></h1>
+            <p class="capa-sub">
+              Um simulador de terminal com <b>${nAtividades}</b> em <b>${nTrilhas}</b>.
+              Você digita os comandos reais e o estado persiste entre eles —
+              não é quiz, não é vídeo.
+            </p>
+            <div class="capa-acoes">
+              <button type="button" class="capa-cta" id="capaComecar">Começar agora</button>
+              <button type="button" class="capa-link" id="capaEntrar">já tenho conta</button>
+            </div>
+            <span class="capa-gratis">
+              Grátis pra começar, sem cartão. Seu progresso salva no navegador.
+            </span>
+          </div>
+
+          <div class="capa-term">
+            <div class="capa-term-barra" aria-hidden="true">
+              <span class="capa-bola" style="background:#ff5f57"></span>
+              <span class="capa-bola" style="background:#febc2e"></span>
+              <span class="capa-bola" style="background:#28c840"></span>
+              <span class="capa-term-titulo">terminal</span>
+            </div>
+            <div class="capa-term-corpo" id="capaTerm" role="img"
+                 aria-label="Demonstração: os comandos aws s3 mb, aws s3 ls e aws ec2 run-instances sendo executados no simulador"></div>
+          </div>
+        </div>
+
+        <!-- O que acontece no primeiro minuto, na ordem: é a abertura.js que
+             vem depois do "Começar agora". Substituiu três cards genéricos de
+             "vantagens": mostrar o caminho convence mais que listar adjetivo. -->
+        <h2 class="capa-passos-titulo">O seu primeiro minuto</h2>
+        <ol class="capa-passos">
+          <li><b>Chega um pedido.</b> O Rafa, do time, precisa de um bucket no S3 pro site
+            novo, do jeito que um pedido chega no trabalho.</li>
+          <li><b>Você digita o comando.</b> Não sabe qual é? <code>aws s3 help</code> abre o
+            manual. Errou a flag? O terminal mostra o erro e o que faltou.</li>
+          <li><b>A tela se monta.</b> O bucket existe, você ganha XP e as trilhas aparecem.
+            Daí pra frente é igual: pedido, comando, resultado.</li>
+        </ol>
+
+        <p class="capa-rodape">
+          <a href="/aprender">Lições de AWS</a> · <a href="/sobre.html">O que o CLImb ensina</a> ·
+          <a href="/escolas">Para escolas</a><br>
+          Projeto independente e educativo, <b>sem afiliação, patrocínio ou endosso</b> da Amazon.
+          “AWS” e “Amazon Web Services” são marcas registradas da Amazon.com, Inc. ou de suas
+          afiliadas. É um simulador — não conecta a nenhuma conta AWS real.
+        </p>
+      </div>
+    `;
+}
+
+(function () {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+
+  const CHAVE = "awsCliQuest.capa.v1";
+  const CHAVE_TOKEN = "awsCliQuest.token";
+
+  function jaDispensou() {
+    try { return localStorage.getItem(CHAVE) === "1"; } catch (e) { return false; }
+  }
+  function marcarDispensada() {
+    try { localStorage.setItem(CHAVE, "1"); } catch (e) { /* modo anônimo: tudo bem */ }
+    marcarCookie();
+  }
+  // O servidor manda a capa pronta no HTML pra quem NÃO tem este cookie. Ele
+  // é gravado quando a pessoa dispensa a capa, ou quando ela não deveria ver
+  // (já tem progresso ou conta). Cookie funcional, sem rastreio: só diz "já viu".
+  function marcarCookie() {
+    try { document.cookie = "climb_capa=1; Max-Age=31536000; Path=/; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : ""); } catch (e) { /* ok */ }
+  }
+  function estaLogado() {
+    try { return !!localStorage.getItem(CHAVE_TOKEN); } catch (e) { return false; }
+  }
+  // A capa roda ANTES do app (é o 2º script da lista, logo depois do
+  // pronto.js), então o `jogo` ainda não existe: o progresso de quem não tem
+  // conta é lido direto do save local (awsCliQuest.v1, o mesmo do jogo.js).
+  function temProgresso() {
+    try {
+      if (typeof jogo !== "undefined" && jogo) return Object.keys(jogo.concluidos || {}).length > 0;
+      const salvo = JSON.parse(localStorage.getItem("awsCliQuest.v1") || "null");
+      return !!(salvo && salvo.concluidos && Object.keys(salvo.concluidos).length);
+    } catch (e) { return false; }
+  }
+
+  // Pronto pra receber o clique = todos os scripts rodaram e o app.js montou.
+  // Antes disso, "Começar agora" espera em vez de falhar calado: a capa agora
+  // aparece cedo (antes dos ~110 arquivos do app), e em rede lenta dá pra
+  // clicar antes de selecionarDesafio existir.
+  let appCarregado = document.readyState === "complete";
+  if (!appCarregado) document.addEventListener("DOMContentLoaded", () => setTimeout(() => { appCarregado = true; }, 60));
+  function quandoApp(fn) {
+    if (appCarregado) return fn();
+    const t = setInterval(() => { if (appCarregado) { clearInterval(t); fn(); } }, 100);
+  }
+
+  // Só mostra pra quem é REALMENTE novo: sem progresso, sem sessão, sem ter
+  // dispensado antes.
+  function deveMostrar() {
+    return !jaDispensou() && !estaLogado() && !temProgresso();
+  }
+
+  // Primeira atividade ainda não concluída, na ordem das trilhas. Com fallback:
+  // se SERVICOS_TRILHA não existir, cai pro primeiro DESAFIOS pendente.
+  function primeiroDesafio() {
+    try {
+      if (typeof SERVICOS_TRILHA !== "undefined" && typeof desafiosDoServico === "function") {
+        for (const s of SERVICOS_TRILHA) {
+          const alvo = (desafiosDoServico(s) || []).find((d) => !desafioConcluido(d.id));
+          if (alvo) return alvo;
+        }
+      }
+      if (typeof DESAFIOS !== "undefined") return DESAFIOS.find((d) => !desafioConcluido(d.id)) || null;
+    } catch (e) { /* qualquer coisa: segue sem seleção */ }
+    return null;
+  }
+
+  // ---------- estilo ----------
+  function injetarEstilo() {
+    if (document.getElementById("capaEstilo")) return; // inclui a que veio no HTML
+    const st = document.createElement("style");
+    st.id = "capaEstilo";
+    st.textContent = CAPA_ESTILO;;
     document.head.appendChild(st);
   }
 
@@ -325,63 +399,14 @@
     const capa = document.createElement("section");
     capa.id = "capa";
     capa.setAttribute("aria-label", "Apresentação do CLImb");
-    capa.innerHTML = `
-      <div class="capa-brilho" aria-hidden="true"></div>
-      <div class="capa-conteudo">
-        <div class="capa-marca">⚡ CLImb <small>climb.dev.br</small></div>
-
-        <div class="capa-topo">
-          <div>
-            <h1>Aprenda AWS CLI<em>digitando de verdade.</em></h1>
-            <p class="capa-sub">
-              Um simulador de terminal com <b>${nAtividades}</b> em <b>${nTrilhas}</b>.
-              Você digita os comandos reais e o estado persiste entre eles —
-              não é quiz, não é vídeo.
-            </p>
-            <div class="capa-acoes">
-              <button type="button" class="capa-cta" id="capaComecar">Começar agora</button>
-              <button type="button" class="capa-link" id="capaEntrar">já tenho conta</button>
-            </div>
-            <span class="capa-gratis">
-              Grátis pra começar, sem cartão. Seu progresso salva no navegador.
-            </span>
-          </div>
-
-          <div class="capa-term">
-            <div class="capa-term-barra" aria-hidden="true">
-              <span class="capa-bola" style="background:#ff5f57"></span>
-              <span class="capa-bola" style="background:#febc2e"></span>
-              <span class="capa-bola" style="background:#28c840"></span>
-              <span class="capa-term-titulo">terminal</span>
-            </div>
-            <div class="capa-term-corpo" id="capaTerm" role="img"
-                 aria-label="Demonstração: os comandos aws s3 mb, aws s3 ls e aws ec2 run-instances sendo executados no simulador"></div>
-          </div>
-        </div>
-
-        <!-- O que acontece no primeiro minuto, na ordem: é a abertura.js que
-             vem depois do "Começar agora". Substituiu três cards genéricos de
-             "vantagens": mostrar o caminho convence mais que listar adjetivo. -->
-        <h2 class="capa-passos-titulo">O seu primeiro minuto</h2>
-        <ol class="capa-passos">
-          <li><b>Chega um pedido.</b> O Rafa, do time, precisa de um bucket no S3 pro site
-            novo, do jeito que um pedido chega no trabalho.</li>
-          <li><b>Você digita o comando.</b> Não sabe qual é? <code>aws s3 help</code> abre o
-            manual. Errou a flag? Aparece o mesmo erro que a AWS devolveria.</li>
-          <li><b>A tela se monta.</b> O bucket existe, você ganha XP e as trilhas aparecem.
-            Daí pra frente é igual: pedido, comando, resultado.</li>
-        </ol>
-
-        <p class="capa-rodape">
-          <a href="/aprender">Lições de AWS</a> · <a href="/sobre.html">O que o CLImb ensina</a> ·
-          <a href="/escolas">Para escolas</a><br>
-          Projeto independente e educativo, <b>sem afiliação, patrocínio ou endosso</b> da Amazon.
-          “AWS” e “Amazon Web Services” são marcas registradas da Amazon.com, Inc. ou de suas
-          afiliadas. É um simulador — não conecta a nenhuma conta AWS real.
-        </p>
-      </div>
-    `;
+    capa.innerHTML = capaMarcacao(nAtividades, nTrilhas);;
     document.body.appendChild(capa);
+    hidratar(capa);
+  }
+
+  // Liga a capa: a que o servidor mandou pronta ou a montada acima.
+  function hidratar(capa) {
+    injetarEstilo();
     document.body.classList.add("capa-aberta");
     esconderAppAtras(true);
 
@@ -467,7 +492,18 @@
   // quem nunca viu o CLImb (medido em 04/10/2026). Este arquivo é defer e roda
   // com o HTML já lido, então o <body> existe. O pronto.js não é afetado: ele
   // vigia header/main/footer, e a capa é irmã deles.
-  function iniciar() { if (deveMostrar()) montar(); }
+  function iniciar() {
+    const pronta = document.getElementById("capa");
+    if (pronta) {
+      // veio do servidor: liga, ou tira se esta pessoa não deveria ver
+      // (tem progresso ou conta mas ainda não tinha o cookie)
+      if (deveMostrar()) hidratar(pronta);
+      else { pronta.remove(); document.body.classList.remove("capa-aberta"); marcarCookie(); }
+      return;
+    }
+    if (deveMostrar()) montar();
+    else marcarCookie();
+  }
   if (document.body) iniciar();
   else document.addEventListener("DOMContentLoaded", iniciar);
 

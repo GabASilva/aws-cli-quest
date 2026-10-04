@@ -252,6 +252,18 @@ máquina): capa visível de 5,7 s para 0,9 s, LCP de 6,3 s para 1,0 s, CLS de
   contavam no CLS sem ninguém ver.
 - O terminal de demonstração escreve **um elemento por linha**: num bloco só,
   cada letra digitada virava um LCP novo.
+- **A capa vem PRONTA no HTML** pra quem não tem o cookie `climb_capa`: o
+  servidor (`capaPronta()`) lê `CAPA_ESTILO` e `capaMarcacao` do próprio
+  `js/capa.js` — que ficam FORA do IIFE de lá — e injeta no `index.html`, com
+  `class="capa-aberta"` no `<body>`. O `capa.js` só liga os botões (`hidratar`)
+  ou tira a capa de quem tem progresso/conta, gravando o cookie. Mexeu no
+  desenho da capa? É no `capa.js`, uma fonte só. O `index.html` tem duas formas
+  no cache de compressão (`index.html` e `index.html+capa`).
+- O Lighthouse NÃO melhora o LCP com isso (7,5 s nas duas versões, medido em
+  04/10/2026): o simulador dele põe no caminho do LCP tudo o que foi pedido
+  antes da pintura, e os ~115 scripts são pedidos logo no parse. O ganho é da
+  pessoa real (a capa não espera os scripts). Pra mexer na nota de verdade,
+  só adiando o carregamento do app inteiro — reforma grande, não feita.
 - `pronto.js` e `capa.js` vão com `fetchpriority="high"`: em produção (HTTP/2)
   os scripts baixam todos juntos, e sem prioridade a capa só chegava aos 3,4 s.
   O teste local roda em HTTP/1.1 e NÃO mostra isso: meça a capa em produção.

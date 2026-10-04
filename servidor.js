@@ -13,6 +13,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm"); // lê o desenho da capa do js/capa.js (capaPronta)
 const crypto = require("crypto");
 const zlib = require("zlib");
 const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<usuario>
@@ -1823,6 +1824,33 @@ function servirGabaritoAberto(req, res) {
   res.end(corpo);
 }
 
+// ---------- Capa pronta no HTML ----------
+// O desenho da capa mora no js/capa.js (CAPA_ESTILO e capaMarcacao, fora do
+// IIFE). Lido uma vez num sandbox sem window: o IIFE de lá sai na hora.
+let CAPA_PRONTA;
+function capaPronta() {
+  if (CAPA_PRONTA !== undefined) return CAPA_PRONTA;
+  try {
+    const cx = { console: { log() {}, warn() {}, error() {} } };
+    vm.createContext(cx);
+    vm.runInContext(fs.readFileSync(path.join(RAIZ, "js", "capa.js"), "utf8") +
+      "\n;globalThis.__c = { estilo: CAPA_ESTILO, marcacao: capaMarcacao };", cx, { timeout: 5000 });
+    const n = CONTEUDO_PUB ? CONTEUDO_PUB.desafios.length : 0;
+    const milhar = (x) => String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const atividades = n ? milhar(n) + " atividades" : "centenas de atividades";
+    const trilhas = CONTEUDO_PUB ? CONTEUDO_PUB.meta.length + " trilhas" : "dezenas de trilhas";
+    CAPA_PRONTA = `<style id="capaEstilo">${cx.__c.estilo}</style>` +
+      `<section id="capa" aria-label="Apresentação do CLImb">${cx.__c.marcacao(atividades, trilhas)}</section>`;
+  } catch (e) {
+    console.error("Capa pronta indisponível (o capa.js monta no navegador):", e.message);
+    CAPA_PRONTA = "";
+  }
+  return CAPA_PRONTA;
+}
+function temCookie(req, nome) {
+  return String((req && req.headers && req.headers.cookie) || "").split(/;\s*/).some((c) => c.split("=")[0] === nome);
+}
+
 // A lista de URLs públicas. Usada pelo sitemap E pelo IndexNow (lib/indexnow.js):
 // uma lista só, pra nunca avisar o Bing de uma página que o sitemap não tem.
 function urlsDoSitemap(base) {
@@ -1918,16 +1946,24 @@ function servirEstatico(req, res, rota) {
     }
     let corpo = conteudo;
     let cache;
+    let chaveCache = null; // o index.html tem duas formas (com e sem a capa)
     if (relativo === "index.html") {
       // injeta ?v=VERSAO em todo src/href de js/ e css/ (URLs locais)
       // e escreve no <body> quantas atividades e trilhas existem: a capa
       // (js/capa.js) roda antes do app carregar e não tem DESAFIOS pra contar
       const contagem = CONTEUDO_PUB
-        ? `<body data-atividades="${CONTEUDO_PUB.desafios.length}" data-trilhas="${CONTEUDO_PUB.meta.length}">`
-        : "<body>";
+        ? `data-atividades="${CONTEUDO_PUB.desafios.length}" data-trilhas="${CONTEUDO_PUB.meta.length}"`
+        : "";
+      // Quem chega novo (sem o cookie climb_capa) recebe a capa JÁ NO HTML: ela
+      // pinta junto com a página, sem esperar o js/capa.js chegar (em produção,
+      // com HTTP/2, ele dividia a banda com os ~115 scripts e a capa só
+      // aparecia aos ~4,6 s). O capa.js depois só liga os botões — ou tira a
+      // capa, se a pessoa já tem progresso/conta e só não tinha o cookie.
+      const capa = !temCookie(req, "climb_capa") && capaPronta();
+      chaveCache = capa ? "index.html+capa" : "index.html";
       corpo = Buffer.from(
         String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSAO}"`)
-          .replace("<body>", contagem)
+          .replace("<body>", `<body ${contagem}${capa ? ' class="capa-aberta"' : ""}>` + (capa || ""))
       );
       cache = "no-store"; // o HTML é sempre buscado fresco
     } else if (temVersao && PROD) {
@@ -1958,7 +1994,7 @@ function servirEstatico(req, res, rota) {
       if (codificacao) {
         // a chave inclui a VERSAO: depois de um deploy o conteúdo muda e o
         // cache em memória precisa ser invalidado junto.
-        const comprimido = comprimir(relativo + "@" + VERSAO, codificacao, corpo);
+        const comprimido = comprimir((chaveCache || relativo) + "@" + VERSAO, codificacao, corpo);
         if (comprimido) {
           cabecalhos["Content-Encoding"] = codificacao;
           corpo = comprimido;
