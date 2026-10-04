@@ -252,10 +252,14 @@ máquina): capa visível de 5,7 s para 0,9 s, LCP de 6,3 s para 1,0 s, CLS de
   contavam no CLS sem ninguém ver.
 - O terminal de demonstração escreve **um elemento por linha**: num bloco só,
   cada letra digitada virava um LCP novo.
-- Conhecido e NÃO resolvido: quem volta (sem capa) em rede lenta tem CLS ~0,29,
-  porque o teto de 2 s do `pronto.js` libera a tela antes de o app montar.
-  Trocar o teto por "2 s depois do DOMContentLoaded" tira o CLS mas atrasa a
-  primeira pintura em ~4 s pra esse visitante. Decisão do Gabriel, pendente.
+- `pronto.js` e `capa.js` vão com `fetchpriority="high"`: em produção (HTTP/2)
+  os scripts baixam todos juntos, e sem prioridade a capa só chegava aos 3,4 s.
+  O teste local roda em HTTP/1.1 e NÃO mostra isso: meça a capa em produção.
+- **Decidido (Gabriel, 04/10/2026): o teto de 2 s do `pronto.js` fica.** Quem
+  volta (sem capa) em rede lenta tem CLS ~0,29, porque o teto libera a tela
+  antes de o app montar. Contar o teto a partir do DOMContentLoaded tiraria o
+  CLS, mas deixaria esse visitante ~4 s a mais com a tela vazia, e "4 s é muito
+  tempo". Não reabra sem pedido dele.
 
 ### Página pública nova (SEO)
 

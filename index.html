@@ -197,10 +197,14 @@
 
   <!-- primeiro de todos: segura a pintura ate a interface estar montada
        (sem isto a tela treme enquanto o JS acrescenta header, card e rodape) -->
-  <script defer src="js/pronto.js"></script>
+  <!-- fetchpriority: em producao (HTTP/2) os ~115 scripts baixam juntos e
+       dividem a banda; sem prioridade a capa.js so chegava aos 3,4 s (em
+       4G lento), e a capa aparecia aos 4,6 s. Estes dois sao os que pintam a
+       primeira tela de quem chega novo. -->
+  <script defer fetchpriority="high" src="js/pronto.js"></script>
   <!-- logo depois do pronto.js: a capa (só pra quem chega novo) aparece sem
        esperar o resto do app; o clique dela espera o app se for cedo demais -->
-  <script defer src="js/capa.js"></script>
+  <script defer fetchpriority="high" src="js/capa.js"></script>
   <script defer src="js/simulador.js"></script>
   <script defer src="js/manuais.js"></script>
   <script defer src="js/manuais-fase6-9.js"></script>
