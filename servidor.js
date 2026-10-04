@@ -20,6 +20,8 @@ const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /apr
 const pagGuias = require("./lib/paginas-guias.js"); // /instalar-aws-cli, /comandos-aws-cli, /erros-aws-cli
 const pagEscolas = require("./lib/pagina-escolas.js"); // /escolas — vitrine do plano Escola
 const pagSobre = require("./lib/pagina-sobre.js"); // /sobre.html — catálogo, gerado do conteúdo
+const indexnow = require("./lib/indexnow.js"); // avisa o Bing das páginas novas/mudadas
+const exemplosCmd = require("./lib/exemplos.js"); // saída real dos comandos (scripts/gerar-exemplos.js)
 const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades nas páginas públicas
 const semGabarito = require("./lib/sem-gabarito.js"); // o cliente não recebe dica nem solução do que é pago
 const licencaServidor = require("./lib/licenca-servidor.js"); // quem pode ver o quê, decidido aqui
@@ -1708,6 +1710,10 @@ try {
   // O conteúdo do app (manuais + atividades) entra nas páginas de /aprender:
   // sem ele elas saem com ~240 palavras, que é raso demais pro Google indexar.
   CONTEUDO_PUB = conteudoApp.carregar(RAIZ);
+  // Antes de qualquer comandosComPagina() (ele guarda o resultado em cache):
+  // a saída real de cada comando e o PORQUE entram na página e na contagem.
+  CONTEUDO_PUB.exemplos = exemplosCmd.carregar(RAIZ, CONTEUDO_PUB);
+  CONTEUDO_PUB.porque = pagLicoes.porque();
   // As lições que as trilhas novas trazem no próprio arquivo (*-completo.js)
   // entram aqui; as de licoes.js têm prioridade se o id repetir.
   for (const [id, l] of Object.entries(CONTEUDO_PUB.licoes || {})) if (!LICOES_PUB[id]) LICOES_PUB[id] = l;
@@ -1817,8 +1823,9 @@ function servirGabaritoAberto(req, res) {
   res.end(corpo);
 }
 
-function servirSitemap(res) {
-  const base = hostBasePublico();
+// A lista de URLs públicas. Usada pelo sitemap E pelo IndexNow (lib/indexnow.js):
+// uma lista só, pra nunca avisar o Bing de uma página que o sitemap não tem.
+function urlsDoSitemap(base) {
   const urls = [
     { loc: `${base}/`, freq: "weekly", pri: "1.0" },
     { loc: `${base}/sobre.html`, freq: "monthly", pri: "0.8" },
@@ -1839,6 +1846,12 @@ function servirSitemap(res) {
       urls.push({ loc: `${base}/aprender/${c.servico}/${c.sub}`, freq: "monthly", pri: "0.7" });
     }
   }
+  return urls;
+}
+
+function servirSitemap(res) {
+  const base = hostBasePublico();
+  const urls = urlsDoSitemap(base);
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls.map((u) => `  <url>\n    <loc>${pagLicoes.esc(u.loc)}</loc>\n    <changefreq>${u.freq}</changefreq>\n    <priority>${u.pri}</priority>\n  </url>`).join("\n") +
     `\n</urlset>\n`;
@@ -2289,6 +2302,11 @@ http
       if (rota.startsWith("/u/")) return servirPerfilPublico(req, res, rota);
       if (rota === "/js/gabarito.js") return servirGabaritoAberto(req, res);
       if (rota === "/sitemap.xml") return servirSitemap(res);
+      if (rota === indexnow.ROTA_CHAVE) {
+        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=86400", ...HEADERS_SEG });
+        res.end(indexnow.CHAVE);
+        return;
+      }
       // Navegador e Googlebot pedem /favicon.ico por conta própria, mesmo com o
       // <link rel="icon"> apontando pro SVG: o Search Console contava esses 404
       // no rastreamento (último em 27/09/2026). Redireciona pro ícone de verdade.
@@ -2326,6 +2344,19 @@ http
   .listen(PORTA, () => {
     console.log(`CLImb no ar: http://localhost:${PORTA}`);
     aquecerCompressao(); // depois do listen: nao atrasa o primeiro atendimento
+    // IndexNow: só em produção, no domínio de verdade, e depois que o boot
+    // assentou (o aquecimento da compressão roda primeiro). Busca as páginas
+    // no próprio servidor e avisa só as que mudaram — ver lib/indexnow.js.
+    // FLY_APP_NAME só existe na máquina do Fly: teste local também passa
+    // DADOS_DIR (PROD fica true) e avisaria o Bing com o servidor da sua máquina.
+    if (PROD && process.env.FLY_APP_NAME && hostCanonico() === "climb.dev.br") {
+      setTimeout(() => {
+        indexnow.avisarMudancas({
+          urls: urlsDoSitemap(hostBasePublico()).map((u) => u.loc),
+          porta: PORTA, dir: process.env.DADOS_DIR, host: hostCanonico(),
+        }).catch((e) => console.log("IndexNow: " + e.message));
+      }, 60000);
+    }
   });
 
 // ---------- Por que NÃO existe auto-ping aqui (medido em 21/09/2026) ----------

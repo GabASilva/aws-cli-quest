@@ -281,6 +281,19 @@ description` própria, `rel=canonical` absoluto, HTML **montado no servidor**
   trilhas grátis). O `sobre.html` era gerado por script e ficou dizendo "630
   atividades em 63 trilhas" com o app em 1.407 e 70; hoje ele é montado no
   servidor (`lib/pagina-sobre.js`), assim como `/escolas` e `/aprender`.
+- **Mexeu em solução de atividade ou em manual? Rode `node scripts/gerar-exemplos.js`.**
+  Ele grava `lib/exemplos-comandos.json` (saída real de cada comando no
+  simulador + o erro de uso), que vai pras páginas de comando. Velho, o servidor
+  avisa no log do boot e `node scripts/gerar-exemplos.js --conferir` falha. O
+  texto do erro é o do terminal do CLImb: a página não diz que é a mensagem
+  literal da AWS, porque algumas são em português.
+- O mínimo de 300 palavras das páginas de comando conta a saída real com
+  **teto de 80 palavras** (JSON de describe não transforma página rasa em
+  página). Não baixe o mínimo pra ter mais páginas: em 04/10/2026 só 35 dos 617
+  comandos passavam, e é de propósito.
+- IndexNow (`lib/indexnow.js`): a cada boot NO FLY, o servidor avisa o Bing só
+  das URLs do sitemap cujo HTML mudou. Página pública nova entra pelo
+  `urlsDoSitemap()` — não existe outra lista.
 - Use `pag.cabecalho`/`pag.rodape` (`lib/paginas-licoes.js`): eles abrem e
   fecham o `<main>`, a cor de link e o rodapé comum. As páginas públicas estão
   em 100 de acessibilidade e de SEO no Lighthouse; página com HTML próprio
