@@ -1,17 +1,19 @@
 "use strict";
 // ============================================================
 // CLImb — icones.js
-// Opção de HUD "Ícones: desenhados" — troca o emoji dos botões do app (topo,
-// menus Ferramentas/Você, rodapé, faixa do dia, card) por ícones de traço
-// único, na cor do texto. Aprovado pelo Gabriel em 04/10/2026 a partir de uma
-// folha de comparação.
+// Ícones desenhados no lugar do emoji dos botões do app (topo, menus
+// Ferramentas/Você, rodapé, faixa do dia, card), em traço único na cor do
+// texto. Aprovado pelo Gabriel em 04/10/2026 a partir de uma folha de
+// comparação; entrou como opção (v176) e no mesmo dia virou o PADRÃO, a
+// pedido dele: "é um ganho real e fica parecendo menos uma IA".
 //
 // POR QUÊ: o emoji muda de desenho entre Windows, Android e iPhone, e no tema
 // claro o ❔ (Como jogar) e o 💬 (Ajuda) são brancos e quase somem no fundo.
 // O ícone de traço usa currentColor: segue o tema e o contraste do texto.
 //
-// É OPÇÃO, nunca o padrão (memória decisoes-de-hud). Os ícones dos SERVIÇOS na
-// lateral (🪣 S3, 🐧 Linux...) ficam: identificam o serviço, não são botão.
+// Não é opção de HUD (exceção, decidida pelo Gabriel, à regra de
+// decisoes-de-hud). Os ícones dos SERVIÇOS na lateral (🪣 S3, 🐧 Linux...)
+// ficam: identificam o serviço, não são botão.
 //
 // COMO: os botões são redesenhados por vários arquivos (renderCabecalho,
 // menus.js, temas.js...), sempre com texto "emoji + rótulo". Em vez de mexer
@@ -23,7 +25,6 @@
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
-  const CHAVE = "awsCliQuest.icones.v1";
 
   const S = (d) => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + d + "</svg>";
   const ICONES = {
@@ -56,7 +57,6 @@
     lampada: '<path d="M9 17.5h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16.5h5.2v-.7c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
     frasco: '<path d="M9.5 3.5h5M10.5 3.5v5.2L5 18.3A1.6 1.6 0 0 0 6.4 20.5h11.2a1.6 1.6 0 0 0 1.4-2.2l-5.5-9.6V3.5M7.6 14.5h8.8"/>',
     grade: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/>',
-    formas: '<circle cx="7.5" cy="7.5" r="3.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><path d="M7.5 13.5l4 6.5h-8l4-6.5zM16.5 13.5v7M13 17h7"/>',
   };
 
   // Alvo -> ícone. Por elemento (o mesmo emoji serve a coisas diferentes: 🎓 é
@@ -70,7 +70,7 @@
     ["#btnDiagrama", "mapa"], ["#btnCarreiras", "bussola"], ["#btnConceitos", "livro"],
     ["#btnTurmas", "grupo"], ["#btnPerfil", "cracha"], ["#btnConquistas", "medalha"],
     ["#btnSeguranca", "cadeado"], ["#btnPlano", "estrela"],
-    ["#btnTema", { "☀️": "sol", "☀": "sol", "🌙": "lua" }], ["#btnDestaque", "alvo"], ["#btnIcones", "formas", "sempre"],
+    ["#btnTema", { "☀️": "sol", "☀": "sol", "🌙": "lua" }], ["#btnDestaque", "alvo"],
     ["#btnLimparAmbiente", "vassoura"], ["#btnResetar", "voltar", "sempre"],
     ["#btnComoJogar", "ajuda"], ["#btnNovidades", "brilho"], ["#btnAjuda", "balao"],
     ["#btnMaisOpcoes", "aberto"], [".faixa-rotulo", "calendario"], ["#btnSortear", "dado"],
@@ -80,7 +80,6 @@
   // emoji no começo do texto (com seletor de variação e junções), e o espaço depois
   const EMOJI = /^(\s*)((?:\p{Extended_Pictographic}|[❔❓])(?:️|‍\p{Extended_Pictographic})*)\s?/u;
 
-  function ligado() { return document.body.getAttribute("data-icones") === "linha"; }
 
   // primeiro nó de texto com conteúdo, em profundidade
   function primeiroTexto(el) {
@@ -135,75 +134,24 @@
   }
 
   function aplicar() {
-    if (!ligado()) return;
     for (const [sel, regra, sempre] of ALVOS) {
       document.querySelectorAll(sel).forEach((el) => { try { trocarEm(el, regra, sempre); } catch (e) { /* um botão estranho não derruba os outros */ } });
     }
     try { iconesDosMenus(); } catch (e) { /* menu fechado ou diferente: fica sem ícone, como antes */ }
   }
 
-  // Desligar: devolve o emoji ao texto e tira o svg.
-  function desfazer() {
-    document.querySelectorAll("svg.ico").forEach((svg) => {
-      const emoji = svg.dataset.emoji;
-      const prox = svg.nextSibling;
-      if (emoji) {
-        if (prox && prox.nodeType === 3) prox.nodeValue = emoji + " " + prox.nodeValue.replace(/^\s*/, "");
-        else svg.parentNode.insertBefore(document.createTextNode(emoji + " "), svg);
-      }
-      svg.remove();
-    });
-  }
-
   let agendado = false;
   function agendar() {
-    if (agendado || !ligado()) return;
+    if (agendado) return;
     agendado = true;
     setTimeout(() => { agendado = false; aplicar(); }, 0);
   }
 
-  function escolher(linha, avisar) {
-    if (linha) document.body.setAttribute("data-icones", "linha");
-    else document.body.removeAttribute("data-icones");
-    try { localStorage.setItem(CHAVE, linha ? "linha" : "emoji"); } catch (e) { /* anônimo: só não lembra */ }
-    if (linha) aplicar(); else desfazer();
-    atualizarBotao();
-    if (avisar && typeof toast === "function") toast(linha ? "Ícones desenhados ativados." : "🙂 Emoji de volta nos botões.", "sucesso");
-  }
-
-  function atualizarBotao() {
-    const b = document.getElementById("btnIcones");
-    if (!b) return;
-    const linha = ligado();
-    // reescreve só quando muda: texto igual reescrito conta como mutação (pronto.js)
-    const rotulo = (linha ? "" : "🔷 ") + "Ícones: " + (linha ? "desenhados" : "emoji");
-    if (b.textContent.trim() !== rotulo.trim()) { b.textContent = rotulo; if (linha) aplicar(); }
-    b.title = linha ? "Voltar pros emoji nos botões" : "Trocar os emoji dos botões por ícones desenhados (iguais em qualquer aparelho)";
-  }
-
-  function criarBotao() {
-    if (document.getElementById("btnIcones")) return;
-    const ancora = document.getElementById("btnDestaque") || document.getElementById("btnTema");
-    const rodape = document.querySelector("footer");
-    if (!ancora && !rodape) return;
-    const b = document.createElement("button");
-    b.type = "button";
-    b.id = "btnIcones";
-    b.className = "botao secundario";
-    b.addEventListener("click", () => escolher(!ligado(), true));
-    if (ancora && ancora.parentNode) ancora.parentNode.insertBefore(b, ancora.nextSibling);
-    else rodape.appendChild(b);
-    atualizarBotao();
-  }
-
   function iniciar() {
-    let salvo = "emoji";
-    try { salvo = localStorage.getItem(CHAVE) || "emoji"; } catch (e) { /* ok */ }
-    if (salvo === "linha") document.body.setAttribute("data-icones", "linha");
-    criarBotao();
+    // a opção "Ícones" (v176) gravava esta chave; não serve mais pra nada
+    try { localStorage.removeItem("awsCliQuest.icones.v1"); } catch (e) { /* ok */ }
     aplicar();
-    new MutationObserver(() => { criarBotao(); agendar(); })
-      .observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(agendar).observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
