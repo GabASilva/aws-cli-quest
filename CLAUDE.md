@@ -232,6 +232,31 @@ Contexto e números: memória `medir-performance`.
   o resto entra na fila (foi assim que o `robots.txt` deu timeout e o SEO caiu
   pra 92 com o arquivo intacto).
 
+### A capa é o que o PageSpeed mede
+
+O PageSpeed abre o site como visitante novo, e visitante novo vê a **capa**
+(`js/capa.js`). Medido em 04/10/2026, em 4G lento com CPU 4x (A/B na mesma
+máquina): capa visível de 5,7 s para 0,9 s, LCP de 6,3 s para 1,0 s, CLS de
+0,293 para 0,005. Não desfaça nenhuma destas peças:
+
+- `capa.js` é o **2º script** (logo depois do `pronto.js`) e monta sem esperar
+  o app. Por isso, ao montar, ele **não pode usar global do app** (`jogo`,
+  `DESAFIOS`, `SERVICOS_META`): progresso vem do localStorage e as contagens vêm
+  de `data-atividades`/`data-trilhas` do `<body>`, que o servidor escreve ao
+  servir o `index.html`. O clique em "Começar agora" **espera o app**
+  (`quandoApp`), em vez de falhar.
+- **Sem animação de entrada** na capa. Elemento pintado com `opacity: 0` não
+  vira LCP, e o candidato passava a ser o terminal de demonstração, até 8 s.
+- O app **fica `visibility: hidden` atrás da capa** (`body.capa-aberta`).
+  Coberto mas pintado, ele virava o LCP e os deslocamentos da montagem
+  contavam no CLS sem ninguém ver.
+- O terminal de demonstração escreve **um elemento por linha**: num bloco só,
+  cada letra digitada virava um LCP novo.
+- Conhecido e NÃO resolvido: quem volta (sem capa) em rede lenta tem CLS ~0,29,
+  porque o teto de 2 s do `pronto.js` libera a tela antes de o app montar.
+  Trocar o teto por "2 s depois do DOMContentLoaded" tira o CLS mas atrasa a
+  primeira pintura em ~4 s pra esse visitante. Decisão do Gabriel, pendente.
+
 ### Página pública nova (SEO)
 
 Toda rota que o Google pode indexar nasce com: `<title>` único, `meta
@@ -248,6 +273,14 @@ description` própria, `rel=canonical` absoluto, HTML **montado no servidor**
   erro real do comando.
 - Página órfã não vale: toda página nova precisa de **link interno** apontando
   pra ela de algum lugar que já é rastreado.
+- **Número de catálogo nunca é escrito à mão** (atividades, trilhas, lições,
+  trilhas grátis). O `sobre.html` era gerado por script e ficou dizendo "630
+  atividades em 63 trilhas" com o app em 1.407 e 70; hoje ele é montado no
+  servidor (`lib/pagina-sobre.js`), assim como `/escolas` e `/aprender`.
+- Use `pag.cabecalho`/`pag.rodape` (`lib/paginas-licoes.js`): eles abrem e
+  fecham o `<main>`, a cor de link e o rodapé comum. As páginas públicas estão
+  em 100 de acessibilidade e de SEO no Lighthouse; página com HTML próprio
+  perde isso.
 
 ### Antes de dizer que melhorou
 

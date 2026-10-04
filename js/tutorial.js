@@ -132,8 +132,17 @@
         if (Date.now() < LIMITE) setTimeout(talvezAbrir, 400);
         return;
       }
+      // A abertura (abertura.js) é dona da primeira sessão: enquanto ela roda,
+      // ou enquanto o convite "Quer ver a introdução?" está na tela, o tour
+      // não entra — antes os dois apareciam juntos, um escurecendo o outro.
+      // Quem ainda não viu nem recusou a abertura também não ganha o tour: ela
+      // vem nesta sessão ou na próxima.
+      let abertura = null;
+      try { abertura = localStorage.getItem("awsCliQuest.abertura.v1"); } catch (e) { /* ok */ }
+      const aberturaNaVez = document.body.classList.contains("ab-modo") || document.getElementById("abConvite") ||
+        !(abertura === "vista" || abertura === "recusada");
       const jaEstaJogando = typeof ui !== "undefined" && ui.desafioAtivo;
-      if (!jaEstaJogando) iniciar();
+      if (!jaEstaJogando && !aberturaNaVez) iniciar();
     }
     if (!visto) setTimeout(talvezAbrir, 700);
   });

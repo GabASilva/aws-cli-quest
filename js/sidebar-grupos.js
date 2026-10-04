@@ -11,39 +11,43 @@
 // gerou. Carrega DEPOIS de licenca.js (que também envolve o renderSidebar pra
 // pôr os cadeados) — senão os cadeados sumiriam.
 // ============================================================
+// Ordem dos grupos = ordem de aprendizado sugerida. Fica FORA do IIFE porque
+// o servidor também lê (lib/paginas-licoes.js agrupa o /aprender com ela):
+// uma lista só, a lateral do app e a página pública nunca discordam.
+var GRUPOS_TRILHA_BASE = [
+  { id: "fundamentos", nome: "Fundamentos", emoji: "🚀",
+    servicos: ["setup", "linux", "formatos", "s3", "ec2", "iam", "cli-config"] },
+  { id: "computacao", nome: "Computação e contêineres", emoji: "⚙️",
+    servicos: ["lambda", "ebs", "autoscaling", "elbv2", "elasticbeanstalk", "ecr", "ecs", "eks"] },
+  { id: "dados", nome: "Bancos e armazenamento", emoji: "🗄️",
+    servicos: ["dynamodb", "rds", "efs", "elasticache"] },
+  { id: "rede", nome: "Rede e entrega", emoji: "🌐",
+    servicos: ["vpc", "route53", "cloudfront", "apigateway"] },
+  { id: "integracao", nome: "Integração e mensageria", emoji: "📨",
+    servicos: ["sqs", "sns", "events", "stepfunctions"] },
+  { id: "analytics", nome: "Dados e IA", emoji: "📊",
+    servicos: ["glue", "athena", "kinesis", "redshift", "rekognition", "translate", "polly", "comprehend", "bedrock"] },
+  { id: "seguranca", nome: "Segurança", emoji: "🔐",
+    servicos: ["kms", "acm", "cognito-idp", "secretsmanager", "guardduty", "inspector2", "macie2", "wafv2", "shield", "configservice", "cloudtrail"] },
+  { id: "custos", nome: "Custos e governança", emoji: "💰",
+    servicos: ["budgets", "ce", "organizations", "support"] },
+  { id: "cicd", nome: "Entrega de software (CI/CD)", emoji: "🚚",
+    servicos: ["codecommit", "codebuild", "codedeploy", "codedeploy-bg", "codepipeline", "codeconnections"] },
+  { id: "operacoes", nome: "Operações", emoji: "🛠️",
+    servicos: ["cloudwatch", "ssm", "cloudformation"] },
+  { id: "praticar", nome: "Praticar e desafiar", emoji: "🎯",
+    servicos: ["extras-cenarios", "extras-conserte", "extras-relampago", "mundo-real", "diagnostico",
+      "adv-politicas", "adv-query", "adv-gestao", "adv-cegas", "projetos"] },
+  // rede de segurança: trilha nova que ninguém mapeou cai aqui em vez de sumir
+  { id: "outros", nome: "Outros serviços", emoji: "📦", servicos: [] },
+];
+
 (function () {
   if (typeof window === "undefined") return;
 
   const CHAVE = "climb.grupos.abertos";
 
-  // Ordem dos grupos = ordem de aprendizado sugerida.
-  const GRUPOS = [
-    { id: "fundamentos", nome: "Fundamentos", emoji: "🚀",
-      servicos: ["setup", "linux", "formatos", "s3", "ec2", "iam", "cli-config"] },
-    { id: "computacao", nome: "Computação e contêineres", emoji: "⚙️",
-      servicos: ["lambda", "ebs", "autoscaling", "elbv2", "elasticbeanstalk", "ecr", "ecs", "eks"] },
-    { id: "dados", nome: "Bancos e armazenamento", emoji: "🗄️",
-      servicos: ["dynamodb", "rds", "efs", "elasticache"] },
-    { id: "rede", nome: "Rede e entrega", emoji: "🌐",
-      servicos: ["vpc", "route53", "cloudfront", "apigateway"] },
-    { id: "integracao", nome: "Integração e mensageria", emoji: "📨",
-      servicos: ["sqs", "sns", "events", "stepfunctions"] },
-    { id: "analytics", nome: "Dados e IA", emoji: "📊",
-      servicos: ["glue", "athena", "kinesis", "redshift", "rekognition", "translate", "polly", "comprehend", "bedrock"] },
-    { id: "seguranca", nome: "Segurança", emoji: "🔐",
-      servicos: ["kms", "acm", "cognito-idp", "secretsmanager", "guardduty", "inspector2", "macie2", "wafv2", "shield", "configservice", "cloudtrail"] },
-    { id: "custos", nome: "Custos e governança", emoji: "💰",
-      servicos: ["budgets", "ce", "organizations", "support"] },
-    { id: "cicd", nome: "Entrega de software (CI/CD)", emoji: "🚚",
-      servicos: ["codecommit", "codebuild", "codedeploy", "codedeploy-bg", "codepipeline", "codeconnections"] },
-    { id: "operacoes", nome: "Operações", emoji: "🛠️",
-      servicos: ["cloudwatch", "ssm", "cloudformation"] },
-    { id: "praticar", nome: "Praticar e desafiar", emoji: "🎯",
-      servicos: ["extras-cenarios", "extras-conserte", "extras-relampago", "mundo-real", "diagnostico",
-        "adv-politicas", "adv-query", "adv-gestao", "adv-cegas", "projetos"] },
-    // rede de segurança: trilha nova que ninguém mapeou cai aqui em vez de sumir
-    { id: "outros", nome: "Outros serviços", emoji: "📦", servicos: [] },
-  ];
+  const GRUPOS = GRUPOS_TRILHA_BASE;
 
   const grupoDe = {};
   for (const g of GRUPOS) for (const s of g.servicos) grupoDe[s] = g.id;

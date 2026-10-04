@@ -168,6 +168,19 @@
     if (typeof renderSidebar === "function") renderSidebar();
     if (typeof renderCard === "function") renderCard();
     focar();
+    if (typeof window.mostrarAtividadeNoCelular === "function") setTimeout(window.mostrarAtividadeNoCelular, 120);
+  }
+
+  // Quem clicou "Começar", viu o Rafa e fechou a aba volta SEM atividade aberta
+  // (o desafio ativo não é salvo): a abertura reaparecia sobre um card "Escolha
+  // um desafio na lista", e ao pular ficava nele. A tarefa do Rafa É a primeira
+  // atividade, então ela vai aberta por trás — igual ao caminho da capa.
+  function garantirAtividade() {
+    try {
+      if (typeof ui === "undefined" || ui.desafioAtivo || typeof selecionarDesafio !== "function") return;
+      const d = typeof window.primeiroDesafioDaCapa === "function" ? window.primeiroDesafioDaCapa() : null;
+      if (d) selecionarDesafio(d.id);
+    } catch (e) { /* sem atividade: o card mostra a lista, como antes */ }
   }
 
   // Desenha o recado do colega. A moldura em ASCII só entra quando cabe:
@@ -193,6 +206,7 @@
 
   // ---------- roteiro ----------
   function abrir() {
+    garantirAtividade();
     st.ativa = true;
     st.fase = "tarefa";
     injetarEstilo();
@@ -234,7 +248,9 @@
         diz("");
         diz("↑ apareceu uma barra no topo: é o seu XP. Ela enche conforme você resolve coisas.", "aviso-climb");
         diz("");
-        diz("Existem outras 62 trilhas além do S3.");
+        // contado, não escrito: "62" ficou aqui até 04/10/2026, com 70 trilhas no app
+        const outras = typeof SERVICOS_META !== "undefined" ? SERVICOS_META.length - 1 : 0;
+        diz(outras > 1 ? "Existem outras " + outras + " trilhas além do S3." : "Existem muitas outras trilhas além do S3.");
         diz("  climb trilhas    ver todas", "aviso-climb");
         st.fase = "trilhas";
         rolar();
@@ -273,6 +289,7 @@
     document.body.appendChild(cx);
     cx.querySelector("#abSim").addEventListener("click", () => { cx.remove(); abrir(); });
     cx.querySelector("#abNao").addEventListener("click", () => { cx.remove(); marcar("recusada"); });
+    garantirAtividade();
   }
 
   // ---------- embrulho do terminal ----------

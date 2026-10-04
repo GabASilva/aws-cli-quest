@@ -30,7 +30,8 @@
 
   <!-- Dados estruturados: ajuda o buscador a entender que isto e um app de
        ensino, e nao uma pagina qualquer. Os numeros ficam de fora de proposito
-       (envelhecem); quem tem o catalogo atualizado e o /sobre.html, gerado. -->
+       (envelhecem); quem tem o catalogo atualizado e o /sobre.html, que o
+       servidor monta do conteudo a cada boot (lib/pagina-sobre.js). -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -113,7 +114,7 @@
     <a href="/aprender/dynamodb">DynamoDB</a> ·
     <a href="/aprender/cloudwatch">CloudWatch</a> ·
     <a href="/aprender/rds">RDS</a> ·
-    <a href="/aprender">ver as 53 lições</a>
+    <a href="/aprender">ver todas as lições</a>
   </nav>
   <p class="aviso-marca">
     <a href="/sobre.html" style="color:var(--laranja)">O que o CLImb ensina</a> ·
@@ -197,6 +198,9 @@
   <!-- primeiro de todos: segura a pintura ate a interface estar montada
        (sem isto a tela treme enquanto o JS acrescenta header, card e rodape) -->
   <script defer src="js/pronto.js"></script>
+  <!-- logo depois do pronto.js: a capa (só pra quem chega novo) aparece sem
+       esperar o resto do app; o clique dela espera o app se for cedo demais -->
+  <script defer src="js/capa.js"></script>
   <script defer src="js/simulador.js"></script>
   <script defer src="js/manuais.js"></script>
   <script defer src="js/manuais-fase6-9.js"></script>
@@ -321,7 +325,6 @@
   <script defer src="js/menus.js"></script>
   <script defer src="js/travas.js"></script>
   <script defer src="js/temas.js"></script>
-  <script defer src="js/capa.js"></script>
   <script defer src="js/abertura.js"></script>
   <script defer src="js/climb-cmd.js"></script>
   <script defer src="js/historico.js"></script>

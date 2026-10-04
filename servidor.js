@@ -19,6 +19,7 @@ const perfilPub = require("./lib/perfil-publico.js"); // página pública /u/<us
 const pagLicoes = require("./lib/paginas-licoes.js"); // páginas públicas /aprender
 const pagGuias = require("./lib/paginas-guias.js"); // /instalar-aws-cli, /comandos-aws-cli, /erros-aws-cli
 const pagEscolas = require("./lib/pagina-escolas.js"); // /escolas — vitrine do plano Escola
+const pagSobre = require("./lib/pagina-sobre.js"); // /sobre.html — catálogo, gerado do conteúdo
 const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades nas páginas públicas
 const semGabarito = require("./lib/sem-gabarito.js"); // o cliente não recebe dica nem solução do que é pago
 const licencaServidor = require("./lib/licenca-servidor.js"); // quem pode ver o quê, decidido aqui
@@ -1901,8 +1902,14 @@ function servirEstatico(req, res, rota) {
     let cache;
     if (relativo === "index.html") {
       // injeta ?v=VERSAO em todo src/href de js/ e css/ (URLs locais)
+      // e escreve no <body> quantas atividades e trilhas existem: a capa
+      // (js/capa.js) roda antes do app carregar e não tem DESAFIOS pra contar
+      const contagem = CONTEUDO_PUB
+        ? `<body data-atividades="${CONTEUDO_PUB.desafios.length}" data-trilhas="${CONTEUDO_PUB.meta.length}">`
+        : "<body>";
       corpo = Buffer.from(
         String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSAO}"`)
+          .replace("<body>", contagem)
       );
       cache = "no-store"; // o HTML é sempre buscado fresco
     } else if (temVersao && PROD) {
@@ -2287,6 +2294,11 @@ http
       }
       if (rota === "/aprender" || rota.startsWith("/aprender/")) {
         if (servirLicaoPublica(req, res, rota)) return;
+      }
+      if (rota === pagSobre.ROTA_SOBRE && CONTEUDO_PUB) {
+        return servirHtml(res, pagSobre.paginaSobre({
+          base: hostBasePublico(), conteudo: CONTEUDO_PUB, gratis: GRATIS_PUB, licoes: LICOES_PUB || {},
+        }));
       }
       if (rota === pagEscolas.ROTA_ESCOLAS && CONTEUDO_PUB) {
         return servirHtml(res, pagEscolas.paginaEscolas({

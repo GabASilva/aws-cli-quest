@@ -45,6 +45,9 @@
     // "Onde se usa no mundo real" não fazem sentido aqui.
     diagnostico: {
       emoji: "🔧", titulo: "esta trilha funciona",
+      // fora do app (página pública /aprender) o título solto não faz sentido
+      nomePublico: "Diagnóstico de rede",
+      tituloBusca: "Diagnóstico de rede na AWS: o método, passo a passo",
       rotulos: {
         abertura: "Como",
         serve: "O que você vai treinar",

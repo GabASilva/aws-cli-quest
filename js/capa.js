@@ -28,9 +28,26 @@
   function estaLogado() {
     try { return !!localStorage.getItem(CHAVE_TOKEN); } catch (e) { return false; }
   }
+  // A capa roda ANTES do app (é o 2º script da lista, logo depois do
+  // pronto.js), então o `jogo` ainda não existe: o progresso de quem não tem
+  // conta é lido direto do save local (awsCliQuest.v1, o mesmo do jogo.js).
   function temProgresso() {
-    try { return typeof jogo !== "undefined" && Object.keys(jogo.concluidos || {}).length > 0; }
-    catch (e) { return false; }
+    try {
+      if (typeof jogo !== "undefined" && jogo) return Object.keys(jogo.concluidos || {}).length > 0;
+      const salvo = JSON.parse(localStorage.getItem("awsCliQuest.v1") || "null");
+      return !!(salvo && salvo.concluidos && Object.keys(salvo.concluidos).length);
+    } catch (e) { return false; }
+  }
+
+  // Pronto pra receber o clique = todos os scripts rodaram e o app.js montou.
+  // Antes disso, "Começar agora" espera em vez de falhar calado: a capa agora
+  // aparece cedo (antes dos ~110 arquivos do app), e em rede lenta dá pra
+  // clicar antes de selecionarDesafio existir.
+  let appCarregado = document.readyState === "complete";
+  if (!appCarregado) document.addEventListener("DOMContentLoaded", () => setTimeout(() => { appCarregado = true; }, 60));
+  function quandoApp(fn) {
+    if (appCarregado) return fn();
+    const t = setInterval(() => { if (appCarregado) { clearInterval(t); fn(); } }, 100);
   }
 
   // Só mostra pra quem é REALMENTE novo: sem progresso, sem sessão, sem ter
@@ -61,13 +78,23 @@
     st.id = "capaEstilo";
     st.textContent = `
       body.capa-aberta { overflow: hidden; }
+      /* O app se monta POR TRÁS da capa. Coberto, mas pintado: o navegador
+         não sabe que está escondido, então o terminal e a lateral viravam o
+         "maior elemento" (LCP no fim da carga, ~6 s, em vez do título da capa
+         a ~0,9 s) e cada deslocamento da montagem contava no CLS. Invisível,
+         ele não conta pra nenhum dos dois — e já era aria-hidden + inert. */
+      body.capa-aberta > header, body.capa-aberta > main, body.capa-aberta > footer,
+      body.capa-aberta > .aviso-marca, body.capa-aberta > .rodape-licoes { visibility: hidden; }
       #capa {
         position: fixed; inset: 0; z-index: 100000;
         background: var(--fundo, #10151f);
         overflow-y: auto; overscroll-behavior: contain;
-        animation: capaEntra .35s ease both;
       }
-      @keyframes capaEntra { from { opacity: 0 } to { opacity: 1 } }
+      /* Sem animação de ENTRADA de propósito. Ela começava em opacity 0, e o
+         que é pintado transparente não conta como LCP: o título da capa nunca
+         virava o "maior elemento", e o LCP caía nas linhas que o terminal de
+         demonstração ia escrevendo até os 8 s (medido em 04/10/2026). A saída
+         continua animada: ela responde ao clique da pessoa. */
       #capa.saindo { animation: capaSai .28s ease both; }
       @keyframes capaSai { from { opacity: 1 } to { opacity: 0; transform: scale(1.015) } }
       #capa .capa-brilho {
@@ -146,33 +173,37 @@
         background: var(--laranja, #ff9900); animation: capaPisca 1.05s step-end infinite;
       }
       @keyframes capaPisca { 50% { opacity: 0 } }
-      /* três blocos */
-      #capa .capa-blocos {
-        display: grid; grid-template-columns: repeat(3, 1fr);
-        gap: 1rem; margin-top: clamp(2.5rem, 7vw, 4rem);
+      /* o primeiro minuto: sequência real, por isso numerada */
+      #capa .capa-passos-titulo {
+        font-size: 1rem; font-weight: 600; color: var(--texto, #dce3ee);
+        margin: clamp(2.5rem, 7vw, 4rem) 0 1rem;
       }
-      #capa .capa-bloco {
-        background: var(--painel, #161e2d); border: 1px solid var(--borda, #2a3650);
-        border-radius: .7rem; padding: 1.3rem;
+      #capa .capa-passos {
+        list-style: none; counter-reset: passo; margin: 0; padding: 0;
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6rem;
       }
-      #capa .capa-bloco h2 {
-        font-size: 1rem; margin: .6rem 0 .5rem; color: var(--texto, #dce3ee);
+      #capa .capa-passos li {
+        counter-increment: passo; position: relative; padding-top: 2.4rem;
+        border-top: 1px solid var(--borda, #2a3650);
+        font-size: .92rem; line-height: 1.6; color: var(--texto-fraco, #8b99b0);
       }
-      #capa .capa-bloco p {
-        margin: 0; font-size: .9rem; line-height: 1.6; color: var(--texto-fraco, #8b99b0);
+      #capa .capa-passos li::before {
+        content: counter(passo); position: absolute; top: .7rem; left: 0;
+        font-family: var(--fonte-mono, monospace); font-weight: 700; color: var(--laranja, #ff9900);
       }
-      #capa .capa-bloco code {
-        font-family: var(--fonte-mono, monospace); font-size: .85em;
-        color: var(--laranja, #ff9900);
+      #capa .capa-passos b { display: block; color: var(--texto, #dce3ee); font-size: 1rem; margin-bottom: .3rem; }
+      #capa .capa-passos code {
+        font-family: var(--fonte-mono, monospace); font-size: .85em; color: var(--laranja, #ff9900);
       }
-      #capa .capa-icone { font-size: 1.5rem; }
+      #capa .capa-rodape a { color: var(--texto-fraco, #8b99b0); text-underline-offset: 3px; }
+      #capa .capa-rodape a:hover { color: var(--texto, #dce3ee); }
       #capa .capa-rodape {
         margin-top: 2.5rem; padding-top: 1.3rem; border-top: 1px solid var(--borda, #2a3650);
         color: var(--texto-fraco, #8b99b0); font-size: .78rem; line-height: 1.6;
       }
       @media (max-width: 860px) {
         #capa .capa-topo { grid-template-columns: 1fr; }
-        #capa .capa-blocos { grid-template-columns: 1fr; }
+        #capa .capa-passos { grid-template-columns: 1fr; gap: 1.1rem; }
         #capa .capa-marca { margin-bottom: 1.5rem; }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -204,6 +235,12 @@
     const reduzido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cursor = '<span class="capa-cursor" aria-hidden="true"></span>';
 
+    // Cada linha é um elemento próprio. Num bloco só, o texto crescia a cada
+    // letra e cada crescimento virava um LCP novo: o "maior elemento" da capa
+    // só parava de mudar quando a animação acabava (7 a 8 s em 4G lento,
+    // medido em 04/10/2026). Linha a linha, nenhuma passa do título.
+    const emLinha = (html) => '<div class="capa-linha">' + (html || "&nbsp;") + "</div>";
+
     function linhaHtml(item, parcial) {
       const t = parcial === undefined ? item.texto : parcial;
       if (item.tipo === "vazio") return "";
@@ -215,7 +252,7 @@
 
     // Sem animação: entrega o roteiro pronto. Mesma informação, zero movimento.
     if (reduzido) {
-      alvo.innerHTML = ROTEIRO.map((i) => linhaHtml(i)).join("\n") + "\n" + '<span class="p">climb $ </span>' + cursor;
+      alvo.innerHTML = ROTEIRO.map((i) => emLinha(linhaHtml(i))).join("") + emLinha('<span class="p">climb $ </span>' + cursor);
       return;
     }
 
@@ -225,7 +262,7 @@
     alvo._pararCapa = () => { parado = true; };
 
     function pintar(parcialHtml) {
-      alvo.innerHTML = linhas.join("\n") + (linhas.length ? "\n" : "") + (parcialHtml || "");
+      alvo.innerHTML = linhas.map(emLinha).join("") + (parcialHtml ? emLinha(parcialHtml) : "");
     }
 
     function proxima() {
@@ -259,10 +296,18 @@
   // Contados na hora, nao escritos na mao: a capa ja anunciou "599 atividades
   // em 62 trilhas" por dias depois de o app ter 630 em 63. Numero cravado em
   // texto de marketing envelhece calado.
+  // Cedo demais pra contar DESAFIOS: o servidor escreve os números no <body>
+  // (data-atividades / data-trilhas, contados do mesmo conteúdo) ao servir o
+  // index.html. Sem eles (arquivo aberto direto, servidor antigo), conta na hora.
+  const milhar = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   function contarAtividades() {
-    try { return DESAFIOS.length + " atividades"; } catch (e) { return "centenas de atividades"; }
+    const n = parseInt(document.body.dataset.atividades, 10);
+    if (n > 0) return milhar(n) + " atividades";
+    try { return milhar(DESAFIOS.length) + " atividades"; } catch (e) { return "centenas de atividades"; }
   }
   function contarTrilhas() {
+    const n = parseInt(document.body.dataset.trilhas, 10);
+    if (n > 0) return n + " trilhas";
     // SERVICOS_META e o que a lista lateral desenha. Contar `servico` distinto
     // em DESAFIOS daria 2 a mais (bedrock-runtime e treino tem atividade mas
     // nao viram trilha propria) — anunciar numero que a pessoa nao consegue
@@ -314,28 +359,22 @@
           </div>
         </div>
 
-        <div class="capa-blocos">
-          <div class="capa-bloco">
-            <div class="capa-icone" aria-hidden="true">⌨️</div>
-            <h2>Terminal, não múltipla escolha</h2>
-            <p>Você digita <code>aws s3 mb s3://loja</code> e o bucket passa a existir.
-               Errou a flag? O erro que aparece é o mesmo que a AWS devolveria.</p>
-          </div>
-          <div class="capa-bloco">
-            <div class="capa-icone" aria-hidden="true">🧭</div>
-            <h2>Trilhas com o “por quê”</h2>
-            <p>De S3 e IAM a VPC, Lambda e CloudWatch. Cada comando vem com a
-               explicação de por que ele existe — não só o que digitar.</p>
-          </div>
-          <div class="capa-bloco">
-            <div class="capa-icone" aria-hidden="true">🧯</div>
-            <h2>Infra quebrada de propósito</h2>
-            <p>Na trilha <b>Diagnóstico</b> a infraestrutura chega com defeito e
-               você tem que achar a causa nos logs — como no trabalho.</p>
-          </div>
-        </div>
+        <!-- O que acontece no primeiro minuto, na ordem: é a abertura.js que
+             vem depois do "Começar agora". Substituiu três cards genéricos de
+             "vantagens": mostrar o caminho convence mais que listar adjetivo. -->
+        <h2 class="capa-passos-titulo">O seu primeiro minuto</h2>
+        <ol class="capa-passos">
+          <li><b>Chega um pedido.</b> O Rafa, do time, precisa de um bucket no S3 pro site
+            novo, do jeito que um pedido chega no trabalho.</li>
+          <li><b>Você digita o comando.</b> Não sabe qual é? <code>aws s3 help</code> abre o
+            manual. Errou a flag? Aparece o mesmo erro que a AWS devolveria.</li>
+          <li><b>A tela se monta.</b> O bucket existe, você ganha XP e as trilhas aparecem.
+            Daí pra frente é igual: pedido, comando, resultado.</li>
+        </ol>
 
         <p class="capa-rodape">
+          <a href="/aprender">Lições de AWS</a> · <a href="/sobre.html">O que o CLImb ensina</a> ·
+          <a href="/escolas">Para escolas</a><br>
           Projeto independente e educativo, <b>sem afiliação, patrocínio ou endosso</b> da Amazon.
           “AWS” e “Amazon Web Services” são marcas registradas da Amazon.com, Inc. ou de suas
           afiliadas. É um simulador — não conecta a nenhuma conta AWS real.
@@ -349,15 +388,25 @@
     const term = capa.querySelector("#capaTerm");
     if (term) animarTerminal(term);
 
-    capa.querySelector("#capaComecar").addEventListener("click", () => fechar(true));
-    capa.querySelector("#capaEntrar").addEventListener("click", () => {
+    // Se o app ainda está chegando, o botão avisa e o clique é atendido assim
+    // que der: nunca se perde.
+    function esperando(botao, fn) {
+      if (appCarregado) return fn();
+      botao.disabled = true; botao.setAttribute("aria-busy", "true");
+      botao.textContent = "Abrindo…";
+      quandoApp(fn);
+    }
+    const btnComecar = capa.querySelector("#capaComecar");
+    btnComecar.addEventListener("click", () => esperando(btnComecar, () => fechar(true)));
+    const btnEntrar = capa.querySelector("#capaEntrar");
+    btnEntrar.addEventListener("click", () => esperando(btnEntrar, () => {
       fechar(false);
       // o botão de conta é injetado por outro arquivo; se não estiver lá, só fecha
       setTimeout(() => document.querySelector("#btnConta")?.click(), 320);
-    });
+    }));
 
     // Esc fecha (sem selecionar atividade)
-    capa.addEventListener("keydown", (ev) => { if (ev.key === "Escape") fechar(false); });
+    capa.addEventListener("keydown", (ev) => { if (ev.key === "Escape") quandoApp(() => fechar(false)); });
     setTimeout(() => capa.querySelector("#capaComecar")?.focus(), 120);
   }
 
@@ -391,18 +440,36 @@
       if (irParaAtividade) {
         const d = primeiroDesafio();
         if (d && typeof selecionarDesafio === "function") selecionarDesafio(d.id);
+        // Se a abertura não assumir a tela (já vista/recusada), no celular a
+        // pessoa ainda cairia na LISTA de trilhas: o card fica abaixo da dobra.
+        setTimeout(() => { if (!document.body.classList.contains("ab-modo")) mostrarAtividadeNoCelular(); }, 900);
       }
     }, 280);
   }
 
-  // Espera o DOM; o `jogo` já foi carregado por app.js no DOMContentLoaded, então
-  // rodamos logo depois pra que temProgresso() enxergue o progresso restaurado.
-  function iniciar() { if (deveMostrar()) montar(); }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => setTimeout(iniciar, 60));
-  } else {
-    setTimeout(iniciar, 60);
+  // No celular (≤760px) o layout empilha header, lateral (46vh) e só então o
+  // card: quem acabou de clicar "Começar" via a lista, não a atividade. Rola
+  // até o card, descontando o header, que é sticky. No desktop não faz nada.
+  function mostrarAtividadeNoCelular() {
+    if (window.innerWidth > 760) return;
+    const card = document.getElementById("cardDesafio");
+    if (!card) return;
+    const topo = document.querySelector("header")?.offsetHeight || 0;
+    const y = card.getBoundingClientRect().top + window.scrollY - topo - 8;
+    const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: Math.max(0, y), behavior: suave ? "smooth" : "auto" });
   }
+  window.mostrarAtividadeNoCelular = mostrarAtividadeNoCelular;
+  window.primeiroDesafioDaCapa = primeiroDesafio;
+
+  // Monta JÁ, sem esperar o resto do app. Antes a capa vinha no fim da lista e
+  // só aparecia depois dos ~110 arquivos: em 3G lento, ~20 s de tela vazia pra
+  // quem nunca viu o CLImb (medido em 04/10/2026). Este arquivo é defer e roda
+  // com o HTML já lido, então o <body> existe. O pronto.js não é afetado: ele
+  // vigia header/main/footer, e a capa é irmã deles.
+  function iniciar() { if (deveMostrar()) montar(); }
+  if (document.body) iniciar();
+  else document.addEventListener("DOMContentLoaded", iniciar);
 
   // exposto pro botão "ver a apresentação de novo", se um dia quisermos
   window.abrirCapa = function () {

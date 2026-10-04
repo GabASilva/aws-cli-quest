@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-10-04",
+      data: "4 out 2026",
+      titulo: "🎯 Começo mais rápido e menos laranja na tela (se você quiser)",
+      itens: [
+        "<b>🎯 Nova opção: Destaque só nas ações.</b> Em <b>👤 Você</b>, o botão <b>Destaque</b> deixa o laranja só nos botões, na barra de XP e no terminal; títulos e negritos voltam pra cor do texto. O visual de sempre continua sendo o padrão: é só pra quem prefere a tela mais calma.",
+        "<b>📱 No celular, \"Começar\" leva direto pra atividade.</b> Antes você caía na lista de trilhas e tinha que rolar até achar o que fazer.",
+        "<b>👋 Quem volta no meio da introdução não se perde mais.</b> Se você fechou a aba durante a conversa com o Rafa, a introdução volta com a primeira atividade já aberta, sem o tour de 7 passos por cima dela.",
+        "<b>📚 Lições de AWS mais fáceis de ler</b> em <code>climb.dev.br/aprender</code>: os serviços estão agrupados como na lateral do app, cada comando mostra pra que serve (antes vários diziam só \"USO\") e a sintaxe abre num clique.",
+      ],
+    },
+    {
       versao: "2026-09-30",
       data: "30 set 2026",
       titulo: "🎓 CLImb na escola: conta de professor e turma escola",

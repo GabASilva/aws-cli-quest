@@ -1698,3 +1698,49 @@ summary:focus-visible,
 .sup-ok { background: var(--painel-2); border: 1px solid var(--verde); border-radius: 8px; padding: 12px; margin: 10px 0; line-height: 1.6; }
 .sup-reportar { margin: 12px 0 0; font-size: 0.8rem; }
 .sup-rodape a, .sup-faq a { color: var(--azul); }
+
+/* ============================================================
+   CLImb — destaque (opção de HUD)
+   Opção "Destaque: só nas ações" (js/temas.js, botão #btnDestaque).
+   Mora no fim do estilo.css, e não em arquivo próprio, pra não somar um
+   pedido bloqueante no <head> (cada folha lá atrasa a primeira pintura).
+
+   No padrão, o laranja aparece em quase tudo: borda do cabeçalho, botão do
+   Ranking, rótulo do Desafio do dia, título de modal, negrito do enunciado.
+   Com tudo destacado, nada se destaca — o olho não acha o "Jogar". Aqui o
+   laranja fica só onde é AÇÃO ou PROGRESSO (botão principal, barra de XP,
+   prompt do terminal, item ativo, foco) e o resto volta pra cor de texto.
+
+   É OPÇÃO, nunca o padrão (memória decisoes-de-hud): só vale com
+   body[data-destaque="acoes"]. Cores por token: passa o contraste nos dois
+   temas, porque --texto e --texto-fraco já são os do tema ativo.
+   ============================================================ */
+
+body[data-destaque="acoes"] header { border-bottom: 1px solid var(--borda); }
+
+/* Ranking era botão laranja cheio no topo, competindo com a atividade */
+body[data-destaque="acoes"] header #btnRanking {
+  background: transparent; color: var(--texto); border: 1px solid var(--borda);
+}
+body[data-destaque="acoes"] header #btnRanking:hover { border-color: var(--laranja); }
+
+/* texto que só queria ênfase: negrito basta */
+body[data-destaque="acoes"] #cardDesafio .descricao b,
+body[data-destaque="acoes"] .licao-oque b,
+body[data-destaque="acoes"] .licao-corpo b,
+body[data-destaque="acoes"] .banner-email b,
+body[data-destaque="acoes"] .cartao-topo strong { color: var(--texto); font-weight: 700; }
+
+/* títulos */
+body[data-destaque="acoes"] .modal-caixa h2,
+body[data-destaque="acoes"] #tourBox h3,
+body[data-destaque="acoes"] .ia-h3,
+body[data-destaque="acoes"] .perfil-nivel { color: var(--texto); }
+
+/* rótulos e selos informativos */
+body[data-destaque="acoes"] .streak small,
+body[data-destaque="acoes"] .faixa-rotulo,
+body[data-destaque="acoes"] .sala-aviso,
+body[data-destaque="acoes"] .pf-nota.alerta { color: var(--texto); }
+body[data-destaque="acoes"] .faixa-selo { background: var(--painel-2); color: var(--texto-fraco); }
+body[data-destaque="acoes"] #faixaTreino { border-left-color: var(--borda); }

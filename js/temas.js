@@ -72,17 +72,57 @@
 
   function iniciar() {
     aplicar(atual(), false);   // antes de qualquer render, pra não piscar
+    aplicarDestaque(destaqueAtual(), false);
     criarBotao();
-    // o rodapé é remontado por outras features; garante que o botão volte
-    const obs = new MutationObserver(() => criarBotao());
+    criarBotaoDestaque();
+    // o rodapé é remontado por outras features; garante que os botões voltem
+    const obs = new MutationObserver(() => { criarBotao(); criarBotaoDestaque(); });
     const rodape = document.querySelector("footer");
     if (rodape) obs.observe(rodape, { childList: true });
   }
 
+  // ---------- Destaque: "em tudo" (padrão) ou "só nas ações" ----------
+  // Escolha à parte do tema (vale nos dois). O CSS fica no fim do css/estilo.css; aqui
+  // só liga data-destaque no <body>. Padrão continua o de sempre: é opção.
+  const CHAVE_DESTAQUE = "awsCliQuest.destaque.v1";
+  function destaqueAtual() {
+    try { return localStorage.getItem(CHAVE_DESTAQUE) === "acoes" ? "acoes" : "padrao"; } catch (e) { return "padrao"; }
+  }
+  function aplicarDestaque(id, avisar) {
+    if (id === "acoes") document.body.setAttribute("data-destaque", "acoes");
+    else document.body.removeAttribute("data-destaque");
+    try { localStorage.setItem(CHAVE_DESTAQUE, id); } catch (e) { /* anônimo: só não lembra */ }
+    atualizarBotaoDestaque();
+    if (avisar && typeof toast === "function") {
+      toast(id === "acoes" ? "🎯 Laranja só nos botões e no progresso." : "🎯 Destaque de volta ao padrão.", "sucesso");
+    }
+  }
+  function atualizarBotaoDestaque() {
+    const b = document.getElementById("btnDestaque");
+    if (!b) return;
+    const so = destaqueAtual() === "acoes";
+    b.textContent = "🎯 Destaque: " + (so ? "só nas ações" : "padrão");
+    b.title = so ? "Voltar o laranja pra todos os destaques" : "Deixar o laranja só nos botões e no progresso (menos poluição visual)";
+  }
+  function criarBotaoDestaque() {
+    if (document.getElementById("btnDestaque")) return;
+    const tema = document.getElementById("btnTema");
+    const rodape = document.querySelector("footer");
+    if (!tema && !rodape) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "btnDestaque";
+    b.className = "botao secundario";
+    b.addEventListener("click", () => aplicarDestaque(destaqueAtual() === "acoes" ? "padrao" : "acoes", true));
+    // logo depois do botão de tema: o menus.js leva os dois juntos pro "Você"
+    if (tema && tema.parentNode) tema.parentNode.insertBefore(b, tema.nextSibling);
+    else rodape.appendChild(b);
+    atualizarBotaoDestaque();
+  }
   // aplica o tema o quanto antes (mesmo antes do DOM pronto, se der) pra
   // evitar o flash de tema errado na primeira pintura
   try {
-    if (document.body) aplicar(atual(), false);
+    if (document.body) { aplicar(atual(), false); aplicarDestaque(destaqueAtual(), false); }
   } catch (e) { /* body ainda não existe: o DOMContentLoaded abaixo resolve */ }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
