@@ -70,7 +70,7 @@
     ["#btnDiagrama", "mapa"], ["#btnCarreiras", "bussola"], ["#btnConceitos", "livro"],
     ["#btnTurmas", "grupo"], ["#btnPerfil", "cracha"], ["#btnConquistas", "medalha"],
     ["#btnSeguranca", "cadeado"], ["#btnPlano", "estrela"],
-    ["#btnTema", { "☀️": "sol", "☀": "sol", "🌙": "lua" }], ["#btnDestaque", "alvo"],
+    ["#btnTema", { "☀️": "sol", "☀": "sol", "🌙": "lua" }], ["#btnDestaque", "alvo"], ["#btnEnxuta", "grade"],
     ["#btnLimparAmbiente", "vassoura"], ["#btnResetar", "voltar", "sempre"],
     ["#btnComoJogar", "ajuda"], ["#btnNovidades", "brilho"], ["#btnAjuda", "balao"],
     ["#btnMaisOpcoes", "aberto"], [".faixa-rotulo", "calendario"], ["#btnSortear", "dado"],

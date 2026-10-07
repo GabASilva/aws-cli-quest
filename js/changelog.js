@@ -24,14 +24,16 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
-      versao: "2026-10-06",
-      data: "6 out 2026",
-      titulo: "▶ A próxima atividade a um clique",
+      versao: "2026-10-07",
+      data: "7 out 2026",
+      titulo: "▶ A próxima atividade a um clique (e uma tela mais enxuta, se você quiser)",
       itens: [
         "<b>▶ Começar e Continuar.</b> Sem atividade aberta, a caixa do topo agora mostra um botão com a próxima: a primeira do S3 se você está chegando, ou a seguinte de onde você parou. Antes ela só pedia pra escolher na lista.",
         "<b>📅 O Desafio do dia aparece depois da sua 1ª atividade.</b> Pra quem está começando, ele disputava a atenção com o primeiro passo.",
         "<b>📱 Boas-vindas do terminal legíveis no celular.</b> A moldura de texto quebrava em pedaços em tela estreita e a lista de comandos se embaralhava. Agora ela se ajusta a qualquer largura.",
         "<b>✨ Novidades sempre aberto</b>, mesmo antes da 1ª atividade. E os botões que ainda estão travados ficaram mais fáceis de ler.",
+        "<b>📐 Nova opção: Tela enxuta.</b> Em <b>👤 Você</b>, o botão <b>Tela</b> tira coisa de volta da atividade:<br>• o Ranking vira um botão discreto;<br>• os contadores 🔥 e 📅 só aparecem quando passam de zero;<br>• no computador, os links do rodapé vão pra baixo do app e o terminal ganha altura;<br>• a lista de trilhas usa a fonte do texto;<br>• no celular, a lista vem recolhida num botão e fecha sozinha quando você escolhe uma atividade.<br>O visual de sempre continua sendo o padrão.",
+        "<b>⚠️ Reportar problema</b> foi pro fim do card da atividade, em vez de ficar acima do título.",
       ],
     },
     {

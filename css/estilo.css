@@ -1772,3 +1772,43 @@ svg.ico {
   width: 1.1em; height: 1.1em; flex: 0 0 1.1em;
   vertical-align: -0.2em; margin-right: 0.38em;
 }
+
+/* ============================================================
+   Opção "📐 Tela: enxuta" (js/tela-enxuta.js) — só com body[data-enxuta].
+   É OPÇÃO, nunca o padrão (memória decisoes-de-hud).
+   ============================================================ */
+
+/* Ranking discreto: botão de contorno, como Ferramentas e Você */
+body[data-enxuta] header #btnRanking {
+  background: transparent; color: var(--texto); border: 1px solid var(--borda);
+}
+body[data-enxuta] header #btnRanking:hover { border-color: var(--laranja); }
+
+/* 🔥 0 e 📅 0 dias: zero não informa nada (data-zero vem do tela-enxuta.js) */
+body[data-enxuta] header [data-zero] { display: none; }
+
+/* lista lateral na fonte do texto; monoespaçado fica pros números */
+body[data-enxuta] #sidebar { font-family: "Segoe UI", system-ui, sans-serif; }
+body[data-enxuta] #sidebar .servico-cab,
+body[data-enxuta] #sidebar .item-desafio { font-family: inherit; }
+body[data-enxuta] #sidebar .servico-cab { font-size: .86rem; }
+body[data-enxuta] #sidebar .item-titulo { font-size: .84rem; }
+body[data-enxuta] #sidebar .item-meta { font-size: .72rem; }
+
+/* botão "▾ Trilha S3 · 2/66" que recolhe a lista: só existe no celular */
+#btnListaEnxuta { display: none; }
+
+/* computador: o app ocupa a tela, e as faixas de links ficam embaixo dele */
+@media (min-width: 761px) {
+  body[data-enxuta] { height: auto; min-height: 100vh; overflow: visible; }
+  body[data-enxuta] main { flex: none; height: calc(100vh - var(--enx-fixo, 126px)); }
+}
+
+/* celular: lista recolhida até a pessoa pedir */
+@media (max-width: 760px) {
+  body[data-enxuta] #btnListaEnxuta {
+    display: block; width: calc(100% - 20px); margin: 10px; text-align: left;
+    font-size: .95rem; padding: 11px 14px;
+  }
+  body[data-enxuta]:not(.enx-lista-aberta) #sidebar { display: none; }
+}

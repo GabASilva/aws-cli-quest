@@ -146,7 +146,9 @@
     const p = document.createElement("p");
     p.className = "sup-reportar";
     p.innerHTML = `<button type="button" class="sala-link" data-abrir-suporte="atividade">⚠️ Reportar problema nesta atividade</button>`;
-    (alvo.firstElementChild || alvo).appendChild(p);
+    // no FIM do card, como diz acima. O firstElementChild era o .card-topo, e
+    // o link aparecia ACIMA do título, puxando o olho antes do enunciado.
+    alvo.appendChild(p);
   }
 
   function ligar() {
