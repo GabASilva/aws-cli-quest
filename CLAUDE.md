@@ -306,6 +306,10 @@ description` própria, `rel=canonical` absoluto, HTML **montado no servidor**
 - IndexNow (`lib/indexnow.js`): a cada boot NO FLY, o servidor avisa o Bing só
   das URLs do sitemap cujo HTML mudou. Página pública nova entra pelo
   `urlsDoSitemap()` — não existe outra lista.
+- `<title>` até **70** caracteres, `meta description` entre **25 e 160**, e **um
+  `<h1>` só** — é o que o Bing Webmaster acusa (em 07/10/2026 acusou a home com
+  dois h1, porque a capa injetada trazia o dela, e 24 títulos de comando com até
+  128). Com o servidor de pé: `node scripts/conferir-seo.js` tem de dar "Tudo certo".
 - Use `pag.cabecalho`/`pag.rodape` (`lib/paginas-licoes.js`): eles abrem e
   fecham o `<main>`, a cor de link e o rodapé comum. As páginas públicas estão
   em 100 de acessibilidade e de SEO no Lighthouse; página com HTML próprio

@@ -1972,6 +1972,10 @@ function servirEstatico(req, res, rota) {
       let folhas = "";
       if (capa) {
         html = html.replace(/[ \t]*<link rel="stylesheet" href="css\/[^"]+">\r?\n?/g, (m) => { folhas += m.trim() + "\n"; return ""; });
+        // Um <h1> só: com a capa, o título dela ("Aprenda AWS CLI digitando de
+        // verdade") é o da página, e o <h1> escondido do cabeçalho do app vira
+        // <p>. O Bing (07/10/2026) acusava "More than one h1 tag" na home.
+        html = html.replace(/<h1 (style="position:absolute[^"]*")>([^<]*)<\/h1>/, "<p $1>$2</p>");
       }
       corpo = Buffer.from(html.replace("<body>", `<body ${contagem}${capa ? ' class="capa-aberta"' : ""}>` + (capa ? capa + "\n" + folhas : "")));
       cache = "no-store"; // o HTML é sempre buscado fresco
