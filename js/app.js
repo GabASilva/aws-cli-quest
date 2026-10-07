@@ -108,16 +108,50 @@ function selecionarDesafio(id) {
   $("#entradaTerminal").focus();
 }
 
+// A atividade que a caixa vazia sugere: a seguinte, na mesma trilha, da
+// última que a pessoa concluiu (jogo.concluidos guarda na ordem em que foram
+// feitas); sem progresso, a primeira da trilha de entrada. Pula o que ela não
+// pode abrir (Pro) e projeto ainda travado.
+function proximaSugestao() {
+  try {
+    const abre = (d) => !desafioConcluido(d.id) && desafioLiberado(d) &&
+      (typeof podeAcessar !== "function" || podeAcessar(d));
+    const feitos = Object.keys(jogo.concluidos || {});
+    const ultimo = feitos.length ? obterDesafio(feitos[feitos.length - 1]) : null;
+    if (ultimo) {
+      const lista = desafiosDoServico(ultimo.servico);
+      const i = lista.findIndex((d) => d.id === ultimo.id);
+      const seguinte = lista.slice(i + 1).find(abre) || lista.find(abre);
+      if (seguinte) return seguinte;
+    }
+    const primeiro = typeof window.primeiroDesafioDaCapa === "function" ? window.primeiroDesafioDaCapa() : null;
+    if (primeiro && abre(primeiro)) return primeiro;
+    return DESAFIOS.find(abre) || null;
+  } catch (e) { return null; }
+}
+
 function renderCard() {
   const alvo = $("#cardDesafio");
   const d = ui.desafioAtivo ? obterDesafio(ui.desafioAtivo) : null;
   if (!d) {
+    // Antes era só "👈 Escolha um desafio na lista": a pessoa tinha de decidir
+    // sozinha, e no celular a lista fica ACIMA, cortada. Agora a caixa já
+    // oferece a próxima atividade (a primeira, ou a seguinte de onde parou).
+    const prox = proximaSugestao();
+    const novo = Object.keys(jogo.concluidos || {}).length === 0;
+    const trilha = prox ? (SERVICOS_META.find((m) => m.id === prox.servico) || {}).nome || prox.servico : "";
     alvo.innerHTML = `<div class="card-vazio">
-      <h2>👈 Escolha um desafio na lista</h2>
-      <p>Comece pela trilha do <strong>S3</strong> se for sua primeira vez — ou vá direto no comando que você quer praticar: qualquer atividade abre na hora.
+      <h2>${novo ? "Por onde começar" : "Bom te ver de volta"}</h2>
+      ${prox ? `<div class="cv-proxima">
+        <button type="button" class="botao primario" id="btnProximaAtividade">▶ ${novo ? "Começar" : "Continuar"}: ${escaparHtml(prox.titulo)}</button>
+        <span class="cv-meta">Trilha ${escaparHtml(trilha)} · ${NOMES_NIVEL[prox.nivel] || ""} · ${prox.xp} XP</span>
+      </div>` : ""}
+      <p>${novo ? "Ou escolha qualquer trilha na lista" : "Ou escolha outra atividade na lista"} — qualquer atividade abre na hora.
       Completar uma trilha libera o <strong>Projeto</strong> dela, onde você monta um sistema completo só com o CLI.</p>
       <p>No terminal abaixo, <code>aws help</code> mostra os serviços, <code>ls</code> mostra seus arquivos locais.</p>
     </div>`;
+    const btn = $("#btnProximaAtividade");
+    if (btn) btn.addEventListener("click", () => selecionarDesafio(prox.id));
     return;
   }
 
@@ -604,20 +638,31 @@ async function iniciar() {
   entrada.focus();
 }
 
+// Boas-vindas do terminal. Era uma moldura de ╔═╗ em texto: no celular (~36
+// colunas) ela quebrava em pedaços e a tabela de ajuda se embaralhava, e no
+// computador o ⚡ (2 colunas) desalinhava a borda direita. Agora é título +
+// parágrafo que quebram sozinhos, e a ajuda é uma grade que vira uma coluna
+// em tela estreita (css: .bv-ajuda).
 function boasVindas() {
-  imprimir(`╔══════════════════════════════════════════════╗
-║   ⚡ CLImb — bem-vindo(a) a bordo!           ║
-╚══════════════════════════════════════════════╝
-Você tem uma conta AWS simulada só sua. Nada aqui custa dinheiro
-e nada quebra de verdade — pode experimentar à vontade.
-
-  aws help              manual geral (os manuais valem ouro!)
-  aws s3 help           comandos de um serviço
-  aws s3 mb help        manual de um comando específico
-  ls                    seus arquivos locais fictícios
-  clear                 limpa a tela
-
-👉 O que fazer está no card acima. Digite os comandos aqui embaixo.`);
+  imprimir("⚡ CLImb — bem-vindo(a) a bordo!", "bv-titulo");
+  imprimir("Você tem uma conta AWS simulada só sua. Nada aqui custa dinheiro e nada quebra de verdade — pode experimentar à vontade.");
+  const ajuda = document.createElement("div");
+  ajuda.className = "linha bv-ajuda";
+  for (const [cmd, oque] of [
+    ["aws help", "manual geral (os manuais valem ouro!)"],
+    ["aws s3 help", "comandos de um serviço"],
+    ["aws s3 mb help", "manual de um comando específico"],
+    ["ls", "seus arquivos locais fictícios"],
+    ["clear", "limpa a tela"],
+  ]) {
+    const c = document.createElement("code");
+    c.textContent = cmd;
+    const o = document.createElement("span");
+    o.textContent = oque;
+    ajuda.append(c, o);
+  }
+  $("#saidaTerminal").appendChild(ajuda);
+  imprimir("👉 O que fazer está no card acima. Digite os comandos aqui embaixo.");
 }
 
 document.addEventListener("DOMContentLoaded", iniciar);

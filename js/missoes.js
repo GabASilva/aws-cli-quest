@@ -249,5 +249,23 @@ const BANCO = [
     renderFaixa();
   }
 
-  document.addEventListener("DOMContentLoaded", montarFaixa);
+  // Quem ainda não concluiu nenhuma atividade não vê a faixa: um "Jogar" laranja
+  // numa atividade sorteada (às vezes de Linux) competia com o "Começar" da
+  // caixa logo abaixo. Ela aparece com a 1ª atividade — e a cada
+  // renderCabecalho, que roda ao concluir, entrar na conta ou sincronizar.
+  function mostrarFaixa() {
+    const faixa = document.querySelector("#faixaTreino");
+    if (!faixa) return;
+    let algum = false;
+    try { algum = Object.keys(jogo.concluidos || {}).length > 0; } catch (e) { algum = true; }
+    if (faixa.hidden === algum) faixa.hidden = !algum; // só escreve se mudou (pronto.js)
+  }
+  const cabOriginal = window.renderCabecalho;
+  if (typeof cabOriginal === "function" && !cabOriginal.__faixa) {
+    const embrulhada = function () { const r = cabOriginal.apply(this, arguments); try { mostrarFaixa(); } catch (e) { /* ok */ } return r; };
+    embrulhada.__faixa = true;
+    window.renderCabecalho = embrulhada;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { montarFaixa(); mostrarFaixa(); });
 })();

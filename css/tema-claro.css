@@ -156,6 +156,14 @@ body[data-tema="claro"] .caixa {
   border-radius: 8px;
 }
 
+/* a caixa vazia mora DENTRO do #cardDesafio, que já tem borda: com a regra
+   acima ela virava caixa dentro de caixa (borda dupla) */
+body[data-tema="claro"] #cardDesafio > .card-vazio {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
 /* ---------- ajustes pontuais ----------
    Os poucos lugares do app (fora do Console AWS) com cor cravada que
    não sobrevivem a um fundo claro.                                   */

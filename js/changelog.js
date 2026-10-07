@@ -24,6 +24,17 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-10-06",
+      data: "6 out 2026",
+      titulo: "▶ A próxima atividade a um clique",
+      itens: [
+        "<b>▶ Começar e Continuar.</b> Sem atividade aberta, a caixa do topo agora mostra um botão com a próxima: a primeira do S3 se você está chegando, ou a seguinte de onde você parou. Antes ela só pedia pra escolher na lista.",
+        "<b>📅 O Desafio do dia aparece depois da sua 1ª atividade.</b> Pra quem está começando, ele disputava a atenção com o primeiro passo.",
+        "<b>📱 Boas-vindas do terminal legíveis no celular.</b> A moldura de texto quebrava em pedaços em tela estreita e a lista de comandos se embaralhava. Agora ela se ajusta a qualquer largura.",
+        "<b>✨ Novidades sempre aberto</b>, mesmo antes da 1ª atividade. E os botões que ainda estão travados ficaram mais fáceis de ler.",
+      ],
+    },
+    {
       versao: "2026-10-04",
       data: "4 out 2026",
       titulo: "🔷 Ícones novos, começo mais rápido e menos laranja na tela (se você quiser)",

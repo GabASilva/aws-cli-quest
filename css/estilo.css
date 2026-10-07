@@ -140,6 +140,10 @@ body:not(.app-pronto) .aviso-marca { visibility: hidden; }
 /* A barra de rolagem some quando a capa/um modal poe overflow:hidden no body,
    e a pagina inteira escorrega pro lado. Reservar a calha resolve na raiz. */
 html { scrollbar-gutter: stable; }
+/* barras de rolagem no tom do tema escuro: a padrão do Windows (clara) era a
+   coisa mais brilhante da coluna lateral. O tema claro tem as suas
+   (tema-claro.css). scrollbar-color herda, então vale pra lateral e terminal. */
+body:not([data-tema="claro"]) { scrollbar-color: #34425e transparent; }
 
 /* Linha de lições no rodapé da home (ver o comentário no index.html): existe
    pro buscador ter caminho direto da home — que ele rastreia — pras páginas que
@@ -270,6 +274,9 @@ main {
   margin: 3px 0;
 }
 .card-vazio p { color: var(--texto-fraco); line-height: 1.55; }
+.cv-proxima { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 4px 0 14px; }
+.cv-proxima .botao { font-size: 1rem; padding: 10px 18px; }
+.cv-meta { color: var(--texto-fraco); font-size: .85rem; }
 .card-vazio code { background: var(--painel-2); padding: 1px 6px; border-radius: 5px; font-family: var(--fonte-mono); }
 
 .card-topo { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -327,6 +334,19 @@ pre.linha { font-family: var(--fonte-mono); }
 .linha.erro { color: var(--vermelho); }
 .linha.ok { color: var(--verde); }
 .linha.eco { color: var(--texto); margin-top: 6px; }
+/* boas-vindas do terminal (app.js: boasVindas) */
+#saidaTerminal .linha.bv-titulo { color: var(--laranja); font-weight: 700; margin-bottom: 6px; }
+#saidaTerminal .bv-ajuda {
+  display: grid; grid-template-columns: max-content 1fr; gap: 2px 2.2em;
+  margin: 10px 0 10px 1em; font-family: var(--fonte-mono);
+}
+#saidaTerminal .bv-ajuda code { font-family: inherit; color: var(--texto); background: none; padding: 0; }
+#saidaTerminal .bv-ajuda span { color: var(--texto-fraco); }
+@media (max-width: 600px) {
+  /* uma coluna: o comando, e a explicação embaixo, recuada */
+  #saidaTerminal .bv-ajuda { grid-template-columns: 1fr; gap: 0; margin-left: .5em; }
+  #saidaTerminal .bv-ajuda span { margin: 0 0 6px 1em; }
+}
 /* Aviso do CLImb: claramente FORA da saída do CLI (não é resposta do AWS) */
 #saidaTerminal .linha.aviso-climb {
   color: var(--texto-fraco);
@@ -635,6 +655,7 @@ table.ranking tr.voce td:last-child { border-radius: 0 8px 8px 0; }
 }
 .faixa-selo.ok { background: rgba(62, 207, 111, 0.2); color: var(--verde); }
 #faixaTreino .botao { padding: 6px 14px; font-size: 0.82rem; }
+#faixaTreino[hidden] { display: none; } /* missoes.js: some até a 1ª atividade */
 
 /* ---------- Freemium / planos ---------- */
 .selo-pro {

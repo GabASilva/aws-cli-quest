@@ -29,19 +29,21 @@
     // !important pelos mesmos motivos do primeiros-passos.js: o mobile-nav
     // mexe em estilo inline ao mover botões entre o header e o painel ☰.
     st.textContent = `
+      /* "apagado" pela COR, nunca por opacity: opacity derruba o contraste do
+         texto (era .42, abaixo de 4,5:1 nos dois temas). --texto-fraco passa
+         nos dois. A borda tracejada é o outro sinal de "ainda não". */
       .${CLASSE} {
-        opacity: .42 !important;
+        color: var(--texto-fraco) !important;
+        border-style: dashed !important;
         cursor: not-allowed !important;
-        filter: grayscale(.7);
         position: relative;
       }
-      .${CLASSE}:hover { opacity: .6 !important; }
+      .${CLASSE}:hover { color: var(--texto) !important; }
       /* o cadeado entra por CSS pra não mexer no texto do botão — se mexesse,
          o menus.js copiaria o cadeado pro rótulo do item ao remontar */
       .${CLASSE}::after {
         content: " 🔒";
         font-size: .85em;
-        opacity: .9;
       }
 
       .tv-dica {

@@ -31,8 +31,9 @@
     "#btnConceitos", "#btnConquistas", "#btnConsole", "#btnSimulados",
     "#btnTurmas", "#btnPerfil", "#btnSeguranca", "#btnPlano",
     "#btnAssinarCustom", "#btnArquitetoIa", "#btnDiagrama", "#btnCarreiras",
-    "#btnNovidades",
   ];
+  // #btnNovidades também fica de fora: ninguém "destrava" a lista do que
+  // mudou, e ela era o único link do rodapé apagado pra quem acabou de chegar.
 
   function revelouManualmente() {
     try { return localStorage.getItem(CHAVE_REVELOU) === "1"; } catch (e) { return false; }
