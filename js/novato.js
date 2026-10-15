@@ -75,7 +75,7 @@
 
   function apontarParaADica() {
     const card = document.getElementById("cardDesafio");
-    const temDica = card && /Dica \(/.test(card.textContent || "");
+    const temDica = card && /(Dica|Hint|Pista) \(/.test(card.textContent || ""); // o card sai no idioma da pessoa
     diz("");
     diz("Perdido? Não tem problema — todo mundo começa assim.", "aviso-climb");
     if (temDica) diz("Clique em 💡 Dica no card acima: ela conta o comando aos poucos, de graça.", "aviso-climb");
@@ -89,7 +89,7 @@
     const original = window.imprimir;
     if (typeof original !== "function" || original.__nv) return;
     function comObservador(texto, classe) {
-      if (classe === "erro" && /comando não encontrado/i.test(String(texto))) erroDeComando = true;
+      if (classe === "erro" && /comando não encontrado|command not found|comando no encontrado/i.test(String(texto))) erroDeComando = true;
       return original.apply(this, arguments);
     }
     comObservador.__nv = true;

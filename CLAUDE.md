@@ -21,6 +21,15 @@
   usa recurso de OUTRA trilha falha aqui — declare em `DEPENDENCIAS` do
   ambientes.js (id da atividade ou `trilha@ate-id`). `ISOLAR=<id>` mostra a
   saída de cada linha daquela atividade.
+- **Idiomas (PT/EN/ES):** o servidor traduz o texto SERVIDO por dicionário
+  (`lib/i18n.js`, `i18n/en.json` e `es.json`; a chave é o literal do código).
+  Todo texto novo visível (atividade, manual, changelog, UI, erro da API)
+  precisa das duas traduções: `node scripts/i18n.js pendentes` →
+  `aplicar <arquivo>` (formato no topo do script; `@@ <id> =` = fica igual,
+  pra classe CSS, ARN, saída da AWS). `node teste/idiomas.js` TEM que passar
+  — ele roda o fumaça sobre o código já traduzido nos dois idiomas. Texto
+  usado em comparação (`===`, `case`, chave de objeto) não é traduzido de
+  propósito: não conte com ele mudando.
 - Mexeu em turma, licença, checkout, plano Escola ou suporte? `node teste/escola.js`
   (sobe o servidor com banco temporário e testa professor, preço escola,
   vagas pagas, painel, tarefas e o "💬 Ajuda" de ponta a ponta).

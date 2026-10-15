@@ -187,7 +187,7 @@
     }
     const n = visiveis;
     resumo.textContent = n
-      ? `${n} de ${itens.length} atividade${itens.length > 1 ? "s" : ""}`
+      ? (itens.length > 1 ? `${n} de ${itens.length} atividades` : `${n} de ${itens.length} atividade`)
       : (achados.length ? "Nenhuma atividade da lista cita isso pelo nome — clique no comando acima pra ver o manual dele." : "Nada encontrado nesta trilha.");
   }
   function escapar(s) {

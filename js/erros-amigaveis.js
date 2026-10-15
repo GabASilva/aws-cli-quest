@@ -9,7 +9,7 @@
 // Regras na ordem: a primeira que casar vence. `msg` pode ser texto fixo
 // ou uma função que recebe o texto do erro (pra extrair detalhes).
 const REGRAS_ERRO = [
-  [/comando não encontrado/i, "Esse comando não existe aqui. O terminal entende 'aws ...', além de 'ls', 'clear' e 'help'."],
+  [/comando não encontrado|command not found|comando no encontrado/i, "Esse comando não existe aqui. O terminal entende 'aws ...', além de 'ls', 'clear' e 'help'."],
   [/argument command: Invalid choice/i, "Esse serviço da AWS não existe (ou tem um erro de digitação). Veja a lista com 'aws help'."],
   [/Comandos de '/i, "Esse comando não existe nesse serviço. Veja os disponíveis com 'aws <serviço> help'."],
   [/the following arguments are required: --([\w-]+)/i, (t) => {
@@ -21,7 +21,7 @@ const REGRAS_ERRO = [
   [/BucketAlreadyOwnedByYou/i, "Esse bucket já é seu — nome de bucket não se repete. Pode seguir, ou escolha outro nome."],
   [/BucketNotEmpty/i, "O bucket tem objetos dentro. Adicione --force pra apagar o bucket junto com o conteúdo."],
   [/NoSuchBucket/i, "Esse bucket não existe. Confira o nome com 'aws s3 ls'."],
-  [/(InvalidBucketName|nome de bucket inválido)/i, "Nome de bucket inválido: use de 3 a 63 caracteres, só letras minúsculas, números e hífens."],
+  [/(InvalidBucketName|nome de bucket inválido|invalid bucket name|nombre de bucket inválido)/i, "Nome de bucket inválido: use de 3 a 63 caracteres, só letras minúsculas, números e hífens."],
   [/upload failed/i, "O arquivo local não existe. Veja o que está disponível digitando 'ls'."],
   [/NoSuchBucketPolicy/i, "Esse bucket ainda não tem política. Defina uma com 'aws s3api put-bucket-policy'."],
 
@@ -34,7 +34,7 @@ const REGRAS_ERRO = [
   [/InvalidKeyPair\.Duplicate/i, "Já existe um par de chaves com esse nome."],
   [/InvalidGroup\.NotFound/i, "Esse security group não existe. Crie com 'aws ec2 create-security-group' antes de usá-lo."],
   [/InvalidGroup\.Duplicate/i, "Já existe um security group com esse nome."],
-  [/CIDR inválido/i, "Faixa de IP inválida. Use algo como 0.0.0.0/0 (qualquer IP) ou 10.0.0.0/24."],
+  [/CIDR inválido|invalid CIDR/i, "Faixa de IP inválida. Use algo como 0.0.0.0/0 (qualquer IP) ou 10.0.0.0/24."],
 
   // IAM
   // Só erro que fala de ARN. O "is not valid" solto casava nome de bucket,
@@ -45,7 +45,7 @@ const REGRAS_ERRO = [
   [/MalformedPolicy|Policies must be valid JSON/i, "A política precisa ser um JSON válido. Use o arquivo pronto: file://politica-publica.json."],
 
   // Lambda
-  [/Role ARN inválido|failed to satisfy constraint.*Role/i, "O ARN da role está errado. Ex.: arn:aws:iam::123456789012:role/papel-lambda."],
+  [/Role ARN inválido|invalid Role ARN|failed to satisfy constraint.*Role/i, "O ARN da role está errado. Ex.: arn:aws:iam::123456789012:role/papel-lambda."],
   [/(runtime|Runtimes aceitos)/i, "Esse runtime não é aceito. Exemplos: python3.12, nodejs20.x, java21."],
   // Só o --zip-file do Lambda: o CodeCommit também usa fileb://, com outro arquivo
   [/zip-file/i, "Use fileb://<arquivo.zip> apontando pra um arquivo que existe. Veja com 'ls' (tem um app.zip pronto)."],
@@ -60,12 +60,12 @@ const REGRAS_ERRO = [
   [/Some index key attributes are not defined/i, "A chave usada no --key-schema precisa estar declarada também no --attribute-definitions."],
   [/billing-mode|PAY_PER_REQUEST/i, "Informe a cobrança: --billing-mode PAY_PER_REQUEST (mais simples) ou --provisioned-throughput."],
   [/Missing the key/i, "Faltou a chave primária no item. Ela é obrigatória no put-item."],
-  [/AttributeType=<S\|N\|B>|attribute-definitions precisa/i, "Cada atributo precisa de tipo: S (texto), N (número) ou B (binário)."],
+  [/AttributeType=<S\|N\|B>|attribute-definitions (precisa|needs|necesita)/i, "Cada atributo precisa de tipo: S (texto), N (número) ou B (binário)."],
 
   // Genéricos de parsing
   [/Invalid JSON|Error parsing parameter.*JSON/i, "O JSON está malformado. Dica: aspas simples por fora, ex.: '{\"id\": {\"S\": \"1\"}}'."],
-  [/valor shorthand inválido|Formato esperado: Chave/i, "Formato shorthand errado. Use Chave=valor,Chave2=valor2 (sem espaços, separado por vírgula)."],
-  [/aspas não fechadas/i, "Você abriu aspas (' ou \") e não fechou."],
+  [/valor shorthand inválido|invalid shorthand value|Formato esperado: (Chave|Clave)|Expected format: Key/i, "Formato shorthand errado. Use Chave=valor,Chave2=valor2 (sem espaços, separado por vírgula)."],
+  [/aspas não fechadas|unclosed quotes|comillas sin cerrar/i, "Você abriu aspas (' ou \") e não fechou."],
 ];
 
 function explicarErro(texto) {

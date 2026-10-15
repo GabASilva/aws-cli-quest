@@ -124,7 +124,7 @@
         const n = jogo.atividadeDiaria[chave] || 0;
         total += n;
         const nivel = n === 0 ? 0 : n <= 1 ? 1 : n <= 3 ? 2 : n <= 6 ? 3 : 4;
-        const rot = `${String(dia.getDate()).padStart(2, "0")}/${String(dia.getMonth() + 1).padStart(2, "0")}: ${n} atividade${n === 1 ? "" : "s"}`;
+        const rot = `${String(dia.getDate()).padStart(2, "0")}/${String(dia.getMonth() + 1).padStart(2, "0")}: ${n === 1 ? "1 atividade" : `${n} atividades`}`;
         celulas += `<span class="perfil-heat-cel h${nivel}" title="${rot}"></span>`;
       }
       colunas += `<div class="perfil-heat-col">${celulas}</div>`;
@@ -421,7 +421,7 @@
         <div class="perfil-card"><strong>${m.diasAtivos}</strong><span>dias<br>ativos</span></div>
         <div class="perfil-card"><strong>${jogo.melhorStreak || 0}</strong><span>melhor sequência<br>de acertos</span></div>
         ${m.conquistas ? `<div class="perfil-card"><strong>${m.conquistas.tem}/${m.conquistas.total}</strong><span>conquistas</span></div>` : ""}
-        ${m.simTent ? `<div class="perfil-card"><strong>${m.simMelhor}%</strong><span>melhor simulado<br>(${m.simTent} tentativa${m.simTent === 1 ? "" : "s"})</span></div>` : ""}
+        ${m.simTent ? `<div class="perfil-card"><strong>${m.simMelhor}%</strong><span>melhor simulado<br>(${m.simTent === 1 ? "1 tentativa" : `${m.simTent} tentativas`})</span></div>` : ""}
       </div>
 
       ${cartaoCompartilhar(p)}

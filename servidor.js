@@ -27,6 +27,7 @@ const conteudoApp = require("./lib/conteudo-app.js"); // manuais e atividades na
 const semGabarito = require("./lib/sem-gabarito.js"); // o cliente não recebe dica nem solução do que é pago
 const licencaServidor = require("./lib/licenca-servidor.js"); // quem pode ver o quê, decidido aqui
 const pagSimulado = require("./lib/pagina-simulado.js"); // página pública do simulado
+const i18n = require("./lib/i18n.js"); // o app em inglês e espanhol (troca os textos no arquivo servido)
 
 const PORTA = parseInt(process.env.PORT || process.argv[2] || "8741", 10);
 const RAIZ = __dirname;
@@ -360,9 +361,39 @@ const HEADERS_SEG = {
 };
 
 function responderJson(res, status, obj) {
+  // A mensagem pro usuário sai no idioma dele (cookie climb_idioma, lido na
+  // entrada da requisição). Só erro/detalhe/msg: o resto é dado.
+  if (res.idioma && res.idioma !== "pt" && obj && typeof obj === "object") {
+    for (const campo of ["erro", "detalhe", "msg"]) {
+      if (typeof obj[campo] === "string") obj[campo] = i18n.traduzirMensagem(obj[campo], res.idioma, chavesDoServidor());
+    }
+  }
   const corpo = JSON.stringify(obj);
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...HEADERS_SEG });
   res.end(corpo);
+}
+
+// Os literais de mensagem do próprio servidor.js (pros padrões com ${n}).
+let _chavesServidor = null;
+function chavesDoServidor() {
+  if (!_chavesServidor) {
+    try { _chavesServidor = i18n.extrairServidor(fs.readFileSync(__filename, "utf8")).map((e) => e.chave); }
+    catch (e) { _chavesServidor = []; }
+  }
+  return _chavesServidor;
+}
+
+// Idioma de quem pede: cookie climb_idioma (gravado pelo js/idioma.js).
+function idiomaDoCookie(req) {
+  const m = String((req && req.headers && req.headers.cookie) || "").match(/(?:^|;\s*)climb_idioma=([a-z]{2})/);
+  return i18n.normalizarIdioma(m && m[1]);
+}
+// Idioma de um arquivo JS: vem no ?v= (o index.html escreve "?v=VERSAO.en"), e
+// não do cookie — a URL versionada é cache imutável e precisa dizer sozinha o
+// que contém. O sob-demanda.js copia esse v, então o idioma vai junto.
+function idiomaDaUrl(req) {
+  const m = String(req.url || "").match(/[?&]v=[^&.]*\.([a-z]{2})(?:&|$)/);
+  return i18n.normalizarIdioma(m && m[1]);
 }
 
 function perfilPublico(nome) {
@@ -824,13 +855,14 @@ async function tratarApi(req, res, rota) {
   if (rota === "/api/simulados/banco" && req.method === "GET") {
     const nome = usuarioDoToken(tokenDoCabecalho(req));
     if (!nome) return responderJson(res, 401, { erro: "Os simulados são pra quem tem conta. Criar é grátis." });
-    if (!SIMULADO_PUB) return responderJson(res, 503, { erro: "banco de questões indisponível" });
+    const banco = simuladoNoIdioma(res.idioma);
+    if (!banco) return responderJson(res, 503, { erro: "banco de questões indisponível" });
     res.setHeader("Cache-Control", "no-store");
     return responderJson(res, 200, {
-      questoes: SIMULADO_PUB.questoes,
-      fontes: SIMULADO_PUB.fontes,
-      fontePorId: SIMULADO_PUB.fontePorId,
-      fonteFallback: SIMULADO_PUB.fonteFallback || {},
+      questoes: banco.questoes,
+      fontes: banco.fontes,
+      fontePorId: banco.fontePorId,
+      fonteFallback: banco.fonteFallback || {},
     });
   }
 
@@ -842,7 +874,8 @@ async function tratarApi(req, res, rota) {
       return responderJson(res, 402, { erro: "Este conteúdo faz parte do plano Pro." });
     }
     res.setHeader("Cache-Control", "no-store"); // é conteúdo de quem pagou: não fica em cache
-    return responderJson(res, 200, { gabarito: GABARITO_PAGO || {} });
+    const noIdioma = GABARITO_IDIOMA[res.idioma];
+    return responderJson(res, 200, { gabarito: (noIdioma ? noIdioma.pago : GABARITO_PAGO) || {} });
   }
 
   if (rota === "/api/eu" && req.method === "GET") {
@@ -1552,13 +1585,19 @@ const VERSAO = calcularVersao();
 let TEXTO_SEM_GABARITO = new Map(); // "js/x.js" -> texto servido
 let GABARITO_ABERTO = null;         // script público, pronto
 let GABARITO_PAGO = null;           // objeto, vai por /api/gabarito
+// Em inglês e espanhol, o mesmo corte — mas DEPOIS da tradução: a dica que vai
+// pelo gabarito é a traduzida. Chave do mapa: "en|js/x.js".
+const TEXTO_IDIOMA = new Map();
+const GABARITO_IDIOMA = {}; // { en: { aberto: Buffer, pago: {} } }
 function prepararGabarito() {
   try {
     const conteudo = conteudoApp.carregar(RAIZ);
     const abertos = licencaServidor.idsAbertos(conteudo.desafios, RAIZ);
     let cortados = 0;
+    const brutos = {};
     for (const f of conteudoApp.ARQUIVOS) {
       const bruto = fs.readFileSync(path.join(RAIZ, "js", f), "utf8");
+      brutos[f] = bruto;
       const r = semGabarito.tirarGabarito(bruto);
       if (!r.removidos) continue;
       TEXTO_SEM_GABARITO.set("js/" + f, Buffer.from(r.texto, "utf8"));
@@ -1567,6 +1606,21 @@ function prepararGabarito() {
     GABARITO_ABERTO = Buffer.from(semGabarito.scriptDeGabarito(
       semGabarito.gabaritoDe(conteudo.desafios.filter((d) => abertos.has(d.id))), "aberto"), "utf8");
     GABARITO_PAGO = semGabarito.gabaritoDe(conteudo.desafios.filter((d) => !abertos.has(d.id)));
+    for (const idioma of i18n.IDIOMAS) {
+      const dic = i18n.dicionario(idioma);
+      if (!dic) continue;
+      const traduzidos = {};
+      for (const f of conteudoApp.ARQUIVOS) {
+        traduzidos[f] = i18n.traduzirTexto(brutos[f], dic);
+        TEXTO_IDIOMA.set(idioma + "|js/" + f, Buffer.from(semGabarito.tirarGabarito(traduzidos[f]).texto, "utf8"));
+      }
+      const c = conteudoApp.carregarDeTextos(traduzidos);
+      GABARITO_IDIOMA[idioma] = {
+        aberto: Buffer.from(semGabarito.scriptDeGabarito(
+          semGabarito.gabaritoDe(c.desafios.filter((d) => abertos.has(d.id))), "aberto"), "utf8"),
+        pago: semGabarito.gabaritoDe(c.desafios.filter((d) => !abertos.has(d.id))),
+      };
+    }
     console.log(`Gabarito fora do cliente: ${cortados} campos cortados de ` +
       `${TEXTO_SEM_GABARITO.size} arquivos; ${conteudo.desafios.length - abertos.size} atividades pagas ` +
       `só com licença, ${abertos.size} abertas no /js/gabarito.js`);
@@ -1579,6 +1633,20 @@ function prepararGabarito() {
   }
 }
 prepararGabarito();
+
+// Texto de um js/ em inglês/espanhol: o de conteúdo já foi preparado (e
+// cortado) no prepararGabarito; o resto é traduzido no primeiro pedido.
+function textoJsNoIdioma(rel, idioma) {
+  const chave = idioma + "|" + rel;
+  if (TEXTO_IDIOMA.has(chave)) return TEXTO_IDIOMA.get(chave);
+  const dic = i18n.dicionario(idioma);
+  if (!dic) return null;
+  let bruto;
+  try { bruto = fs.readFileSync(path.join(RAIZ, rel), "utf8"); } catch (e) { return null; }
+  const corpo = Buffer.from(i18n.traduzirTexto(bruto, dic), "utf8");
+  TEXTO_IDIOMA.set(chave, corpo);
+  return corpo;
+}
 
 // ---------- Pre-aquecimento do cache de compressao ----------
 // O cache acima so enche conforme os arquivos vao sendo pedidos, e a maquina do
@@ -1734,6 +1802,23 @@ try {
   console.error("ATENÇÃO: não consegui carregar o simulado para a página pública —", e.message);
 }
 
+// O banco do simulado em inglês/espanhol: montado no primeiro pedido (quem usa
+// em português não paga por isso no boot).
+const SIMULADO_IDIOMA = {};
+function simuladoNoIdioma(idioma) {
+  if (!idioma || idioma === "pt") return SIMULADO_PUB;
+  if (SIMULADO_IDIOMA[idioma] === undefined) {
+    try {
+      const dic = i18n.dicionario(idioma);
+      SIMULADO_IDIOMA[idioma] = pagSimulado.carregarSimulados(RAIZ, (t) => i18n.traduzirTexto(t, dic));
+    } catch (e) {
+      console.error("Simulado em " + idioma + " indisponível:", e.message);
+      SIMULADO_IDIOMA[idioma] = SIMULADO_PUB;
+    }
+  }
+  return SIMULADO_IDIOMA[idioma];
+}
+
 function servirHtml(res, html) {
   const corpo = Buffer.from(html, "utf8");
   res.writeHead(200, {
@@ -1806,7 +1891,9 @@ function hostBasePublico() {
 // mesmo esquema de cache do resto (URL versionada = imutável).
 function servirGabaritoAberto(req, res) {
   if (!GABARITO_ABERTO) { res.writeHead(503, HEADERS_SEG); res.end(""); return; }
-  let corpo = GABARITO_ABERTO;
+  const idioma = idiomaDaUrl(req);
+  const noIdioma = GABARITO_IDIOMA[idioma];
+  let corpo = noIdioma ? noIdioma.aberto : GABARITO_ABERTO;
   const cabecalhos = {
     "Content-Type": "text/javascript; charset=utf-8",
     "Cache-Control": /[?&]v=/.test(req.url || "") && PROD
@@ -1816,7 +1903,7 @@ function servirGabaritoAberto(req, res) {
   };
   const cod = escolherCodificacao(req);
   if (cod) {
-    const z = comprimir("gabarito-aberto@" + VERSAO, cod, corpo);
+    const z = comprimir("gabarito-aberto@" + VERSAO + (noIdioma ? "." + idioma : ""), cod, corpo);
     if (z) { cabecalhos["Content-Encoding"] = cod; corpo = z; }
   }
   cabecalhos["Content-Length"] = corpo.length;
@@ -1827,25 +1914,33 @@ function servirGabaritoAberto(req, res) {
 // ---------- Capa pronta no HTML ----------
 // O desenho da capa mora no js/capa.js (CAPA_ESTILO e capaMarcacao, fora do
 // IIFE). Lido uma vez num sandbox sem window: o IIFE de lá sai na hora.
-let CAPA_PRONTA;
-function capaPronta() {
-  if (CAPA_PRONTA !== undefined) return CAPA_PRONTA;
+// Uma por idioma: o capa.js passa pelo mesmo dicionário do resto do app.
+const CAPA_PRONTA = {};
+const CAPA_PALAVRAS = {
+  pt: { atividades: "atividades", trilhas: "trilhas", muitas: "centenas de atividades", varias: "dezenas de trilhas", rotulo: "Apresentação do CLImb", milhar: "." },
+  en: { atividades: "activities", trilhas: "tracks", muitas: "hundreds of activities", varias: "dozens of tracks", rotulo: "About CLImb", milhar: "," },
+  es: { atividades: "actividades", trilhas: "rutas", muitas: "cientos de actividades", varias: "decenas de rutas", rotulo: "Presentación de CLImb", milhar: "." },
+};
+function capaPronta(idioma) {
+  idioma = i18n.normalizarIdioma(idioma);
+  if (CAPA_PRONTA[idioma] !== undefined) return CAPA_PRONTA[idioma];
   try {
     const cx = { console: { log() {}, warn() {}, error() {} } };
     vm.createContext(cx);
-    vm.runInContext(fs.readFileSync(path.join(RAIZ, "js", "capa.js"), "utf8") +
-      "\n;globalThis.__c = { estilo: CAPA_ESTILO, marcacao: capaMarcacao };", cx, { timeout: 5000 });
+    const fonte = i18n.traduzirTexto(fs.readFileSync(path.join(RAIZ, "js", "capa.js"), "utf8"), i18n.dicionario(idioma));
+    vm.runInContext(fonte + "\n;globalThis.__c = { estilo: CAPA_ESTILO, marcacao: capaMarcacao };", cx, { timeout: 5000 });
+    const w = CAPA_PALAVRAS[idioma];
     const n = CONTEUDO_PUB ? CONTEUDO_PUB.desafios.length : 0;
-    const milhar = (x) => String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    const atividades = n ? milhar(n) + " atividades" : "centenas de atividades";
-    const trilhas = CONTEUDO_PUB ? CONTEUDO_PUB.meta.length + " trilhas" : "dezenas de trilhas";
-    CAPA_PRONTA = `<style id="capaEstilo">${cx.__c.estilo}</style>` +
-      `<section id="capa" aria-label="Apresentação do CLImb">${cx.__c.marcacao(atividades, trilhas)}</section>`;
+    const milhar = (x) => String(x).replace(/\B(?=(\d{3})+(?!\d))/g, w.milhar);
+    const atividades = n ? milhar(n) + " " + w.atividades : w.muitas;
+    const trilhas = CONTEUDO_PUB ? CONTEUDO_PUB.meta.length + " " + w.trilhas : w.varias;
+    CAPA_PRONTA[idioma] = `<style id="capaEstilo">${cx.__c.estilo}</style>` +
+      `<section id="capa" aria-label="${w.rotulo}">${cx.__c.marcacao(atividades, trilhas)}</section>`;
   } catch (e) {
     console.error("Capa pronta indisponível (o capa.js monta no navegador):", e.message);
-    CAPA_PRONTA = "";
+    CAPA_PRONTA[idioma] = "";
   }
-  return CAPA_PRONTA;
+  return CAPA_PRONTA[idioma];
 }
 function temCookie(req, nome) {
   return String((req && req.headers && req.headers.cookie) || "").split(/;\s*/).some((c) => c.split("=")[0] === nome);
@@ -1933,6 +2028,14 @@ function servirEstatico(req, res, rota) {
   // Arquivo de conteúdo vai SEM dica e sem solução (ver prepararGabarito).
   // Serve da memória: o texto é o mesmo pra todo mundo, então entra no mesmo
   // cache e na mesma compressão dos outros.
+  // Em inglês/espanhol, o JS sai traduzido (lib/i18n.js). O idioma vem no ?v=
+  // da URL, que o index.html escreve conforme o cookie da pessoa.
+  const idiomaJs = ext === ".js" && relativo.startsWith("js/") ? idiomaDaUrl(req) : "pt";
+  if (idiomaJs !== "pt") {
+    const pronto = textoJsNoIdioma(relativo, idiomaJs);
+    if (pronto) return entregar(null, pronto);
+  }
+
   const semGab = TEXTO_SEM_GABARITO.get(relativo);
   if (semGab) return entregar(null, semGab);
 
@@ -1946,7 +2049,9 @@ function servirEstatico(req, res, rota) {
     }
     let corpo = conteudo;
     let cache;
-    let chaveCache = null; // o index.html tem duas formas (com e sem a capa)
+    // o index.html tem duas formas (com e sem a capa), vezes três idiomas; o JS
+    // traduzido tem chave própria no cache de compressão
+    let chaveCache = idiomaJs !== "pt" ? idiomaJs + "|" + relativo : null;
     if (relativo === "index.html") {
       // injeta ?v=VERSAO em todo src/href de js/ e css/ (URLs locais)
       // e escreve no <body> quantas atividades e trilhas existem: a capa
@@ -1959,9 +2064,17 @@ function servirEstatico(req, res, rota) {
       // com HTTP/2, ele dividia a banda com os ~115 scripts e a capa só
       // aparecia aos ~4,6 s). O capa.js depois só liga os botões — ou tira a
       // capa, se a pessoa já tem progresso/conta e só não tinha o cookie.
-      const capa = !temCookie(req, "climb_capa") && capaPronta();
-      chaveCache = capa ? "index.html+capa" : "index.html";
-      let html = String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSAO}"`);
+      const idioma = idiomaDoCookie(req);
+      const capa = !temCookie(req, "climb_capa") && capaPronta(idioma);
+      chaveCache = (capa ? "index.html+capa" : "index.html") + (idioma !== "pt" ? "." + idioma : "");
+      // O idioma vai DENTRO do ?v= (VERSAO.en): cada arquivo traduzido tem URL
+      // própria, e o sob-demanda.js, que copia o v, leva o idioma junto.
+      const v = VERSAO + (idioma !== "pt" ? "." + idioma : "");
+      let html = String(conteudo).replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${v}"`);
+      if (idioma !== "pt") {
+        html = i18n.traduzirHtml(html, i18n.dicionario(idioma))
+          .replace('<html lang="pt-BR"', `<html lang="${idioma}"`);
+      }
       // Com a capa: as folhas de estilo saem do <head> e vão pra DEPOIS dela.
       // Folha no <head> trava a pintura da página inteira; no meio do <body>,
       // só do que vem depois. A capa tem o estilo dela embutido (com cores de
@@ -2305,6 +2418,7 @@ setInterval(limparExpirados, 3600000).unref(); // limpa sessões/rate-limit de h
 http
   .createServer(async (req, res) => {
     const rota = decodeURIComponent(req.url.split("?")[0]);
+    res.idioma = idiomaDoCookie(req); // mensagens da API no idioma da pessoa
     try {
       registrarMetrica();
       // O X-Robots-Tag do host nao-canonico entra DEPOIS do redirect (ver

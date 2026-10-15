@@ -67,6 +67,22 @@ var CAPA_ESTILO = `
         font-size: 1.5rem; font-weight: 700; color: var(--laranja, #ff9900);
         letter-spacing: -.01em; margin-bottom: clamp(2rem, 7vw, 3.5rem);
       }
+      /* PT · EN · ES no canto: quem chega de fora do Brasil acha o idioma
+         sem procurar menu (o clique é tratado pelo js/idioma.js) */
+      #capa .capa-linha-marca {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+      }
+      #capa .capa-idiomas { display: flex; gap: .2rem; font-size: .85rem; }
+      #capa .capa-idiomas button {
+        background: none; border: 0; cursor: pointer; padding: .3rem .45rem;
+        color: var(--texto-fraco, #8b99b0); font-weight: 600; border-radius: .35rem;
+      }
+      #capa .capa-idiomas button:hover { color: var(--texto, #dce3ee); }
+      html[lang^="pt"] #capa .capa-idiomas [data-idioma="pt"],
+      html[lang="en"] #capa .capa-idiomas [data-idioma="en"],
+      html[lang="es"] #capa .capa-idiomas [data-idioma="es"] {
+        color: var(--laranja, #ff9900); text-decoration: underline; text-underline-offset: 3px;
+      }
       #capa .capa-marca small {
         color: var(--texto-fraco, #8b99b0); font-weight: 500;
         font-size: .82rem; margin-left: .6rem;
@@ -178,7 +194,14 @@ function capaMarcacao(nAtividades, nTrilhas) {
   return `
       <div class="capa-brilho" aria-hidden="true"></div>
       <div class="capa-conteudo">
-        <div class="capa-marca">⚡ CLImb <small>climb.dev.br</small></div>
+        <div class="capa-linha-marca">
+          <div class="capa-marca">⚡ CLImb <small>climb.dev.br</small></div>
+          <nav class="capa-idiomas" aria-label="Idioma / Language">
+            <button type="button" data-idioma="pt" lang="pt">PT</button>
+            <button type="button" data-idioma="en" lang="en">EN</button>
+            <button type="button" data-idioma="es" lang="es">ES</button>
+          </nav>
+        </div>
 
         <div class="capa-topo">
           <div>

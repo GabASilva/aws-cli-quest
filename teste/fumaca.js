@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.join(__dirname, "..");
+const i18n = require("../lib/i18n.js");
 
 // setup-lab.js, linux-lab.js e json-yaml.js têm `if (typeof window === "undefined") return`.
 // Sem um window falso eles nem carregam — era por isso que o harness via 583 e
@@ -60,6 +61,9 @@ window.rodarPelaCadeia = function (linha) {
 `;
 const codigo = BASE_CADEIA + ["simulador.js", "manuais.js", "manuais-fase6-9.js", "desafios.js", "atividades-extras.js", "desafios-avancados.js", "cenarios-reais.js", "cloudformation.js", "servicos-fase1.js", "servicos-fase2.js", "servicos-fase3.js", "servicos-fase4.js", "servicos-fase5.js", "servicos-fase6.js", "servicos-fase7.js", "servicos-fase8.js", "servicos-fase9.js", "polly-completo.js", "cloudfront-completo.js", "route53-completo.js", "secretsmanager-completo.js", "acm-completo.js", "desafios-extra.js", "desafios-pratica.js", "cloudwatch-metricas.js", "logs-insights.js", "lambda-dynamo-profundo.js", "cobertura-1.js", "cobertura-2.js", "cobertura-3.js", "mundo-real-2.js", "mundo-real-3.js", "efs-completo.js", "elasticache-completo.js", "ecr-completo.js", "desafios-pratica-2.js", "sqs-completo.js", "ssm-completo.js", "iam-completo.js", "ec2-completo.js", "s3-completo.js", "logs-completo.js", "containers-completo.js", "codebuild-completo.js", "codecommit-completo.js", "codedeploy-completo.js", "codepipeline-completo.js", "cloudformation-completo.js", "codeconnections-completo.js", "codedeploy-bluegreen.js", "fixacao-1.js", "setup-lab.js", "linux-lab.js", "arquivos-lab.js", "cli-config.js", "s3-pastas.js", "json-yaml.js", "json-yaml-2.js", "lab-vpc.js", "fixacao-2.js", "missoes.js"]
   .map((f) => fs.readFileSync(path.join(raiz, "js", f), "utf8"))
+  // IDIOMA=en|es: roda sobre o código JÁ traduzido (o que o servidor entrega
+  // em inglês/espanhol). É o que pega tradução que quebrou um validador.
+  .map((t) => (process.env.IDIOMA ? i18n.traduzirTexto(t, i18n.dicionario(process.env.IDIOMA)) : t))
   .join("\n");
 
 const teste = `

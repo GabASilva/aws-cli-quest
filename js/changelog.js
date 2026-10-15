@@ -24,6 +24,15 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-10-15",
+      data: "15 out 2026",
+      titulo: "🌎 O CLImb agora também em inglês e espanhol",
+      itens: [
+        "<b>PT · EN · ES.</b> Escolha o idioma no canto da capa ou em <b>👤 Você → 🌐 Idioma</b>. Muda tudo junto: atividades, dicas, manuais, lições e o simulado.",
+        "Os comandos e o JSON que a AWS devolve não mudam: eles são em inglês na AWS de verdade, e aqui também.",
+      ],
+    },
+    {
       versao: "2026-10-07",
       data: "7 out 2026",
       titulo: "▶ A próxima atividade a um clique (e uma tela mais enxuta, se você quiser)",

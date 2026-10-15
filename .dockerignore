@@ -17,3 +17,6 @@ backups/
 
 # relatorio do PageSpeed salvo localmente (3 MB)
 teste pagespeed google/
+
+# relatorios do llm-council (decisao interna) - nao vai pra imagem publicada
+council/
