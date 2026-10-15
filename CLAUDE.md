@@ -15,7 +15,8 @@
 - Antes de subir QUALQUER js: `node --check js/<arquivo>.js`.
 - Testes obrigatórios: `node teste/fumaca.js` (executa a solução de todos os
   desafios "aws" e valida) e `node teste/analise.js` (coerência didática:
-  auto-pass, ordem, XP, ids). **Os dois verdes antes de commitar.**
+  auto-pass, ordem, XP, ids). **Os dois verdes antes de commitar.** Mexeu em
+  texto visível? `node teste/idiomas.js` também (ver "Idiomas" abaixo).
 - `node teste/isolamento.js` também: abre CADA atividade sozinha, numa conta
   limpa, com o preparo do `js/ambientes.js` (conta por trilha). Atividade que
   usa recurso de OUTRA trilha falha aqui — declare em `DEPENDENCIAS` do
@@ -139,12 +140,15 @@ faixa (ex.: dyn-2 120xp) — é proposital, comemore o marco.
 2. `node teste/fumaca.js`, `node teste/analise.js` E `node teste/isolamento.js`
    verdes (auto-pass = 0, sem id duplicado, sem "solução falhou", toda
    atividade funcionando aberta fora de ordem).
-3. Desafios shell/Linux (solução não começa com "aws") não rodam no fumaça —
+3. **Traduza** descrição, dicas, título e manual novos: `node scripts/i18n.js
+   pendentes` → `aplicar`, e `node teste/idiomas.js` verde (ele roda o fumaça
+   em inglês e espanhol — pega tradução que quebrou o validador).
+4. Desafios shell/Linux (solução não começa com "aws") não rodam no fumaça —
    teste no preview manualmente.
-4. **Serviço novo? Escreva a lição** (`LICOES` + `PORQUE` em `licoes.js`) —
+5. **Serviço novo? Escreva a lição** (`LICOES` + `PORQUE` em `licoes.js`) —
    ver seção "Parte didática". Não é opcional.
-5. Entrada no `changelog.js` (NOVIDADES) se for conteúdo visível.
-6. Commit em português no padrão `feat(escopo): resumo`.
+6. Entrada no `changelog.js` (NOVIDADES) se for conteúdo visível.
+7. Commit em português no padrão `feat(escopo): resumo`.
 
 ## Parte didática — OBRIGATÓRIA ao implementar serviço novo (`js/licoes.js`)
 
