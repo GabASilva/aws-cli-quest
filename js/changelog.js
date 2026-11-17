@@ -24,6 +24,16 @@
   // regra no topo do arquivo). `versao` = data pura, marca o que a pessoa já viu.
   const NOVIDADES = [
     {
+      versao: "2026-11-16",
+      data: "16 nov 2026",
+      titulo: "🔧 Seis atividades que davam o visto na hora errada",
+      itens: [
+        "<b>Atividade que terminava sozinha.</b> Em seis atividades de <i>criar e desfazer</i>, o visto saía já no primeiro comando — bastava criar o recurso. Agora ele só sai quando você roda de fato o comando que desfaz (<code>rm</code>, <code>detach-user-policy</code>, <code>start-db-instance</code>). Eram estas: <b>Subiu errado</b>, <b>Suba e apague</b>, <b>Revogar acesso</b> (duas) e <b>Religue o banco</b>.",
+        "<b>Copie entre buckets</b> só aceitava os nomes que estavam na solução. Como o enunciado não pede nome nenhum, agora <b>vale qualquer bucket e qualquer arquivo</b>: o que conta é a forma — origem e destino os dois em <code>s3://</code>, e em baldes diferentes.",
+        "Obrigado ao <b>louan</b> e à <b>thalita</b>, que acharam os dois e avisaram. 🙌",
+      ],
+    },
+    {
       versao: "2026-10-15",
       data: "15 out 2026",
       titulo: "🌎 O CLImb agora também em inglês e espanhol",

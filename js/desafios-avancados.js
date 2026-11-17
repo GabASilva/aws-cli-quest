@@ -155,9 +155,12 @@ const DESAFIOS_AVANCADOS = [
       "aws iam attach-user-policy --user-name ex-func --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
       "aws iam detach-user-policy --user-name ex-func --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
     ],
-    validar: (conta) => {
+    // Usuário recém-criado JÁ tem politicas vazia: só com estado negativo a
+    // atividade se concluía no create-user, sem ensinar o attach/detach.
+    // Padrão do CLAUDE.md: exija o comando que desfaz.
+    validar: (conta, cmd, ok) => {
       const u = conta.iam.usuarios["ex-func"];
-      return !!u && u.politicas.length === 0;
+      return ok && ehCmd(cmd, "iam", "detach-user-policy") && !!u && u.politicas.length === 0;
     },
   },
   {

@@ -62,7 +62,13 @@
   at("s3-6", [
     d("ps3-rm1", "s3", 2, 60, "Subiu errado", "Um arquivo subiu por engano. Crie <b>uploads-temp</b>, suba o relatorio.csv e <b>apague</b> ele de dentro do bucket.",
       ["No S3 de alto nível, `mb` é \"make bucket\" (criar o balde) — veja a lista de comandos com: aws s3 help", "A forma do comando é: aws s3 mb s3://<nome-do-bucket>  →  aws s3 cp <arquivo> s3://<bucket>/<arquivo>  →  aws s3 rm s3://<bucket>/<arquivo>"], ["aws s3 mb s3://uploads-temp", "aws s3 cp relatorio.csv s3://uploads-temp/", "aws s3 rm s3://uploads-temp/relatorio.csv"],
-      (c) => temBucket(c, "uploads-temp") && !temObj(c, "uploads-temp", "relatorio.csv")),
+      // NÃO valide só por estado negativo: `!temObj(...)` já é verdade no bucket
+      // recém-criado, então a atividade se concluía sozinha no `mb` (report do
+      // louan, 16/11). Exige o rm NA chave certa — o `rm` é idempotente aqui
+      // (fiel à AWS), por isso o alvo do comando é o que prova a intenção.
+      (c, cmd, ok) => ok && ehCmd(cmd, "s3", "rm") &&
+        /^s3:\/\/uploads-temp\/relatorio\.csv$/.test(String(cmd.posicionais[0] || "")) &&
+        temBucket(c, "uploads-temp") && !temObj(c, "uploads-temp", "relatorio.csv")),
   ]);
   // sync
   at("s3-7", [

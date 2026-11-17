@@ -10,10 +10,20 @@
   const D = [
     // ==================== S3 (+3) ====================
     { id: "s3-12", servico: "s3", nivel: 2, xp: 70, titulo: "Copie entre buckets",
-      descricao: "Copie um objeto de um bucket pra outro (cópia <b>s3 → s3</b>, sem passar pelo seu disco).",
+      descricao: "Copie um objeto de um bucket pra outro (cópia <b>s3 → s3</b>, sem passar pelo seu disco). <b>Os nomes são livres</b> — use os buckets e o arquivo que quiser.",
       dicas: ["Crie os dois buckets, suba o arquivo no primeiro e use cp de s3:// pra s3://."],
       solucao: ["aws s3 mb s3://dados-origem", "aws s3 cp relatorio.csv s3://dados-origem/", "aws s3 mb s3://dados-copia", "aws s3 cp s3://dados-origem/relatorio.csv s3://dados-copia/"],
-      validar: (c) => { const b = c.s3.buckets["dados-copia"]; return !!b && !!b.objetos["relatorio.csv"]; } },
+      // O enunciado não nomeia bucket nem arquivo, então o validador NÃO pode
+      // exigir os nomes da solução: a thalita copiou trust.json entre teste1 e
+      // teste2 e não concluiu (report de 16/11). O que se ensina aqui é a FORMA
+      // (origem e destino os dois em s3://, baldes diferentes) — valide isso.
+      validar: (c, cmd, ok) => {
+        const ehS3 = (s) => String(s || "").startsWith("s3://");
+        const balde = (s) => String(s || "").replace(/^s3:\/\/([^/]*).*$/, "$1");
+        return ok && ehCmd(cmd, "s3", "cp") &&
+          ehS3(cmd.posicionais[0]) && ehS3(cmd.posicionais[1]) &&
+          balde(cmd.posicionais[0]) !== balde(cmd.posicionais[1]);
+      } },
     { id: "s3-13", servico: "s3", nivel: 2, xp: 70, titulo: "Deploy de um site",
       descricao: "Existe a pasta <b>./site</b> no disco. Crie o bucket <b>site-deploy</b> e <b>sincronize</b> a pasta inteira nele.",
       dicas: ["aws s3 sync <site> s3://<nome-do-bucket>"],
@@ -158,7 +168,10 @@
       descricao: "Crie o <b>banco-start</b>, pare e depois <b>ligue</b> de novo.",
       dicas: ["start-db-instance é o contrário do stop."],
       solucao: ["aws rds create-db-instance --db-instance-identifier banco-start --db-instance-class db.t3.micro --engine mysql --master-username admin --allocated-storage 20", "aws rds stop-db-instance --db-instance-identifier banco-start", "aws rds start-db-instance --db-instance-identifier banco-start"],
-      validar: (c) => { const d = c.rds && c.rds.instancias["banco-start"]; return !!d && d.status === "available"; } },
+      // Banco recém-criado já nasce "available": sem exigir o comando, a
+      // atividade se concluía no create, sem passar pelo stop/start. Mesmo
+      // padrão que o rds de fixacao-1.js já usa.
+      validar: (c, cmd, ok) => { const d = c.rds && c.rds.instancias["banco-start"]; return ok && ehCmd(cmd, "rds", "start-db-instance") && !!d && d.status === "available"; } },
     { id: "rds-10", servico: "rds", nivel: 3, xp: 70, titulo: "Descarte o banco temporário",
       descricao: "Crie o <b>banco-temp</b> e <b>apague</b> ele (pulando o snapshot final).",
       dicas: ["aws rds delete-db-instance --db-instance-identifier <identificador> --skip-final-snapshot"],
