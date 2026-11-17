@@ -50,25 +50,34 @@ com `name` (igual ao nome do arquivo), `description` e `metadata.type`
 
 Datas sempre **absolutas** (`15/09/2026`), nunca "semana passada".
 
-## 3. Teto do vault — a regra que impede o inchaço
+## 3. O que impede o inchaço — e NÃO é contar bytes
 
-Confira o tamanho:
+**Só o `MEMORY.md` entra no contexto a cada sessão**; os arquivos de tópico são
+abertos sob demanda. Então arquivo de referência grande **não custa nada** até
+alguém abrir — não o encolha por esporte. (Esta regra já esteve errada: media
+bytes como se tudo carregasse junto.)
+
+O que machuca de verdade, nesta ordem:
+
+1. **Snapshot datado dentro de um arquivo de regra.** Pergunta que resolve:
+   *"tem número de versão, contagem de atividades ou hash de commit escrito
+   aqui?"* Se tem, **sai** — isso vem dos comandos de arranque, sempre certo, e
+   escrito na memória envelhece em dias e passa a mentir. Em 16/11 o
+   `comecar-sem-contexto` tinha **oito** "Retrato de \<data\>" empilhados.
+2. **`MEMORY.md` grande** — esse paga pedágio toda sessão. Teto real: 25 KB e
+   200 linhas, uma linha por memória, até ~150 caracteres.
+3. **Mesmo assunto em dois arquivos** — funda no mais rico, mantenha o caminho
+   dele.
 
 ```bash
-du -sh ~/.claude/projects/C--Users-Gabriel-Alves-Desktop-aws-cli-quest/memory/
-wc -c ~/.claude/projects/C--Users-Gabriel-Alves-Desktop-aws-cli-quest/memory/*.md | sort -n | tail -5
+wc -c ~/.claude/projects/C--Users-Gabriel-Alves-Desktop-aws-cli-quest/memory/MEMORY.md
+grep -rln "Retrato de\|no ar a \*\*v\|atividades\." ~/.claude/projects/C--Users-Gabriel-Alves-Desktop-aws-cli-quest/memory/
 ```
 
-Gatilhos:
+Se a consolidação for grande, use `/consolidate-memory`.
 
-- **Arquivo único acima de ~6 KB** → ele virou log. Separe o durável, aposente o
-  resto.
-- **Vault acima de ~60 KB** → hora de consolidar (`/consolidate-memory`).
-- **`MEMORY.md` acima de 25 linhas** → o índice deixou de ser índice.
-
-**Seções protegidas, que nunca são arquivadas:** `quem-e-o-gabriel`,
-`mapa-do-projeto`, `mapa-dos-arquivos`, `ordem-de-carregamento`,
-`comecar-sem-contexto`.
+**Nunca arquive:** `quem-e-o-gabriel`, `mapa-do-projeto`, `mapa-dos-arquivos`,
+`ordem-de-carregamento`, `comecar-sem-contexto`.
 
 > Isto já aconteceu: o `aws-cli-quest.md` do vault do os-pro chegou a **92 KB**
 > de log append-only — maior sozinho que todo este vault — e foi consolidado em

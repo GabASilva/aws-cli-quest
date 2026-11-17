@@ -124,6 +124,33 @@ for (const d of DESAFIOS) {
 console.log(`\nAuto-pass (validador de estado já satisfeito por atividade ANTERIOR): ${autopass.length}`);
 autopass.forEach((a) => console.log("  ⚠ " + a));
 
+// ---------- 5b. AUTO-PASS NO PRÓPRIO PRIMEIRO PASSO ----------
+// A seção 5 usa UMA conta compartilhada: ela pega o validador satisfeito por
+// atividade ANTERIOR. O que ela NÃO pega é a atividade que se satisfaz no
+// primeiro comando DELA MESMA — e foi esse o furo: seis atividades de "criar e
+// desfazer" validavam só por estado NEGATIVO (`!temObj(...)`, `politicas.length
+// === 0`, `status === "available"`), que já é verdade no recurso recém-criado.
+// Davam o visto no `mb`/`create-*` e ninguém via, porque aqui dizia "Auto-pass:
+// 0". Dois alunos reportaram em 16/11/2026; esta checagem é o que impede a
+// volta. Conta LIMPA por atividade, roda só a 1ª linha e vê se já passou.
+const soPrimeiro = [];
+for (const d of DESAFIOS) {
+  if (d.tipo === "projeto") continue;
+  if (!d.solucao || d.solucao.length < 2) continue;   // 1 passo só: passar na 1ª é o correto
+  if (d.servico === "setup" || d.servico === "diagnostico") continue;  // cadeia/lab próprios
+  if (!String(d.solucao[0]).trim().startsWith("aws")) continue;
+  const limpa = criarContaAws();
+  const r = executarComandoAws(limpa, resolverPlaceholders(limpa, d.solucao[0]));
+  if (!r || !r.ok) continue;                          // 1ª linha não roda sozinha: fora do escopo
+  let passou = false;
+  try { passou = !!d.validar(limpa, r.cmd, true); } catch (e) { passou = false; }
+  if (passou) soPrimeiro.push(`${d.id} (${d.servico}, ${d.solucao.length} passos) — "${d.titulo}"`);
+}
+console.log(`\nConclui no 1º passo tendo vários (validador ganho de graça na PRÓPRIA atividade): ${soPrimeiro.length}`);
+for (const s of soPrimeiro) {
+  problemas.push(`CONCLUI NO 1º PASSO: ${s} — valide o comando que DESFAZ, não só o estado negativo (CLAUDE.md, "Criar-e-apagar")`);
+}
+
 // ---------- 6. XP fora da curva por nível ----------
 const xpPorNivel = {};
 for (const d of DESAFIOS) { if (d.nivel && d.xp) (xpPorNivel[d.nivel] = xpPorNivel[d.nivel] || []).push(d.xp); }
